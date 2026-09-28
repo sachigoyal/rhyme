@@ -9,3 +9,7 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-64@2.11.5'
   - '@turbo/windows-arm64@2.11.5'
   - turbo@2.11.5
+allowBuilds:
+  esbuild: true
+  lightningcss: true
+  unrs-resolver: false
