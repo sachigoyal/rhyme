@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { GuestCanvasSkeleton } from '@/components/loading-states'
+import { BrandLoading } from '@/components/brand-loading'
 import { lazy, Suspense } from 'react'
 import { guestDraft } from '@/features/auth/guest-draft'
 import { lastEditedCanvas } from '@/features/auth/home-destination'
@@ -13,6 +13,7 @@ const GuestCanvas = lazy(() =>
 
 export const Route = createFileRoute('/')({
   ssr: false,
+  pendingComponent: BrandLoading,
   beforeLoad: async ({ context }) => {
     const session = await context.queryClient.ensureQueryData(sessionQuery)
     if (!session) return
@@ -61,7 +62,7 @@ export const Route = createFileRoute('/')({
     throw redirect({ to: '/files' })
   },
   component: () => (
-    <Suspense fallback={<GuestCanvasSkeleton />}>
+    <Suspense fallback={<BrandLoading />}>
       <GuestCanvas />
     </Suspense>
   ),

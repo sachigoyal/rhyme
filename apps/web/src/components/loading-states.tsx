@@ -1,17 +1,5 @@
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { Logo } from './logo'
-import { GuestIntroduction } from './guest-introduction'
-
-export function GuestCanvasSkeleton() {
-  return (
-    <div className="relative">
-      <CanvasSkeleton />
-      <div className="bg-background absolute top-16 left-1/2 z-300 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg border px-3 py-2">
-        <GuestIntroduction />
-      </div>
-    </div>
-  )
-}
 
 export function AppSkeleton({
   children,
