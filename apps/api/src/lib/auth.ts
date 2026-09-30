@@ -4,7 +4,8 @@ import { emailOTP } from 'better-auth/plugins/email-otp'
 import { schema } from '@rhyme/db'
 import type { Database } from '@rhyme/db'
 import type { Env } from '../env'
-import { sendSignInCode } from './email'
+import { sendVerificationCode } from './email'
+import { OTP_EXPIRY_SECONDS } from '../emails/verification-code'
 
 interface CreateAuthOptions {
   env: Env
@@ -25,10 +26,11 @@ export function createAuth({ env, db, waitUntil }: CreateAuthOptions) {
     }),
     plugins: [
       emailOTP({
-        expiresIn: 10 * 60,
+        expiresIn: OTP_EXPIRY_SECONDS,
+        otpLength: 6,
         storeOTP: 'hashed',
-        sendVerificationOTP: async ({ email, otp }) => {
-          waitUntil(sendSignInCode(env, { to: email, code: otp }))
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          waitUntil(sendVerificationCode(env, { to: email, code: otp, type }))
         },
       }),
     ],

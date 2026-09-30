@@ -14,7 +14,8 @@
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "check-types": "tsr generate && tsc --noEmit",
-    "test": "node --test --test-force-exit tests/*.test.mjs"
+    "test": "node --test --test-force-exit tests/*.test.mjs",
+    "generate:email-logo": "node scripts/generate-email-logo.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "catalog:",

@@ -54,3 +54,9 @@ See [AGENTS.md](AGENTS.md) for the repository layout and conventions.
 `pnpm deploy` builds the SPA for `https://rhyme.sachi.dev`, applies remote D1 migrations, and deploys the `rhyme` Worker with the static client, API, and canvas assistant. Production configuration is in `apps/api/wrangler.production.jsonc`; local development continues to use `wrangler.jsonc`. The `BETTER_AUTH_SECRET` is stored as a Worker secret. Sign-in email is sent from `auth@rhyme.sachi.dev` through the configured Cloudflare Email Sending domain.
 
 Run `pnpm --filter api types:production` after changing production bindings.
+
+## Account emails
+
+Sign-in uses the shared verification-code template in `apps/api/src/emails/verification-code.ts`. The Better Auth callback selects purpose-specific copy for sign-in, address verification, password reset, and email changes. Subjects and preview text exclude the code; expiry is shared with the authentication configuration. The logo is an inline PNG attachment, and every message includes a plain-text version. Delivery failures are logged without the recipient or code.
+
+After editing the product SVG logo, run `pnpm --filter web generate:email-logo` to regenerate the email logo. `pnpm --filter api test` checks subjects, code validation, template purposes, inline branding, and sender behavior.
