@@ -10,13 +10,13 @@ export function PageHeading({
   children?: ReactNode
 }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-3xl font-medium tracking-[-0.04em] text-balance sm:text-4xl">
+        <h1 className="text-2xl font-medium tracking-tight text-balance">
           {title}
         </h1>
         {description && (
-          <p className="text-muted-foreground mt-3 max-w-lg text-sm leading-6">
+          <p className="text-muted-foreground mt-1.5 max-w-lg text-sm leading-5">
             {description}
           </p>
         )}

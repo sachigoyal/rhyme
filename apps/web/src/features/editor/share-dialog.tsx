@@ -45,7 +45,7 @@ function RoleSelect({
       disabled={disabled}
       onValueChange={(role) => onChange(role as Role)}
     >
-      <SelectTrigger aria-label={label} size="sm" className="w-24">
+      <SelectTrigger aria-label={label} className="h-8 w-24">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
@@ -98,18 +98,21 @@ export function ShareDialog({
           Share
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="gap-3 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Share “{fileName}”</DialogTitle>
+          <DialogTitle className="pr-6">Share “{fileName}”</DialogTitle>
           <DialogDescription>
             Enter the email address of an existing Rhyme account.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={invite} className="flex flex-wrap gap-2">
+        <form
+          onSubmit={invite}
+          className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+        >
           <Input
             aria-label="Invite by email"
-            className="min-w-40 flex-1"
+            className="col-span-2 h-8 sm:col-span-1"
             disabled={upsert.isPending}
             type="email"
             required
@@ -134,7 +137,7 @@ export function ShareDialog({
           </p>
           {isPending && <Skeleton className="h-10 w-full" />}
           {isError && (
-            <div role="alert" className="space-y-2 py-3 text-sm">
+            <div role="alert" className="space-y-2 py-2 text-sm">
               <p>Couldn’t load people with access.</p>
               <Button
                 variant="outline"
@@ -146,7 +149,7 @@ export function ShareDialog({
             </div>
           )}
           {collaborators?.length === 0 && (
-            <p className="text-muted-foreground py-3 text-sm">
+            <p className="text-muted-foreground py-2 text-sm">
               Only you have access to this canvas.
             </p>
           )}

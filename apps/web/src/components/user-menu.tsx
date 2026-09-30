@@ -67,7 +67,7 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" collisionPadding={8} className="w-56">
         <DropdownMenuLabel className="font-normal">
           <p className="truncate font-medium">{displayName(user)}</p>
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
@@ -80,7 +80,10 @@ export function UserMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            <Monitor />
+            Theme
+          </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup
               value={theme}

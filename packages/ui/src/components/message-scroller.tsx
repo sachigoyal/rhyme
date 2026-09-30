@@ -10,10 +10,13 @@ import { cn } from 'cn'
 import { Button } from '@rhyme/ui/components/button'
 import { ArrowDownIcon } from 'lucide-react'
 
-function MessageScrollerProvider(
-  props: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>,
-) {
-  return <MessageScrollerPrimitive.Provider {...props} />
+function MessageScrollerProvider({
+  autoScroll = true,
+  ...props
+}: React.ComponentProps<typeof MessageScrollerPrimitive.Provider>) {
+  return (
+    <MessageScrollerPrimitive.Provider autoScroll={autoScroll} {...props} />
+  )
 }
 
 function MessageScroller({

@@ -90,9 +90,8 @@ export function GuestCanvas() {
 
   return (
     <main className="bg-background flex h-svh flex-col">
-      <header className="bg-card flex h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+      <header className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <Logo compactOnMobile />
-        <span className="mx-2 hidden h-5 border-l sm:block" />
         <Button
           variant="ghost"
           size="icon-sm"
@@ -143,14 +142,14 @@ export function GuestCanvas() {
           </Button>
         </div>
       </header>
-      <div className="relative min-h-0 flex-1">
+      <div className="relative isolate min-h-0 flex-1">
         <Tldraw
           licenseKey={env.tldrawLicenseKey}
           snapshot={initialDraft as TLStoreSnapshot | undefined}
           onMount={setEditor}
         />
         {editor && (
-          <div className="absolute bottom-20 right-4 z-350 sm:right-5">
+          <div className="absolute right-4 bottom-4 z-350 flex">
             <AgentLauncher open={false} onClick={() => void signUp()} />
           </div>
         )}
@@ -164,7 +163,7 @@ export function GuestCanvas() {
           </p>
         )}
         {showHint && !storageError && (
-          <div className="bg-background pointer-events-none absolute top-4 left-1/2 z-300 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-lg border px-4 py-3">
+          <div className="bg-background pointer-events-none absolute top-4 left-1/2 z-300 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-lg border px-3 py-2">
             <GuestIntroduction />
             <Button
               className="pointer-events-auto shrink-0"

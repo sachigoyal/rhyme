@@ -79,7 +79,7 @@ export function ChatTranscript({
 }) {
   if (!scrollable)
     return (
-      <div className={compact ? 'space-y-5' : 'space-y-7'}>
+      <div className={compact ? 'space-y-4' : 'space-y-5'}>
         {messages.length ? (
           messages.map((message) => (
             <AgentMessage key={message.id} message={message} />
@@ -101,17 +101,13 @@ export function ChatTranscript({
           <MessageScrollerContent
             className={
               compact
-                ? 'gap-5 p-4'
-                : 'mx-auto max-w-3xl gap-7 px-5 py-8 sm:px-8'
+                ? 'gap-4 p-3'
+                : 'mx-auto w-full max-w-3xl gap-5 px-3 py-4 sm:px-5'
             }
           >
             {messages.length ? (
               messages.map((message) => (
-                <MessageScrollerItem
-                  key={message.id}
-                  messageId={message.id}
-                  scrollAnchor={message.role === 'user'}
-                >
+                <MessageScrollerItem key={message.id} messageId={message.id}>
                   <AgentMessage message={message} />
                 </MessageScrollerItem>
               ))

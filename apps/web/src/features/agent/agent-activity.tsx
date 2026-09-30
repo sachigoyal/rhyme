@@ -5,6 +5,13 @@ import { Brain, ChevronRight, Sparkles } from 'lucide-react'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { Marker, MarkerContent, MarkerIcon } from '@rhyme/ui/components/marker'
 import { cn } from '@rhyme/ui/lib/utils'
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from '@rhyme/ui/components/message-scroller'
 
 export function Shimmer({
   children,
@@ -76,14 +83,23 @@ export function ThinkingBlock({
         )}
       </button>
       {open && body && (
-        <div
-          className={cn(
-            'text-muted-foreground mt-1.5 ml-1.5 border-l pl-3 leading-relaxed whitespace-pre-wrap',
-            'max-h-48 overflow-y-auto',
-          )}
-        >
-          <p>{body}</p>
-        </div>
+        <MessageScrollerProvider autoScroll={streaming}>
+          <MessageScroller className="mt-1.5 ml-1.5 h-auto max-h-48 border-l pl-3">
+            <MessageScrollerViewport
+              aria-label="Reasoning"
+              className="h-auto max-h-48"
+            >
+              <MessageScrollerContent className="min-h-0 gap-0 text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                <p>{body}</p>
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton
+              aria-label="Scroll to latest reasoning"
+              size="icon-xs"
+              className="bottom-1"
+            />
+          </MessageScroller>
+        </MessageScrollerProvider>
       )}
     </div>
   )

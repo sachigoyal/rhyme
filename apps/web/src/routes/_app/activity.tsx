@@ -64,7 +64,7 @@ function ActivityPage() {
           </div>
         ) : (
           <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Metric
                 icon={Activity}
                 label="Agent runs"
@@ -102,7 +102,7 @@ function ActivityPage() {
                 caption="Time per agent run"
               />
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border px-5 py-4">
+            <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-3">
               <span className="grid size-8 place-items-center rounded-md bg-muted">
                 <RefreshCw className="size-4" />
               </span>
@@ -144,7 +144,7 @@ function ActivityPage() {
                   key={chat.id}
                   to="/chats"
                   search={{ chat: chat.id }}
-                  className="hover:bg-muted/40 flex items-center gap-4 border-b px-5 py-4 transition-colors last:border-0"
+                  className="hover:bg-muted/40 flex items-center gap-3 border-b px-3 py-3 transition-colors last:border-0"
                 >
                   <MessageSquare className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0 flex-1">
@@ -198,7 +198,7 @@ function Metric({
   caption: string
 }) {
   return (
-    <div className="bg-card rounded-lg border p-5">
+    <div className="bg-card rounded-lg border p-3">
       <div className="text-muted-foreground flex items-center gap-2 text-xs">
         <Icon className="size-3.5" />
         {label}

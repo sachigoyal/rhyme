@@ -91,7 +91,7 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarHeader className="gap-6 px-4 pb-3 pt-6">
+      <SidebarHeader className="gap-3 px-3 py-3">
         <Link to="/" aria-label="Home">
           <Logo />
         </Link>
@@ -106,7 +106,7 @@ export function AppSidebar({
         </Button>
       </SidebarHeader>
 
-      <SidebarContent className="gap-4 px-2">
+      <SidebarContent className="gap-2 px-1">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -220,12 +220,12 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-3">
+      <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             <UserMenu user={user}>
-              <SidebarMenuButton size="lg">
-                <UserAvatar user={user} className="size-8" />
+              <SidebarMenuButton className="h-11 px-2">
+                <UserAvatar user={user} className="size-7" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
                     {displayName(user)}

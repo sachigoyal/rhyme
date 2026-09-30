@@ -152,7 +152,7 @@ function FilesPage() {
                 : undefined
             }
           />
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-4 flex items-center gap-2">
             <SearchInput
               label="Search canvases"
               value={search}

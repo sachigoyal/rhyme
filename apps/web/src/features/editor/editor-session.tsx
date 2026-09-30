@@ -26,7 +26,6 @@ import { UserAvatar, UserMenu } from '@/components/user-menu'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
 import type { AgentStatus } from '@/features/agent/agent-status'
 import { Logo } from '@/components/logo'
-import { Separator } from '@rhyme/ui/components/separator'
 import { AssistantSkeleton } from '@/components/loading-states'
 import type { SessionUser } from '@/lib/auth'
 import { Canvas } from './canvas'
@@ -85,7 +84,7 @@ export function EditorSession({
 
   return (
     <div className="flex h-svh flex-col">
-      <header className="bg-card flex h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+      <header className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <Link
           to="/files"
           className="mr-1 hidden shrink-0 sm:block"
@@ -93,10 +92,6 @@ export function EditorSession({
         >
           <Logo />
         </Link>
-        <Separator
-          orientation="vertical"
-          className="mx-1 hidden data-[orientation=vertical]:h-5 sm:block"
-        />
         <Button
           asChild
           variant="ghost"
@@ -131,7 +126,7 @@ export function EditorSession({
         </div>
       </header>
 
-      <main className="relative min-h-0 flex-1">
+      <main className="relative isolate min-h-0 flex-1">
         <ResizablePanelGroup orientation="horizontal">
           <ResizablePanel id="canvas" minSize={0}>
             <div className="relative h-full">
@@ -177,7 +172,7 @@ export function EditorSession({
           )}
         </ResizablePanelGroup>
         {canEdit && editor && !agentOpen && (
-          <div className="absolute bottom-20 right-4 z-350 sm:right-5">
+          <div className="absolute right-4 bottom-4 z-350 flex">
             <AgentLauncher
               status={agentStatus}
               open={agentOpen}

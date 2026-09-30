@@ -181,7 +181,7 @@ export function AgentChat({
             <MessageScrollerContent
               className={
                 chat.messages.length
-                  ? `gap-5 px-4 py-5 ${layout === 'workspace' ? 'mx-auto w-full max-w-3xl sm:px-8 sm:py-8' : ''}`
+                  ? `gap-4 px-3 py-4 ${layout === 'workspace' ? 'mx-auto w-full max-w-3xl sm:px-5 sm:py-5' : ''}`
                   : 'gap-0'
               }
             >
@@ -195,11 +195,7 @@ export function AgentChat({
                 </MessageScrollerItem>
               ) : (
                 chat.messages.map((message) => (
-                  <MessageScrollerItem
-                    key={message.id}
-                    messageId={message.id}
-                    scrollAnchor={message.role === 'user'}
-                  >
+                  <MessageScrollerItem key={message.id} messageId={message.id}>
                     <AgentMessage
                       message={message}
                       editor={editor}
@@ -270,7 +266,7 @@ export function AgentChat({
       <div
         className={
           layout === 'workspace'
-            ? 'mx-auto w-full max-w-3xl shrink-0 px-1 pb-3 sm:px-5 sm:pb-5'
+            ? 'mx-auto w-full max-w-3xl shrink-0 px-1 pb-3 sm:px-3 sm:pb-3'
             : 'shrink-0'
         }
       >

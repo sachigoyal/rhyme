@@ -63,10 +63,10 @@ export function FileCard({ file, folders }: FileCardProps) {
           <span className="absolute inset-0" aria-hidden />
         </Link>
       )}
-      <div className="flex items-center gap-2 border-t px-4 py-3.5">
+      <div className="flex items-center gap-2 border-t px-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
-          <p className="text-muted-foreground mt-1 truncate text-xs">
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">
             {pending
               ? 'Creating canvas…'
               : file.role === 'owner'
@@ -90,7 +90,7 @@ export function FileCard({ file, folders }: FileCardProps) {
 function FilePreview({ file }: { file: FileSummary }) {
   const [failed, setFailed] = useState(false)
   return (
-    <div className="bg-background relative aspect-[16/10] overflow-hidden">
+    <div className="bg-background relative aspect-video overflow-hidden">
       {file.hasThumbnail && !failed ? (
         <img
           src={thumbnailUrl(file.id, file.version)}

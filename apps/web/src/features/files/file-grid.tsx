@@ -19,7 +19,7 @@ interface FileGridProps {
 }
 
 const GRID =
-  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-5'
+  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-3'
 
 export function FileGrid({
   view,

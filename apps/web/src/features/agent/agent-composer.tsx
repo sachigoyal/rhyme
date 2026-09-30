@@ -51,7 +51,7 @@ export function AgentEmptyState({
   status?: AgentStatus
 }) {
   return (
-    <div className="flex min-h-full flex-col justify-center px-5 py-8">
+    <div className="flex min-h-full flex-col justify-center px-3 py-5">
       <AgentFace status={status} className="mb-5 size-12" />
       <h3 className="text-lg font-medium tracking-tight">Canvas assistant</h3>
       <p className="text-muted-foreground mt-2 text-sm leading-6">

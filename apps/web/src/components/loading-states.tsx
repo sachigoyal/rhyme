@@ -6,7 +6,7 @@ export function GuestCanvasSkeleton() {
   return (
     <div className="relative">
       <CanvasSkeleton />
-      <div className="bg-background absolute top-20 left-1/2 z-300 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg border px-4 py-3">
+      <div className="bg-background absolute top-16 left-1/2 z-300 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-lg border px-3 py-2">
         <GuestIntroduction />
       </div>
     </div>
@@ -21,23 +21,23 @@ export function AppSkeleton() {
       aria-label="Loading workspace"
     >
       <aside
-        className="hidden w-64 shrink-0 space-y-7 border-r p-5 md:block"
+        className="hidden w-64 shrink-0 space-y-4 border-r p-3 md:block"
         aria-hidden
       >
         <Logo />
-        <Skeleton className="h-9" />
+        <Skeleton className="h-8" />
         {Array.from({ length: 5 }, (_, i) => (
           <Skeleton key={i} className="h-5 w-3/4" />
         ))}
       </aside>
       <div className="min-w-0 flex-1" aria-hidden>
-        <div className="flex h-16 items-center border-b px-6">
+        <div className="flex h-12 items-center border-b px-3">
           <Skeleton className="h-4 w-36" />
         </div>
-        <div className="space-y-6 p-6 lg:p-10">
+        <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
           <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-9 max-w-sm" />
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-8 max-w-sm" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }, (_, i) => (
               <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
             ))}
@@ -56,7 +56,7 @@ export function CanvasSkeleton({ title }: { title?: string }) {
       aria-label="Loading canvas"
     >
       <div
-        className="flex h-16 shrink-0 items-center gap-5 border-b px-4"
+        className="flex h-12 shrink-0 items-center gap-2 border-b px-3"
         aria-hidden
       >
         <Logo />
@@ -83,7 +83,7 @@ export function CanvasSkeleton({ title }: { title?: string }) {
 export function AssistantSkeleton() {
   return (
     <div
-      className="flex h-full flex-col gap-6 p-5"
+      className="flex h-full flex-col gap-4 p-3"
       role="status"
       aria-label="Loading assistant"
     >

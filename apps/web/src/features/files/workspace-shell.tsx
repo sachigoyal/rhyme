@@ -1,4 +1,3 @@
-import { Separator } from '@rhyme/ui/components/separator'
 import {
   SidebarInset,
   SidebarProvider,
@@ -44,12 +43,8 @@ export function WorkspaceShell({
       />
       <SidebarInset className="h-svh min-w-0 overflow-hidden">
         {!hideHeader && (
-          <header className="bg-card flex h-16 shrink-0 items-center gap-3 border-b px-4 sm:px-6">
+          <header className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger className="-ml-1" />
-            <Separator
-              orientation="vertical"
-              className="mr-1 data-[orientation=vertical]:h-4"
-            />
             <WorkspaceBreadcrumbs items={breadcrumbs ?? [{ label: title }]} />
             {actions}
           </header>

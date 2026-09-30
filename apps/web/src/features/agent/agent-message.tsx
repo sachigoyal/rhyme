@@ -279,7 +279,9 @@ export function AgentMessage({
   if (message.role === 'user') {
     return (
       <Message align="end">
-        <MessageContent className="max-w-[90%] gap-1">
+        <MessageContent
+          className={cn('max-w-[90%] gap-1', editing ? 'w-full' : 'w-fit')}
+        >
           {editing ? (
             <form
               className="w-full rounded-xl border p-2"
@@ -313,7 +315,7 @@ export function AgentMessage({
               </div>
             </form>
           ) : (
-            <div className="bg-muted w-fit rounded-2xl rounded-br-md px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+            <div className="bg-muted w-fit max-w-full rounded-xl rounded-br-md px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">
               {text}
             </div>
           )}

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { ArrowUpRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { ChatSummary } from '@rhyme/trpc-client'
 import { useDeleteChat, useRenameChat } from '@rhyme/hooks/mutations'
 import { Button } from '@rhyme/ui/components/button'
@@ -8,7 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@rhyme/ui/components/dropdown-menu'
 import { SidebarMenuAction } from '@rhyme/ui/components/sidebar'
@@ -58,25 +56,14 @@ export function ConversationActions({
         <DropdownMenuContent
           align="start"
           side={variant === 'sidebar' ? 'right' : 'bottom'}
-          className="w-40 border shadow-none ring-0"
+          className="w-auto min-w-28 border shadow-none ring-0"
         >
-          <DropdownMenuItem asChild>
-            <Link
-              to="/files/$fileId"
-              params={{ fileId: chat.fileId }}
-              search={{ chat: chat.id }}
-            >
-              <ArrowUpRight className="size-3.5" />
-              Open canvas
-            </Link>
-          </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => setDialog('rename')}
             disabled={locked}
           >
             <Pencil className="size-3.5" /> Rename
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onSelect={() => setDialog('delete')}

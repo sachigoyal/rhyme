@@ -133,7 +133,7 @@ export function AgentPanel({
       className="bg-background flex h-full min-h-0 flex-col"
       aria-label="Canvas assistant"
     >
-      <div className="bg-card flex h-16 shrink-0 items-center gap-2.5 border-b px-4">
+      <div className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
         <AgentFace status={status} className="size-8" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-medium">Rhyme assistant</h2>
@@ -143,36 +143,38 @@ export function AgentPanel({
               : agentStatusLabels[status]}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Conversation history"
-          aria-pressed={history}
-          onClick={() => setHistory(!history)}
-        >
-          <History className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="New conversation"
-          disabled={busy || createChat.isPending}
-          onClick={() => void start()}
-        >
-          {createChat.isPending ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <Plus className="size-3.5" />
-          )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Close assistant"
-          onClick={onClose}
-        >
-          <X className="size-3.5" />
-        </Button>
+        <div className="flex items-center gap-0">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Conversation history"
+            aria-pressed={history}
+            onClick={() => setHistory(!history)}
+          >
+            <History className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="New conversation"
+            disabled={busy || createChat.isPending}
+            onClick={() => void start()}
+          >
+            {createChat.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Close assistant"
+            onClick={onClose}
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
       </div>
 
       {history && (
@@ -314,7 +316,7 @@ export function AgentPanel({
                       <MoreHorizontal className="size-3.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-auto min-w-28">
                     <DropdownMenuItem
                       disabled={busy}
                       onSelect={() => {
@@ -323,14 +325,15 @@ export function AgentPanel({
                       }}
                     >
                       <Pencil />
-                      Rename conversation
+                      Rename
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      variant="destructive"
                       disabled={busy}
                       onSelect={() => setDeletingId(activeId)}
                     >
                       <Trash2 />
-                      Delete conversation
+                      Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

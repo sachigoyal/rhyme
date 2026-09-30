@@ -59,19 +59,20 @@ export function SettingsPage({ user }: { user: SessionUser }) {
         <div className="max-w-3xl">
           <PageHeading
             title="Settings"
-            description="Manage your account and workspace preferences."
-          />
-          <div
-            role="status"
-            aria-live="polite"
-            className="text-muted-foreground mb-6 min-h-5 text-xs"
+            description="Account and workspace preferences."
           >
-            {update.isPending || complete.isPending
-              ? 'Saving…'
-              : 'Preferences are saved to your account automatically.'}
-          </div>
+            <span
+              role="status"
+              aria-live="polite"
+              className="text-muted-foreground text-xs"
+            >
+              {update.isPending || complete.isPending
+                ? 'Saving…'
+                : 'Changes are saved automatically.'}
+            </span>
+          </PageHeading>
           {settings.isError ? (
-            <div className="rounded-lg border p-5">
+            <div className="rounded-lg border p-3">
               <p className="text-sm">Unable to load preferences.</p>
               <Button
                 variant="outline"
@@ -89,11 +90,11 @@ export function SettingsPage({ user }: { user: SessionUser }) {
             </div>
           ) : (
             preferences && (
-              <div className="space-y-8">
+              <div className="space-y-5">
                 <SettingsSection title="Workspace">
                   <SettingRow
                     title="Home page"
-                    description="Choose what opens when you visit Rhyme. After sign-up, the dashboard always opens."
+                    description="Open the dashboard or your last edited canvas. If the canvas is unavailable, the dashboard opens."
                   >
                     <Select
                       value={preferences.homeDestination}
@@ -107,7 +108,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     >
                       <SelectTrigger
                         aria-label="Home page"
-                        className="w-full sm:w-52"
+                        className="w-full sm:w-44"
                       >
                         <SelectValue />
                       </SelectTrigger>
@@ -119,15 +120,11 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                       </SelectContent>
                     </Select>
                   </SettingRow>
-                  <p className="text-muted-foreground px-5 pb-4 text-xs">
-                    If your last edited canvas is unavailable, the dashboard
-                    opens.
-                  </p>
                 </SettingsSection>
                 <SettingsSection title="Appearance">
                   <SettingRow
                     title="Theme"
-                    description="Use light mode, dark mode, or follow your system appearance."
+                    description="Light, dark, or system appearance."
                   >
                     <Select
                       value={preferences.theme}
@@ -138,7 +135,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     >
                       <SelectTrigger
                         aria-label="Theme"
-                        className="w-full sm:w-52"
+                        className="w-full sm:w-44"
                       >
                         <SelectValue />
                       </SelectTrigger>
@@ -152,7 +149,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                 </SettingsSection>
                 <SettingsSection
                   title="Canvas defaults"
-                  description="Applied when you open a canvas. You can change them temporarily from the canvas menu."
+                  description="Applied when you open a canvas."
                 >
                   <ToggleRow
                     title="Show grid"
@@ -230,7 +227,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                   {profile.isError && (
                     <p
                       role="alert"
-                      className="text-destructive px-5 pb-4 text-sm"
+                      className="text-destructive px-3 pb-3 text-sm"
                     >
                       Unable to load account preferences.{' '}
                       <button
@@ -242,7 +239,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     </p>
                   )}
                 </SettingsSection>
-                <div className="flex items-center justify-between gap-4 border-t pt-5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                   <p className="text-muted-foreground text-xs">
                     Reset appearance, home page, and canvas defaults.
                   </p>
@@ -280,13 +277,13 @@ function SettingsSection({
 }) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-3 text-sm font-medium">{title}</h2>
+      <h2 className="mb-2 text-sm font-medium">{title}</h2>
       {description && (
-        <p className="text-muted-foreground mb-4 text-xs leading-5">
+        <p className="text-muted-foreground mb-2 text-xs leading-4">
           {description}
         </p>
       )}
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="divide-y overflow-hidden rounded-lg border bg-card">
         {children}
       </div>
     </section>
@@ -303,10 +300,10 @@ function SettingRow({
   children: ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b px-5 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+    <div className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{title}</p>
-        <p className="text-muted-foreground mt-1 text-xs leading-5">
+        <p className="text-muted-foreground mt-0.5 text-xs leading-4">
           {description}
         </p>
       </div>
@@ -330,14 +327,14 @@ function ToggleRow({
 }) {
   const id = useId()
   return (
-    <div className="flex items-center justify-between gap-6 border-b px-5 py-4 last:border-b-0">
+    <div className="flex items-center justify-between gap-4 px-3 py-3">
       <div className="min-w-0">
         <Label htmlFor={id} className="text-sm font-medium">
           {title}
         </Label>
         <p
           id={`${id}-description`}
-          className="text-muted-foreground mt-1 text-xs leading-5"
+          className="text-muted-foreground mt-0.5 text-xs leading-4"
         >
           {description}
         </p>
