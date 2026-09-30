@@ -20,6 +20,7 @@ import { profileSchema } from 'api/profile-schema'
 import type { z } from 'zod'
 import type { ReactNode } from 'react'
 import { PageHeading } from '@/components/page-heading'
+import { WorkspacePage } from '@/components/workspace-page'
 import { WorkspaceShell } from '@/features/files/workspace-shell'
 import type { SessionUser } from '@/lib/auth'
 
@@ -55,7 +56,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
   const pending = settings.isPending || update.isPending
   return (
     <WorkspaceShell user={user} section="settings" title="Settings">
-      <main className="workspace-page">
+      <WorkspacePage aria-label="Settings">
         <div className="max-w-3xl">
           <PageHeading
             title="Settings"
@@ -261,7 +262,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
             </p>
           )}
         </div>
-      </main>
+      </WorkspacePage>
     </WorkspaceShell>
   )
 }

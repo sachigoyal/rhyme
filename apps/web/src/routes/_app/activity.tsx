@@ -13,6 +13,7 @@ import { Button } from '@rhyme/ui/components/button'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { WorkspaceShell } from '@/features/files/workspace-shell'
 import { PageHeading } from '@/components/page-heading'
+import { WorkspacePage } from '@/components/workspace-page'
 import { timeAgo } from '@/lib/format'
 
 export const Route = createFileRoute('/_app/activity')({
@@ -32,7 +33,7 @@ function ActivityPage() {
   const data = analytics.data
   return (
     <WorkspaceShell user={user} section="activity" title="Agent activity">
-      <section className="workspace-page" aria-label="Agent activity overview">
+      <WorkspacePage aria-label="Agent activity overview">
         <PageHeading
           title="Agent activity"
           description="Usage and performance across your canvases."
@@ -181,7 +182,7 @@ function ActivityPage() {
           Usage includes model responses and tool calls for canvases you can
           access.
         </p>
-      </section>
+      </WorkspacePage>
     </WorkspaceShell>
   )
 }

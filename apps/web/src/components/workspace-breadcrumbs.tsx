@@ -18,7 +18,7 @@ export interface WorkspaceCrumb {
 export function WorkspaceBreadcrumbs({ items }: { items: WorkspaceCrumb[] }) {
   return (
     <Breadcrumb className="min-w-0 flex-1">
-      <BreadcrumbList className="flex-nowrap gap-2 overflow-x-auto whitespace-nowrap py-1">
+      <BreadcrumbList className="native-scrollbar flex-nowrap gap-2 overflow-x-auto whitespace-nowrap py-1">
         <BreadcrumbItem
           className={
             items.length > 1 ? 'hidden shrink-0 sm:inline-flex' : 'shrink-0'

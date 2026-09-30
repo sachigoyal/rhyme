@@ -163,7 +163,7 @@ export function AgentComposer({
               onSubmit()
             }
           }}
-          className="max-h-48 min-h-14 overflow-y-auto px-1 py-2 text-base leading-6 md:text-sm"
+          className="native-scrollbar max-h-48 min-h-14 overflow-y-auto px-1 py-2 text-base leading-6 md:text-sm"
         />
         <InputGroupAddon
           align="block-end"

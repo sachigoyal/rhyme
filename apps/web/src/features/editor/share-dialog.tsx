@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@rhyme/ui/components/select'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 
 type Role = Collaborator['role']
 
@@ -135,65 +136,79 @@ export function ShareDialog({
           <p className="text-muted-foreground text-xs font-medium">
             People with access
           </p>
-          {isPending && <Skeleton className="h-10 w-full" />}
-          {isError && (
-            <div role="alert" className="space-y-2 py-2 text-sm">
-              <p>Couldn’t load people with access.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void refetch()}
-              >
-                Try again
-              </Button>
-            </div>
-          )}
-          {collaborators?.length === 0 && (
-            <p className="text-muted-foreground py-2 text-sm">
-              Only you have access to this canvas.
-            </p>
-          )}
-          {collaborators?.map((person) => (
-            <div key={person.userId} className="flex items-center gap-2 py-1.5">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">
-                  {person.name || person.email}
+          <ScrollArea
+            viewportClassName="h-auto max-h-[min(20rem,50svh)] [&>div]:block!"
+            viewportProps={{ 'aria-label': 'People with access' }}
+          >
+            <div className="pr-2">
+              {isPending && <Skeleton className="h-10 w-full" />}
+              {isError && (
+                <div role="alert" className="space-y-2 py-2 text-sm">
+                  <p>Couldn’t load people with access.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refetch()}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              )}
+              {collaborators?.length === 0 && (
+                <p className="text-muted-foreground py-2 text-sm">
+                  Only you have access to this canvas.
                 </p>
-                {person.name && (
-                  <p className="text-muted-foreground truncate text-xs">
-                    {person.email}
-                  </p>
-                )}
-              </div>
-              <RoleSelect
-                label={`Access for ${person.email}`}
-                disabled={
-                  person.userId.startsWith('pending:') ||
-                  upsert.isPending ||
-                  remove.isPending
-                }
-                value={person.role}
-                onChange={(next) =>
-                  upsert.mutate({ id: fileId, email: person.email, role: next })
-                }
-              />
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                aria-label={`Remove ${person.email}`}
-                disabled={
-                  person.userId.startsWith('pending:') ||
-                  upsert.isPending ||
-                  remove.isPending
-                }
-                onClick={() =>
-                  remove.mutate({ id: fileId, userId: person.userId })
-                }
-              >
-                <X />
-              </Button>
+              )}
+              {collaborators?.map((person) => (
+                <div
+                  key={person.userId}
+                  className="flex items-center gap-2 py-1.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
+                      {person.name || person.email}
+                    </p>
+                    {person.name && (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {person.email}
+                      </p>
+                    )}
+                  </div>
+                  <RoleSelect
+                    label={`Access for ${person.email}`}
+                    disabled={
+                      person.userId.startsWith('pending:') ||
+                      upsert.isPending ||
+                      remove.isPending
+                    }
+                    value={person.role}
+                    onChange={(next) =>
+                      upsert.mutate({
+                        id: fileId,
+                        email: person.email,
+                        role: next,
+                      })
+                    }
+                  />
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Remove ${person.email}`}
+                    disabled={
+                      person.userId.startsWith('pending:') ||
+                      upsert.isPending ||
+                      remove.isPending
+                    }
+                    onClick={() =>
+                      remove.mutate({ id: fileId, userId: person.userId })
+                    }
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>

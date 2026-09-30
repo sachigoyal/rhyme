@@ -1,6 +1,6 @@
 import { Component, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AlertTriangle, Download, Loader2, RotateCcw } from 'lucide-react'
+import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react'
 import type { Editor } from 'tldraw'
 import type { AgentConfig } from 'api/agent-config'
 import { Button } from '@rhyme/ui/components/button'
@@ -147,24 +147,6 @@ export function AgentChat({
     if (chat.send(text.trim())) setDraft('')
   }
 
-  const exportTranscript = () => {
-    const text = chat.messages
-      .map(
-        (message) =>
-          `## ${message.role === 'user' ? 'You' : 'Rhyme'}\n\n${message.parts
-            .filter((part) => part.type === 'text')
-            .map((part) => part.text)
-            .join('\n')}`,
-      )
-      .join('\n\n')
-    const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'rhyme-conversation.md'
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <>
       {chat.connectionError && (
@@ -247,21 +229,6 @@ export function AgentChat({
           <MessageScrollerButton />
         </MessageScroller>
       </MessageScrollerProvider>
-      {layout === 'panel' && chat.messages.length > 0 && !busy && (
-        <div className="flex shrink-0 items-center justify-between px-4 pb-2">
-          <span className="text-muted-foreground text-[10px]">
-            {chat.messages.length} messages
-          </span>
-          <Button
-            size="icon-xs"
-            variant="ghost"
-            aria-label="Export conversation"
-            onClick={exportTranscript}
-          >
-            <Download className="size-3" />
-          </Button>
-        </div>
-      )}
       <div className={chatComposerLayouts[layout]}>
         <AgentComposer
           draft={draft}

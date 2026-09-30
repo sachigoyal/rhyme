@@ -15,6 +15,7 @@ import { WorkspaceShell } from '@/features/files/workspace-shell'
 import { RecoveryState } from '@/components/recovery-state'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { PageHeading } from '@/components/page-heading'
+import { WorkspacePage } from '@/components/workspace-page'
 import { SearchInput } from '@/components/search-input'
 import { FileGrid } from '@/features/files/file-grid'
 import {
@@ -128,7 +129,7 @@ function FilesPage() {
           </Button>
         </RecoveryState>
       ) : waitingFolder ? (
-        <section className="workspace-page" aria-label="Loading folder">
+        <WorkspacePage aria-label="Loading folder">
           {folderQuery.isError ? (
             <RecoveryState
               title="Unable to load folders"
@@ -141,9 +142,9 @@ function FilesPage() {
           ) : (
             <Skeleton className="h-64" />
           )}
-        </section>
+        </WorkspacePage>
       ) : (
-        <section className="workspace-page" aria-label={title}>
+        <WorkspacePage aria-label={title}>
           <PageHeading
             title={title}
             description={
@@ -188,7 +189,7 @@ function FilesPage() {
             search={search}
             sort={sort}
           />
-        </section>
+        </WorkspacePage>
       )}
     </WorkspaceShell>
   )

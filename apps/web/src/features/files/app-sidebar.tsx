@@ -106,7 +106,7 @@ export function AppSidebar({
         </Button>
       </SidebarHeader>
 
-      <SidebarContent className="gap-2 px-1">
+      <SidebarContent className="px-1">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>

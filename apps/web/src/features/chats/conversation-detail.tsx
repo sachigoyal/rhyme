@@ -7,6 +7,7 @@ import { RefreshNotice } from '@/components/refresh-notice'
 import { RecoveryState } from '@/components/recovery-state'
 import { useChat } from '@rhyme/hooks/queries'
 import { Button } from '@rhyme/ui/components/button'
+import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 import {
   Popover,
   PopoverContent,
@@ -88,37 +89,44 @@ export default function ConversationDetail({
           </PopoverTrigger>
           <PopoverContent
             align="end"
-            className="max-h-[80svh] w-80 max-w-[calc(100vw-2rem)] gap-3 overflow-y-auto border p-3 shadow-none ring-0"
+            className="w-80 max-w-[calc(100vw-2rem)] border p-0 shadow-none ring-0"
           >
-            <div className="space-y-1">
-              <p className="text-sm font-medium">{chat.fileName}</p>
-              <p className="text-muted-foreground text-xs">
-                Updated {timeAgo(chat.updatedAt)}
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm" className="w-full">
-              <Link
-                to="/files/$fileId"
-                params={{ fileId: chat.fileId }}
-                search={{ chat: chat.id }}
-              >
-                Open canvas <ArrowUpRight className="size-3.5" />
-              </Link>
-            </Button>
-            <dl className="space-y-1.5 text-xs">
-              <Stat label="Messages" value={chat.messageCount} />
-              <Stat label="Agent runs" value={chat.runCount ?? 0} />
-              <Stat label="Canvas actions" value={chat.toolCallCount} />
-              <Stat
-                label="Tokens used"
-                value={(chat.totalTokens ?? 0).toLocaleString()}
-              />
-              <Stat
-                label="Total run time"
-                value={`${((chat.durationMs ?? 0) / 1000).toFixed(1)}s`}
-              />
-            </dl>
-            {changes.length > 0 && <ChatChangePreviews changes={changes} />}
+            <ScrollArea
+              viewportClassName="h-auto max-h-[min(80svh,var(--radix-popover-content-available-height))] [&>div]:block!"
+              viewportProps={{ 'aria-label': 'Conversation context' }}
+            >
+              <div className="flex flex-col gap-3 p-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{chat.fileName}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Updated {timeAgo(chat.updatedAt)}
+                  </p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link
+                    to="/files/$fileId"
+                    params={{ fileId: chat.fileId }}
+                    search={{ chat: chat.id }}
+                  >
+                    Open canvas <ArrowUpRight className="size-3.5" />
+                  </Link>
+                </Button>
+                <dl className="space-y-1.5 text-xs">
+                  <Stat label="Messages" value={chat.messageCount} />
+                  <Stat label="Agent runs" value={chat.runCount ?? 0} />
+                  <Stat label="Canvas actions" value={chat.toolCallCount} />
+                  <Stat
+                    label="Tokens used"
+                    value={(chat.totalTokens ?? 0).toLocaleString()}
+                  />
+                  <Stat
+                    label="Total run time"
+                    value={`${((chat.durationMs ?? 0) / 1000).toFixed(1)}s`}
+                  />
+                </dl>
+                {changes.length > 0 && <ChatChangePreviews changes={changes} />}
+              </div>
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       </ConversationHeader>

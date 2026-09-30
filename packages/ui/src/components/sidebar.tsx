@@ -9,6 +9,7 @@ import { useIsMobile } from '@rhyme/ui/hooks/use-mobile'
 import { Button } from '@rhyme/ui/components/button'
 import { Input } from '@rhyme/ui/components/input'
 import { Separator } from '@rhyme/ui/components/separator'
+import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 import {
   Sheet,
   SheetContent,
@@ -364,17 +365,22 @@ function SidebarSeparator({
   )
 }
 
-function SidebarContent({ className, ...props }: React.ComponentProps<'div'>) {
+function SidebarContent({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof ScrollArea>) {
   return (
-    <div
+    <ScrollArea
       data-slot="sidebar-content"
       data-sidebar="content"
-      className={cn(
-        'no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
-        className,
-      )}
+      className={cn('min-h-0 flex-1', className)}
+      viewportClassName="[&>div]:block!"
+      viewportProps={{ 'aria-label': 'Workspace navigation' }}
       {...props}
-    />
+    >
+      <div className="flex min-w-0 flex-col gap-2">{children}</div>
+    </ScrollArea>
   )
 }
 

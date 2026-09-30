@@ -22,6 +22,7 @@ import {
 } from '@rhyme/hooks/mutations'
 import { Button } from '@rhyme/ui/components/button'
 import { Input } from '@rhyme/ui/components/input'
+import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -178,83 +179,89 @@ export function AgentPanel({
       </div>
 
       {history && (
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <p className="text-muted-foreground text-xs font-medium">
-              Conversations on this canvas
-            </p>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Back to conversation"
-              onClick={() => setHistory(false)}
-            >
-              <ArrowLeft className="size-3" />
-            </Button>
-          </div>
-          {chats.isPending ? (
-            <MessagesSkeleton />
-          ) : chats.isError ? (
-            <div className="space-y-2 p-3 text-sm">
-              <p className="text-muted-foreground">
-                Couldn’t load conversations.
+        <ScrollArea
+          className="flex-1"
+          viewportClassName="[&>div]:block!"
+          viewportProps={{ 'aria-label': 'Canvas conversations' }}
+        >
+          <div className="p-3">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <p className="text-muted-foreground text-xs font-medium">
+                Conversations on this canvas
               </p>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void chats.refetch()}
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Back to conversation"
+                onClick={() => setHistory(false)}
               >
-                Try again
+                <ArrowLeft className="size-3" />
               </Button>
             </div>
-          ) : !chats.data.length ? (
-            <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-              <MessageSquare className="size-6 text-muted-foreground" />
-              <p className="text-sm">No conversations</p>
-              <p className="text-muted-foreground text-xs leading-5">
-                Start a conversation using the New conversation button.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {chats.data.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`group/conversation flex h-9 items-center rounded-lg ${chat.id === activeId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+            {chats.isPending ? (
+              <MessagesSkeleton />
+            ) : chats.isError ? (
+              <div className="space-y-2 p-3 text-sm">
+                <p className="text-muted-foreground">
+                  Couldn’t load conversations.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void chats.refetch()}
                 >
-                  <ConversationHoverCard chat={chat} side="left">
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left disabled:opacity-50"
-                      disabled={busy && chat.id !== activeId}
-                      onClick={() => {
-                        setStatus('connecting')
-                        setActiveId(chat.id)
+                  Try again
+                </Button>
+              </div>
+            ) : !chats.data.length ? (
+              <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
+                <MessageSquare className="size-6 text-muted-foreground" />
+                <p className="text-sm">No conversations</p>
+                <p className="text-muted-foreground text-xs leading-5">
+                  Start a conversation using the New conversation button.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {chats.data.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className={`group/conversation flex h-9 items-center rounded-lg ${chat.id === activeId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                  >
+                    <ConversationHoverCard chat={chat} side="left">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left disabled:opacity-50"
+                        disabled={busy && chat.id !== activeId}
+                        onClick={() => {
+                          setStatus('connecting')
+                          setActiveId(chat.id)
+                          setInitialPrompt('')
+                          setInitialConfig(undefined)
+                          setHistory(false)
+                        }}
+                      >
+                        <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
+                        <span className="truncate text-sm">{chat.title}</span>
+                      </button>
+                    </ConversationHoverCard>
+                    <ConversationActions
+                      chat={chat}
+                      disabled={busy}
+                      onDeleted={() => {
+                        if (activeId !== chat.id) return
+                        setActiveId(null)
                         setInitialPrompt('')
                         setInitialConfig(undefined)
-                        setHistory(false)
+                        setStatus('idle')
                       }}
-                    >
-                      <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
-                      <span className="truncate text-sm">{chat.title}</span>
-                    </button>
-                  </ConversationHoverCard>
-                  <ConversationActions
-                    chat={chat}
-                    disabled={busy}
-                    onDeleted={() => {
-                      if (activeId !== chat.id) return
-                      setActiveId(null)
-                      setInitialPrompt('')
-                      setInitialConfig(undefined)
-                      setStatus('idle')
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       )}
 
       <div className={history ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}>
@@ -402,13 +409,17 @@ function EmptyChat({
   }
   return (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <ScrollArea
+        className="flex-1"
+        viewportClassName="[&>div]:block!"
+        viewportProps={{ 'aria-label': 'Assistant suggestions' }}
+      >
         <AgentEmptyState
           status={pending ? 'connecting' : 'idle'}
           disabled={pending}
           onSubmit={submit}
         />
-      </div>
+      </ScrollArea>
       <AgentComposer
         draft={draft}
         onDraft={setDraft}

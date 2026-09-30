@@ -6,6 +6,7 @@ import { Button } from '@rhyme/ui/components/button'
 import { RefreshNotice } from '@/components/refresh-notice'
 import { SearchInput } from '@/components/search-input'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 import { cn } from '@rhyme/ui/lib/utils'
 import { ConversationHoverCard } from './conversation-hover-card'
 import { ConversationActions } from './conversation-actions'
@@ -24,7 +25,7 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
       .includes(search.trim().toLowerCase()),
   )
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+    <div className="native-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
       <section
         className={cn(
           'bg-card shrink-0 border-b lg:w-80 lg:border-b-0 lg:border-r xl:w-96',
@@ -44,63 +45,68 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
             onChange={setSearch}
           />
         </div>
-        <div className="max-h-[calc(100svh-15rem)] overflow-y-auto px-2 pb-4">
-          {chats.isPending &&
-            Array.from({ length: 5 }, (_, i) => (
-              <Skeleton key={i} className="m-3 h-9" />
-            ))}
-          {chats.isError && !chats.data && (
-            <div className="p-4 text-sm">
-              <p>Couldn’t load conversations.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => void chats.refetch()}
-              >
-                Try again
-              </Button>
-            </div>
-          )}
-          {chats.isError && chats.data && (
-            <RefreshNotice onRetry={chats.refetch} />
-          )}
-          {visible?.map((chat) => (
-            <div
-              key={chat.id}
-              className={cn(
-                'group/conversation hover:bg-muted/60 mb-0.5 flex h-11 items-center rounded-md transition-colors',
-                chatId === chat.id && 'bg-muted',
-              )}
-            >
-              <ConversationHoverCard chat={chat}>
-                <button
-                  type="button"
-                  disabled={chat.id.startsWith('pending:')}
-                  onClick={() =>
-                    void navigate({ to: '/chats', search: { chat: chat.id } })
-                  }
-                  className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-3 text-left"
+        <ScrollArea
+          viewportClassName="h-auto max-h-[calc(100svh-15rem)] [&>div]:block!"
+          viewportProps={{ 'aria-label': 'Conversations' }}
+        >
+          <div className="px-2 pb-4">
+            {chats.isPending &&
+              Array.from({ length: 5 }, (_, i) => (
+                <Skeleton key={i} className="m-3 h-9" />
+              ))}
+            {chats.isError && !chats.data && (
+              <div className="p-4 text-sm">
+                <p>Couldn’t load conversations.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => void chats.refetch()}
                 >
-                  <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {chat.title}
-                  </span>
-                </button>
-              </ConversationHoverCard>
-              {!chat.id.startsWith('pending:') && (
-                <ConversationActions chat={chat} />
-              )}
-            </div>
-          ))}
-          {visible?.length === 0 && (
-            <p className="text-muted-foreground px-4 py-10 text-center text-sm">
-              {search
-                ? 'No matching conversations.'
-                : 'Start a conversation with the assistant on any canvas.'}
-            </p>
-          )}
-        </div>
+                  Try again
+                </Button>
+              </div>
+            )}
+            {chats.isError && chats.data && (
+              <RefreshNotice onRetry={chats.refetch} />
+            )}
+            {visible?.map((chat) => (
+              <div
+                key={chat.id}
+                className={cn(
+                  'group/conversation hover:bg-muted/60 mb-0.5 flex h-11 items-center rounded-md transition-colors',
+                  chatId === chat.id && 'bg-muted',
+                )}
+              >
+                <ConversationHoverCard chat={chat}>
+                  <button
+                    type="button"
+                    disabled={chat.id.startsWith('pending:')}
+                    onClick={() =>
+                      void navigate({ to: '/chats', search: { chat: chat.id } })
+                    }
+                    className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-3 text-left"
+                  >
+                    <MessageSquare className="text-muted-foreground size-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {chat.title}
+                    </span>
+                  </button>
+                </ConversationHoverCard>
+                {!chat.id.startsWith('pending:') && (
+                  <ConversationActions chat={chat} />
+                )}
+              </div>
+            ))}
+            {visible?.length === 0 && (
+              <p className="text-muted-foreground px-4 py-10 text-center text-sm">
+                {search
+                  ? 'No matching conversations.'
+                  : 'Start a conversation with the assistant on any canvas.'}
+              </p>
+            )}
+          </div>
+        </ScrollArea>
       </section>
       {chatId ? (
         <Suspense fallback={<ConversationSkeleton />}>
