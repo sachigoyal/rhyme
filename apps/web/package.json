@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite dev",
     "generate-routes": "tsr generate",
-    "build": "vite build",
+    "build": "pnpm generate:og && vite build && pnpm generate:404 && pnpm check:seo",
+    "generate:404": "node scripts/generate-404.mjs",
+    "generate:og": "node --experimental-strip-types scripts/generate-og.mjs",
+    "check:seo": "node --experimental-strip-types scripts/check-seo.mjs",
     "preview": "vite preview",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
@@ -19,6 +22,7 @@
     "@rhyme/hooks": "workspace:*",
     "@rhyme/trpc-client": "workspace:*",
     "@rhyme/ui": "workspace:*",
+    "@shadcn/react": "catalog:",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "latest",
@@ -31,15 +35,15 @@
     "lucide-react": "^1.48.0",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-markdown": "catalog:",
     "sonner": "^2.0.8",
     "tailwindcss": "^4.1.18",
     "tldraw": "^5.4.2",
-    "zod": "catalog:",
-    "@shadcn/react": "catalog:",
-    "react-markdown": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@resvg/resvg-js": "catalog:",
     "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.132.0",
     "@types/node": "^22.10.2",
@@ -47,6 +51,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.20.0",
+    "fontkit": "catalog:",
     "prettier": "^3.8.1",
     "typescript": "catalog:",
     "vite": "^8.0.0"

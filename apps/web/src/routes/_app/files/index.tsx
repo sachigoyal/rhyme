@@ -1,14 +1,9 @@
 import { useMemo, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { ArrowUpDown, Loader2, Plus, Search } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { ArrowUpDown, Loader2, Plus } from 'lucide-react'
 import { z } from 'zod'
 import { useFolders } from '@rhyme/hooks/queries'
 import { Button } from '@rhyme/ui/components/button'
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from '@rhyme/ui/components/input-group'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,18 +11,16 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@rhyme/ui/components/dropdown-menu'
-import { displayName } from '@/lib/auth'
-import { Separator } from '@rhyme/ui/components/separator'
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@rhyme/ui/components/sidebar'
-import { AppSidebar } from '@/features/files/app-sidebar'
+import { WorkspaceShell } from '@/features/files/workspace-shell'
+import { RecoveryState } from '@/components/recovery-state'
+import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { PageHeading } from '@/components/page-heading'
+import { SearchInput } from '@/components/search-input'
 import { FileGrid } from '@/features/files/file-grid'
 import {
   buildFolderTree,
   flattenFolderTree,
+  getFolderPath,
 } from '@/features/files/folder-tree'
 import { useCreateAndOpenFile } from '@/features/files/use-create-file'
 
@@ -37,14 +30,19 @@ const searchSchema = z.object({
 })
 
 const titles = {
-  mine: 'Your canvases',
+  mine: 'Canvases',
   shared: 'Shared with me',
   trash: 'Trash',
 }
 
 export const Route = createFileRoute('/_app/files/')({
   validateSearch: searchSchema,
-  head: () => ({ meta: [{ title: 'Files · Rhyme' }] }),
+  loaderDeps: ({ search }) => ({ view: search.view, folderId: search.folder }),
+  loader: ({ context, deps }) => {
+    void context.queryClient.prefetchQuery(
+      context.trpc.files.list.queryOptions(deps),
+    )
+  },
   component: FilesPage,
 })
 
@@ -53,76 +51,117 @@ function FilesPage() {
   const { user } = Route.useRouteContext()
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'recent' | 'name'>('recent')
-  const { data: folders } = useFolders()
+  const folderQuery = useFolders()
+  const folders = folderQuery.data
   const tree = useMemo(
     () => flattenFolderTree(buildFolderTree(folders ?? [])),
     [folders],
   )
   const { create, isPending } = useCreateAndOpenFile()
-  const title =
-    tree.find((folder) => folder.id === folderId)?.name ?? titles[view]
+  const activeFolder = tree.find((folder) => folder.id === folderId)
+  const missingFolder =
+    view === 'mine' && !!folderId && folderQuery.isSuccess && !activeFolder
+  const waitingFolder =
+    view === 'mine' && !!folderId && !activeFolder && !missingFolder
+  const title = missingFolder
+    ? 'Folder unavailable'
+    : (activeFolder?.name ?? titles[view])
+  const folderPath =
+    folderId && view === 'mine' ? getFolderPath(folders ?? [], folderId) : []
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} view={view} folderId={folderId} />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-1 data-[orientation=vertical]:h-4"
-          />
-          <h1 className="truncate text-sm font-medium">{title}</h1>
-          <span className="text-muted-foreground ml-auto hidden text-xs sm:block">
-            A little space for your next big idea.
-          </span>
-          {view === 'mine' && (
-            <Button
-              size="sm"
-              className="ml-2 shadow-none"
-              onClick={() => create(folderId)}
-              disabled={isPending}
-            >
-              {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-              New canvas
-            </Button>
+    <WorkspaceShell
+      user={user}
+      section="files"
+      view={view}
+      folderId={folderId}
+      title={title}
+      breadcrumbs={
+        folderPath.length
+          ? [
+              {
+                label: 'Canvases',
+                link: (
+                  <Link to="/files" search={{ view: 'mine' }}>
+                    Canvases
+                  </Link>
+                ),
+              },
+              ...folderPath.map((folder, index) => ({
+                label: folder.name,
+                link:
+                  index < folderPath.length - 1 ? (
+                    <Link
+                      to="/files"
+                      search={{ view: 'mine', folder: folder.id }}
+                    >
+                      {folder.name}
+                    </Link>
+                  ) : undefined,
+              })),
+            ]
+          : undefined
+      }
+      actions={
+        view === 'mine' && !missingFolder && !waitingFolder ? (
+          <Button
+            size="sm"
+            onClick={() => create(folderId)}
+            disabled={isPending}
+          >
+            {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+            New canvas
+          </Button>
+        ) : undefined
+      }
+    >
+      {missingFolder ? (
+        <RecoveryState
+          sketch="folder"
+          title="Folder not found"
+          description="This folder may have been deleted. Return to your canvases to continue."
+        >
+          <Button asChild>
+            <Link to="/files" search={{ view: 'mine' }}>
+              View canvases
+            </Link>
+          </Button>
+        </RecoveryState>
+      ) : waitingFolder ? (
+        <section className="workspace-page" aria-label="Loading folder">
+          {folderQuery.isError ? (
+            <RecoveryState
+              title="Unable to load folders"
+              description="Try again to open this folder."
+              onRetry={async () => {
+                const result = await folderQuery.refetch()
+                if (result.error) throw result.error
+              }}
+            />
+          ) : (
+            <Skeleton className="h-64" />
           )}
-        </header>
-        <div className="mx-auto w-full max-w-7xl flex-1 px-5 py-8 sm:px-10 sm:py-10">
-          <div className="mb-8">
-            <p className="text-muted-foreground mb-2 text-sm">
-              {view === 'mine'
-                ? `Workspace / ${displayName(user)}`
-                : 'Workspace'}
-            </p>
-            <h2 className="text-3xl font-semibold tracking-tight">{title}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {view === 'trash'
-                ? 'Restore a canvas or make room for something new.'
-                : view === 'shared'
-                  ? 'A shared space for thinking together.'
-                  : 'Everything you’re thinking about, all in one place.'}
-            </p>
-          </div>
+        </section>
+      ) : (
+        <section className="workspace-page" aria-label={title}>
+          <PageHeading
+            title={title}
+            description={
+              view === 'trash'
+                ? 'Restore deleted canvases or delete them permanently.'
+                : undefined
+            }
+          />
           <div className="mb-6 flex items-center gap-3">
-            <InputGroup className="max-w-sm">
-              <InputGroupInput
-                aria-label="Search canvases"
-                placeholder="Search canvases…"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <InputGroupAddon>
-                <Search />
-              </InputGroupAddon>
-            </InputGroup>
+            <SearchInput
+              label="Search canvases"
+              value={search}
+              onChange={setSearch}
+              className="max-w-sm"
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto shadow-none"
-                >
+                <Button variant="outline" size="sm" className="ml-auto">
                   <ArrowUpDown />
                   {sort === 'recent' ? 'Last edited' : 'Name'}
                 </Button>
@@ -149,8 +188,8 @@ function FilesPage() {
             search={search}
             sort={sort}
           />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </section>
+      )}
+    </WorkspaceShell>
   )
 }

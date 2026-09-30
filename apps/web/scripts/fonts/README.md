@@ -1,0 +1,1 @@
+Geist variable font from https://github.com/vercel/geist-font/tree/main/fonts/Geist/variable, downloaded 2026-09-30. Licensed under the SIL Open Font License in OFL.txt. Used only to outline Open Graph artwork at build time.

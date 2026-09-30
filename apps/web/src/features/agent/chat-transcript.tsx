@@ -87,9 +87,7 @@ export function ChatTranscript({
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <MessageSquare className="size-7 text-muted-foreground" />
-            <p className="text-sm">
-              This conversation is ready for its first idea.
-            </p>
+            <p className="text-sm">No messages</p>
           </div>
         )}
         {changes.length > 0 && <ChatChangePreviews changes={changes} />}
@@ -121,9 +119,7 @@ export function ChatTranscript({
               <MessageScrollerItem messageId="empty">
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                   <MessageSquare className="size-7 text-muted-foreground" />
-                  <p className="text-sm">
-                    This conversation is ready for its first idea.
-                  </p>
+                  <p className="text-sm">No messages</p>
                 </div>
               </MessageScrollerItem>
             )}

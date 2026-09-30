@@ -87,7 +87,7 @@ function describeTool(name: string, part: ToolPart) {
     case 'read_canvas':
       return {
         icon: ScanSearch,
-        text: done ? 'Looked at the canvas' : 'Looking at the canvas…',
+        text: done ? 'Read canvas' : 'Reading canvas…',
       }
     case 'create_shapes': {
       const created = count(output?.created)
@@ -95,8 +95,8 @@ function describeTool(name: string, part: ToolPart) {
       return {
         icon: Shapes,
         text: done
-          ? `Drew ${plural(created, 'shape')}${failed ? `, ${failed} failed` : ''}`
-          : `Drawing ${plural(count(input.shapes), 'shape')}…`,
+          ? `Created ${plural(created, 'shape')}${failed ? `, ${failed} failed` : ''}`
+          : `Creating ${plural(count(input.shapes), 'shape')}…`,
       }
     }
     case 'update_shapes':

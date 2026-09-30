@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rhyme",
+  "account_id": "c98230057d841eb747465f0f4aa99513",
+  "main": "src/production.ts",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [{ "pattern": "rhyme.sachi.dev", "custom_domain": true }],
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 },
+  },
+  "vars": {
+    "API_URL": "https://rhyme.sachi.dev",
+    "WEB_URL": "https://rhyme.sachi.dev",
+    "EMAIL_FROM": "auth@rhyme.sachi.dev",
+    "AI_MODEL": "@cf/moonshotai/kimi-k2.6",
+  },
+  "assets": {
+    "directory": "../web/dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/auth/*", "/trpc/*", "/files/*", "/assets/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rhyme",
+      "database_id": "31195662-02ca-463e-9243-3c0e510c0d39",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "rhyme" }],
+  "send_email": [{ "name": "EMAIL" }],
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "CanvasAgent", "class_name": "CanvasAgent" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CanvasAgent"] }],
+}

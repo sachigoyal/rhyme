@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "db:generate": "pnpm --filter @rhyme/db db:generate",
     "db:migrate": "pnpm --filter api db:migrate",
-    "test": "pnpm --filter api test && pnpm --filter web test"
+    "test": "pnpm --filter api test && pnpm --filter @rhyme/hooks test && pnpm --filter web test",
+    "deploy": "pnpm --filter web build && pnpm --filter api db:migrate:production && pnpm --filter api deploy:production"
   },
   "devDependencies": {
     "prettier": "3.9.6",

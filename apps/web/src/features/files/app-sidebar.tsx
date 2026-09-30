@@ -12,8 +12,8 @@ import {
   Pencil,
   Trash2,
   Users,
+  Settings,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   useCreateFolder,
   useDeleteFolder,
@@ -66,7 +66,7 @@ const views: Array<{ view: FileView; label: string; icon: typeof LayoutGrid }> =
 interface AppSidebarProps {
   user: SessionUser
   view?: FileView
-  section?: 'files' | 'chats' | 'activity'
+  section?: 'files' | 'chats' | 'activity' | 'settings'
   chatId?: string
   folderId?: string
 }
@@ -91,13 +91,13 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarHeader className="gap-5 px-4 pb-2 pt-5">
-        <Link to="/" aria-label="Open your canvas">
+      <SidebarHeader className="gap-6 px-4 pb-3 pt-6">
+        <Link to="/" aria-label="Home">
           <Logo />
         </Link>
         <Button
-          variant="outline"
-          className="w-full justify-start gap-2 shadow-none"
+          variant="default"
+          className="w-full justify-start gap-2"
           disabled={creatingCanvas}
           onClick={() => create()}
         >
@@ -106,7 +106,7 @@ export function AppSidebar({
         </Button>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="gap-4 px-2">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -141,6 +141,14 @@ export function AppSidebar({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={section === 'settings'}>
+                  <Link to="/settings">
+                    <Settings />
+                    <span>Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -168,7 +176,7 @@ export function AppSidebar({
               ))}
               {!isPending && tree.length === 0 && (
                 <p className="text-muted-foreground px-2 py-1.5 text-xs">
-                  No folders yet
+                  No folders
                 </p>
               )}
             </SidebarMenu>
@@ -178,31 +186,33 @@ export function AppSidebar({
           <SidebarGroupLabel>Recent conversations</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {chats?.slice(0, 5).map((chat) => (
-                <SidebarMenuItem key={chat.id}>
-                  <ConversationHoverCard chat={chat}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={section === 'chats' && chat.id === chatId}
-                    >
-                      <Link to="/chats" search={{ chat: chat.id }}>
-                        <MessageSquare className="text-muted-foreground" />
-                        <span className="truncate">{chat.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </ConversationHoverCard>
-                  <ConversationActions
-                    chat={chat}
-                    variant="sidebar"
-                    onDeleted={() => {
-                      if (chat.id === chatId) void navigate({ to: '/chats' })
-                    }}
-                  />
-                </SidebarMenuItem>
-              ))}
+              {chats
+                ?.filter((chat) => !chat.id.startsWith('pending:'))
+                .slice(0, 5)
+                .map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <ConversationHoverCard chat={chat}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={section === 'chats' && chat.id === chatId}
+                      >
+                        <Link to="/chats" search={{ chat: chat.id }}>
+                          <span className="truncate">{chat.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </ConversationHoverCard>
+                    <ConversationActions
+                      chat={chat}
+                      variant="sidebar"
+                      onDeleted={() => {
+                        if (chat.id === chatId) void navigate({ to: '/chats' })
+                      }}
+                    />
+                  </SidebarMenuItem>
+                ))}
               {chats?.length === 0 && (
                 <p className="text-muted-foreground px-2 py-2 text-xs leading-relaxed">
-                  Your canvas conversations will appear here.
+                  No conversations
                 </p>
               )}
             </SidebarMenu>
@@ -210,7 +220,7 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <UserMenu user={user}>
@@ -261,20 +271,34 @@ function FolderItem({
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={active}
-        style={{ paddingLeft: `${0.5 + folder.depth * 0.875}rem` }}
-      >
-        <Link to="/files" search={{ view: 'mine', folder: folder.id }}>
+      {folder.id.startsWith('pending:') ? (
+        <SidebarMenuButton
+          disabled
+          style={{ paddingLeft: `${0.5 + folder.depth * 0.875}rem` }}
+        >
           <Folder />
           <span className="truncate">{folder.name}</span>
-        </Link>
-      </SidebarMenuButton>
+        </SidebarMenuButton>
+      ) : (
+        <SidebarMenuButton
+          asChild
+          isActive={active}
+          style={{ paddingLeft: `${0.5 + folder.depth * 0.875}rem` }}
+        >
+          <Link to="/files" search={{ view: 'mine', folder: folder.id }}>
+            <Folder />
+            <span className="truncate">{folder.name}</span>
+          </Link>
+        </SidebarMenuButton>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuAction showOnHover>
+          <SidebarMenuAction
+            showOnHover
+            disabled={folder.id.startsWith('pending:')}
+            aria-label={`Options for ${folder.name}`}
+          >
             <MoreHorizontal />
           </SidebarMenuAction>
         </DropdownMenuTrigger>
@@ -320,18 +344,12 @@ function FolderItem({
         open={dialog === 'delete'}
         onOpenChange={close}
         title={`Delete “${folder.name}”?`}
-        description="Subfolders are deleted too. Files inside are kept and moved out of the folder."
+        description="This folder and its subfolders will be deleted. Their canvases will be kept without a folder."
         confirmLabel="Delete folder"
-        onConfirm={() =>
-          deleteFolder.mutate(
-            { id: folder.id },
-            {
-              onSuccess: () =>
-                active && navigate({ to: '/files', search: { view: 'mine' } }),
-              onError: () => toast.error('Could not delete the folder'),
-            },
-          )
-        }
+        onConfirm={async () => {
+          await deleteFolder.mutateAsync({ id: folder.id })
+          if (active) await navigate({ to: '/files', search: { view: 'mine' } })
+        }}
       />
     </SidebarMenuItem>
   )

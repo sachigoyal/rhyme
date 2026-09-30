@@ -8,7 +8,7 @@ import { deleteFileChatStorage } from '../services/chats'
 import { deletePrefix, objectKeys, readJson, writeJson } from '../lib/storage'
 import { fileProcedure, protectedProcedure, router } from '../trpc/init'
 
-const { fileCollaborators, files, users } = schema
+const { fileCollaborators, files, users, userSettings } = schema
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
 
@@ -34,6 +34,7 @@ const summaryColumns = {
   name: files.name,
   folderId: files.folderId,
   version: files.version,
+  lastEditedById: files.lastEditedById,
   thumbnailKey: files.thumbnailKey,
   createdAt: files.createdAt,
   updatedAt: files.updatedAt,
@@ -47,6 +48,7 @@ type SummarySource = Pick<
   | 'name'
   | 'folderId'
   | 'version'
+  | 'lastEditedById'
   | 'thumbnailKey'
   | 'createdAt'
   | 'updatedAt'
@@ -59,6 +61,7 @@ function toSummary({ thumbnailKey, ...file }: SummarySource, role: FileRole) {
     name: file.name,
     folderId: file.folderId,
     version: file.version,
+    lastEditedById: file.lastEditedById,
     createdAt: file.createdAt,
     updatedAt: file.updatedAt,
     trashedAt: file.trashedAt,
@@ -76,6 +79,20 @@ async function assertFolder(
   if (folderId && !(await isFolderOwner(db, folderId, userId))) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Folder not found' })
   }
+}
+
+async function rememberEditedCanvas(
+  db: Database,
+  userId: string,
+  fileId: string,
+) {
+  await db
+    .insert(userSettings)
+    .values({ userId, lastEditedCanvasId: fileId })
+    .onConflictDoUpdate({
+      target: userSettings.userId,
+      set: { lastEditedCanvasId: fileId },
+    })
 }
 
 export const filesRouter = router({
@@ -143,6 +160,73 @@ export const filesRouter = router({
         })
         .returning({ id: files.id, name: files.name })
         .get()
+    }),
+
+  importGuest: protectedProcedure
+    .input(z.object({ id: z.string().uuid(), document: documentSnapshot }))
+    .mutation(async ({ ctx, input }) => {
+      const find = () =>
+        ctx.db.select().from(files).where(eq(files.id, input.id)).get()
+      const summarize = (file: File) => {
+        if (file.ownerId !== ctx.user.id || file.trashedAt)
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'This canvas cannot be imported into this account.',
+          })
+        return toSummary({ ...file, owner: ctx.user }, 'owner')
+      }
+      const existing = await find()
+      if (existing) return summarize(existing)
+      const bytes = new TextEncoder().encode(JSON.stringify(input.document))
+      if (bytes.byteLength > MAX_DOCUMENT_BYTES)
+        throw new TRPCError({
+          code: 'PAYLOAD_TOO_LARGE',
+          message: 'This canvas is too large to save.',
+        })
+      const key = objectKeys.document(input.id)
+      await ctx.env.STORAGE.put(key, bytes, {
+        httpMetadata: { contentType: 'application/json' },
+      })
+      let saved: File | undefined
+      try {
+        saved = await ctx.db
+          .insert(files)
+          .values({
+            id: input.id,
+            ownerId: ctx.user.id,
+            name: 'Untitled',
+            documentKey: key,
+            documentSize: bytes.byteLength,
+            version: 1,
+            lastEditedById: ctx.user.id,
+          })
+          .onConflictDoNothing({ target: files.id })
+          .returning()
+          .get()
+      } catch (error) {
+        const committed = await find()
+        if (committed?.documentKey !== key)
+          ctx.waitUntil(ctx.env.STORAGE.delete(key))
+        if (committed) return summarize(committed)
+        throw error
+      }
+      if (saved) {
+        ctx.waitUntil(
+          rememberEditedCanvas(ctx.db, ctx.user.id, saved.id).catch(
+            (error: unknown) =>
+              console.warn('Unable to update the last edited canvas', error),
+          ),
+        )
+        return summarize(saved)
+      }
+      ctx.waitUntil(ctx.env.STORAGE.delete(key))
+      const winner = await find()
+      if (!winner)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Unable to import this canvas. Try again.',
+        })
+      return summarize(winner)
     }),
 
   rename: fileProcedure('editor')
@@ -244,17 +328,27 @@ export const filesRouter = router({
           lastEditedById: ctx.user.id,
         })
         .where(and(eq(files.id, file.id), eq(files.version, input.baseVersion)))
-        .returning({ version: files.version, updatedAt: files.updatedAt })
+        .returning({
+          version: files.version,
+          updatedAt: files.updatedAt,
+          lastEditedById: files.lastEditedById,
+        })
         .get()
 
       if (!saved) {
         waitUntil(env.STORAGE.delete(key))
         throw new TRPCError({
           code: 'CONFLICT',
-          message: 'This file was changed somewhere else.',
+          message: 'A newer version of this canvas is available.',
         })
       }
 
+      ctx.waitUntil(
+        rememberEditedCanvas(ctx.db, ctx.user.id, file.id).catch(
+          (error: unknown) =>
+            console.warn('Unable to update the last edited canvas', error),
+        ),
+      )
       if (file.documentKey) waitUntil(env.STORAGE.delete(file.documentKey))
       return saved
     }),

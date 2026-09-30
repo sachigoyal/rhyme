@@ -44,30 +44,34 @@ interface FileCardProps {
 }
 
 export function FileCard({ file, folders }: FileCardProps) {
+  const pending = file.id.startsWith('pending:')
   const trashed = file.trashedAt !== null
   const preview = <FilePreview file={file} />
 
   return (
-    <div className="group bg-card hover:border-foreground/20 relative flex flex-col overflow-hidden rounded-lg border transition-colors">
-      {trashed ? (
+    <div className="group bg-card hover:border-primary/40 focus-within:border-primary relative flex flex-col overflow-hidden rounded-lg border transition-colors">
+      {trashed || pending ? (
         preview
       ) : (
         <Link
           to="/files/$fileId"
           params={{ fileId: file.id }}
-          className="outline-none"
+          aria-label={`Open ${file.name}`}
+          className="outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           {preview}
           <span className="absolute inset-0" aria-hidden />
         </Link>
       )}
-      <div className="flex items-center gap-2 border-t px-3.5 py-3">
+      <div className="flex items-center gap-2 border-t px-4 py-3.5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
-          <p className="text-muted-foreground truncate text-xs">
-            {file.role === 'owner'
-              ? `Edited ${timeAgo(file.updatedAt)}`
-              : `${displayName(file.owner)} · ${timeAgo(file.updatedAt)}`}
+          <p className="text-muted-foreground mt-1 truncate text-xs">
+            {pending
+              ? 'Creating canvas…'
+              : file.role === 'owner'
+                ? `Edited ${timeAgo(file.updatedAt)}`
+                : `${displayName(file.owner)} · ${timeAgo(file.updatedAt)}`}
           </p>
         </div>
         {file.role !== 'owner' && (
@@ -75,7 +79,9 @@ export function FileCard({ file, folders }: FileCardProps) {
             {file.role}
           </Badge>
         )}
-        {file.role === 'owner' && <FileMenu file={file} folders={folders} />}
+        {file.role === 'owner' && !pending && (
+          <FileMenu file={file} folders={folders} />
+        )}
       </div>
     </div>
   )
@@ -84,14 +90,14 @@ export function FileCard({ file, folders }: FileCardProps) {
 function FilePreview({ file }: { file: FileSummary }) {
   const [failed, setFailed] = useState(false)
   return (
-    <div className="bg-muted/50 relative aspect-[16/10] overflow-hidden">
+    <div className="bg-background relative aspect-[16/10] overflow-hidden">
       {file.hasThumbnail && !failed ? (
         <img
           src={thumbnailUrl(file.id, file.version)}
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
-          className="size-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.02] dark:invert dark:hue-rotate-180"
+          className="size-full object-contain p-3 dark:invert dark:hue-rotate-180"
         />
       ) : (
         <div className="grid size-full place-items-center text-muted-foreground/30">
@@ -141,7 +147,7 @@ function FileMenu({ file, folders }: FileCardProps) {
             variant="ghost"
             size="icon-sm"
             className="relative z-10 -mr-1.5 shrink-0"
-            aria-label="File actions"
+            aria-label={`Options for ${file.name}`}
           >
             <MoreHorizontal />
           </Button>
@@ -167,7 +173,7 @@ function FileMenu({ file, folders }: FileCardProps) {
                 onSelect={() => setDialog('destroy')}
               >
                 <X />
-                Delete forever
+                Delete permanently
               </DropdownMenuItem>
             </>
           ) : (
@@ -197,6 +203,7 @@ function FileMenu({ file, folders }: FileCardProps) {
                     {folders.map((folder) => (
                       <DropdownMenuRadioItem
                         key={folder.id}
+                        disabled={folder.id.startsWith('pending:')}
                         value={folder.id}
                         style={{ paddingLeft: `${2 + folder.depth * 0.75}rem` }}
                       >
@@ -235,7 +242,7 @@ function FileMenu({ file, folders }: FileCardProps) {
       <NameDialog
         open={dialog === 'rename'}
         onOpenChange={close}
-        title="Rename file"
+        title="Rename canvas"
         initialName={file.name}
         submitLabel="Save"
         onSubmit={(name) => renameFile.mutateAsync({ id: file.id, name })}
@@ -243,10 +250,10 @@ function FileMenu({ file, folders }: FileCardProps) {
       <ConfirmDialog
         open={dialog === 'destroy'}
         onOpenChange={close}
-        title={`Delete “${file.name}” forever?`}
-        description="The drawing and its images are removed permanently. This can't be undone."
-        confirmLabel="Delete forever"
-        onConfirm={() => destroyFile.mutate({ id: file.id })}
+        title={`Delete “${file.name}” permanently?`}
+        description="The canvas and its assets will be permanently deleted. This cannot be undone."
+        confirmLabel="Delete permanently"
+        onConfirm={() => destroyFile.mutateAsync({ id: file.id })}
       />
     </>
   )

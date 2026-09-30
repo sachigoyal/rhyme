@@ -1,41 +1,68 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
-import { Button } from '@rhyme/ui/components/button'
-import { GuestCanvas } from '@/features/auth/guest-canvas'
-import { useOpenRecentCanvas } from '@/features/auth/use-open-recent-canvas'
+import { createFileRoute, redirect } from '@tanstack/react-router'
+import { GuestCanvasSkeleton } from '@/components/loading-states'
+import { lazy, Suspense } from 'react'
+import { guestDraft } from '@/features/auth/guest-draft'
+import { lastEditedCanvas } from '@/features/auth/home-destination'
 import { sessionQuery } from '@/lib/auth'
+
+const GuestCanvas = lazy(() =>
+  import('@/features/auth/guest-canvas').then((module) => ({
+    default: module.GuestCanvas,
+  })),
+)
 
 export const Route = createFileRoute('/')({
   ssr: false,
-  beforeLoad: async ({ context }) => ({
-    session: await context.queryClient.ensureQueryData(sessionQuery),
-  }),
-  component: Home,
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQuery)
+    if (!session) return
+    if (guestDraft.get()) throw redirect({ to: '/auth/complete' })
+    const [profile, settings] = await Promise.all([
+      context.queryClient.ensureQueryData(
+        context.trpc.profile.get.queryOptions(),
+      ),
+      context.queryClient.ensureQueryData(
+        context.trpc.settings.get.queryOptions(undefined, {
+          staleTime: 5 * 60 * 1000,
+        }),
+      ),
+    ])
+    if (!profile) throw redirect({ to: '/onboarding' })
+    if (settings.homeDestination === 'last-edited') {
+      if (settings.lastEditedCanvasId) {
+        const file = await context.queryClient
+          .fetchQuery(
+            context.trpc.files.get.queryOptions({
+              id: settings.lastEditedCanvasId,
+            }),
+          )
+          .catch(() => null)
+        if (file && !file.trashedAt && file.role !== 'viewer')
+          throw redirect({ to: '/files/$fileId', params: { fileId: file.id } })
+        throw redirect({ to: '/files' })
+      }
+      const [mine, shared] = await Promise.all([
+        context.queryClient.fetchQuery(
+          context.trpc.files.list.queryOptions({
+            view: 'mine',
+            folderId: undefined,
+          }),
+        ),
+        context.queryClient.fetchQuery(
+          context.trpc.files.list.queryOptions({
+            view: 'shared',
+            folderId: undefined,
+          }),
+        ),
+      ])
+      const fileId = lastEditedCanvas([...mine, ...shared], session.user.id)
+      if (fileId) throw redirect({ to: '/files/$fileId', params: { fileId } })
+    }
+    throw redirect({ to: '/files' })
+  },
+  component: () => (
+    <Suspense fallback={<GuestCanvasSkeleton />}>
+      <GuestCanvas />
+    </Suspense>
+  ),
 })
-
-function Home() {
-  const { session } = Route.useRouteContext()
-  return session ? <OpenRecentCanvas /> : <GuestCanvas />
-}
-
-function OpenRecentCanvas() {
-  const error = useOpenRecentCanvas()
-  return (
-    <main className="grid h-svh place-items-center p-6">
-      {error ? (
-        <div className="max-w-sm space-y-4 text-center">
-          <h1 className="font-medium">Couldn’t open your canvas</h1>
-          <p className="text-muted-foreground text-sm">{error.message}</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Try again
-          </Button>
-        </div>
-      ) : (
-        <div className="text-muted-foreground flex items-center gap-2 text-sm">
-          <Loader2 className="size-4 animate-spin" />
-          Opening your canvas…
-        </div>
-      )}
-    </main>
-  )
-}

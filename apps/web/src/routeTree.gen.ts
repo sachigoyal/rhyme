@@ -15,6 +15,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AppActivityRouteImport } from './routes/_app/activity'
 import { Route as AppChatsRouteImport } from './routes/_app/chats'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AuthCompleteRouteImport } from './routes/auth.complete'
 import { Route as AppFilesIndexRouteImport } from './routes/_app/files/index'
 import { Route as AppFilesFileIdRouteImport } from './routes/_app/files/$fileId'
@@ -48,6 +49,11 @@ const AppChatsRoute = AppChatsRouteImport.update({
   path: '/chats',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AuthCompleteRoute = AuthCompleteRouteImport.update({
   id: '/auth/complete',
   path: '/auth/complete',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/activity': typeof AppActivityRoute
   '/chats': typeof AppChatsRoute
+  '/settings': typeof AppSettingsRoute
   '/auth/complete': typeof AuthCompleteRoute
   '/files/$fileId': typeof AppFilesFileIdRoute
   '/files/': typeof AppFilesIndexRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/activity': typeof AppActivityRoute
   '/chats': typeof AppChatsRoute
+  '/settings': typeof AppSettingsRoute
   '/auth/complete': typeof AuthCompleteRoute
   '/files/$fileId': typeof AppFilesFileIdRoute
   '/files': typeof AppFilesIndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/_app/activity': typeof AppActivityRoute
   '/_app/chats': typeof AppChatsRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/auth/complete': typeof AuthCompleteRoute
   '/_app/files/$fileId': typeof AppFilesFileIdRoute
   '/_app/files/': typeof AppFilesIndexRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/activity'
     | '/chats'
+    | '/settings'
     | '/auth/complete'
     | '/files/$fileId'
     | '/files/'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/activity'
     | '/chats'
+    | '/settings'
     | '/auth/complete'
     | '/files/$fileId'
     | '/files'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/_app/activity'
     | '/_app/chats'
+    | '/_app/settings'
     | '/auth/complete'
     | '/_app/files/$fileId'
     | '/_app/files/'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/auth/complete': {
       id: '/auth/complete'
       path: '/auth/complete'
@@ -209,6 +228,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppActivityRoute: typeof AppActivityRoute
   AppChatsRoute: typeof AppChatsRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppFilesFileIdRoute: typeof AppFilesFileIdRoute
   AppFilesIndexRoute: typeof AppFilesIndexRoute
 }
@@ -216,6 +236,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppActivityRoute: AppActivityRoute,
   AppChatsRoute: AppChatsRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppFilesFileIdRoute: AppFilesFileIdRoute,
   AppFilesIndexRoute: AppFilesIndexRoute,
 }
@@ -234,10 +255,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

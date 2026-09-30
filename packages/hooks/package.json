@@ -8,7 +8,8 @@
     "./mutations": "./src/mutations/index.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@rhyme/trpc-client": "workspace:*",

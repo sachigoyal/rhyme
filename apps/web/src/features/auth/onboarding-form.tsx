@@ -1,147 +1,155 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Questionnaire } from '@shadcn/react/questionnaire'
 import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react'
 import { profileSchema } from 'api/profile-schema'
+import { useProfile } from '@rhyme/hooks/queries'
 import { useCompleteProfile } from '@rhyme/hooks/mutations'
 import { buttonVariants } from '@rhyme/ui/components/button'
 import { cn } from '@rhyme/ui/lib/utils'
 import { displayName, sessionQuery } from '@/lib/auth'
 import type { SessionUser } from '@/lib/auth'
-import { guestDraft } from './guest-draft'
+import { onboardingDraft, onboardingSteps } from './onboarding-draft'
+import type { OnboardingDraft } from './onboarding-draft'
 
 const questions = [
   {
     name: 'name',
-    title: 'What should we call you?',
-    description: 'A little introduction before your next big idea.',
+    title: 'Your name',
+    description: 'Shown to people you share canvases with.',
     required: true,
     choices: [],
   },
   {
     name: 'role',
-    title: 'What kind of work do you do?',
-    description: 'Help us understand the people who create with Rhyme.',
+    title: 'Your role',
+    description: 'Optional.',
     required: false,
     choices: [
       {
         value: 'design',
         label: 'Design',
-        detail: 'Shape ideas and experiences',
       },
       {
         value: 'engineering',
         label: 'Engineering',
-        detail: 'Build and map systems',
       },
       {
         value: 'product',
         label: 'Product & business',
-        detail: 'Plan what comes next',
       },
       {
         value: 'education',
         label: 'Education',
-        detail: 'Learn and teach visually',
       },
       {
         value: 'other',
-        label: 'Something else',
-        detail: 'There is room for every idea',
+        label: 'Other',
       },
     ],
   },
   {
     name: 'useCases',
-    title: 'What will you make here?',
-    description:
-      'Choose as many as you like. There is no wrong starting point.',
+    title: 'How will you use Rhyme?',
+    description: 'Select all that apply. Optional.',
     required: false,
     multiple: true,
     choices: [
       {
         value: 'brainstorming',
-        label: 'Brainstorms',
-        detail: 'Give your ideas some space',
+        label: 'Brainstorming',
       },
       {
         value: 'diagrams',
         label: 'Diagrams',
-        detail: 'Make the complex clear',
       },
       {
         value: 'wireframes',
         label: 'Wireframes',
-        detail: 'Explore an interface',
       },
       {
         value: 'planning',
-        label: 'Plans & workshops',
-        detail: 'Get everyone on the same page',
+        label: 'Planning and workshops',
       },
       {
         value: 'teaching',
-        label: 'Learning & teaching',
-        detail: 'Think it through together',
+        label: 'Teaching and learning',
       },
     ],
   },
   {
     name: 'teamSize',
-    title: 'Who are you creating with?',
-    description: 'A solo practice or a shared workspace — both belong here.',
+    title: 'Team size',
+    description: 'How many people are on your team? Optional.',
     required: false,
     choices: [
-      { value: 'solo', label: 'Just me' },
+      { value: 'solo', label: '1 person' },
       { value: '2-10', label: '2–10 people' },
       { value: '11-50', label: '11–50 people' },
-      { value: '51+', label: 'More than 50 people' },
+      { value: '51+', label: '51+ people' },
     ],
   },
   {
     name: 'referral',
-    title: 'How did you find Rhyme?',
-    description: 'This helps us know where to meet our next creators.',
+    title: 'How did you hear about Rhyme?',
+    description: 'Optional.',
     required: false,
     choices: [
       { value: 'friend', label: 'A friend or colleague' },
       { value: 'search', label: 'Search' },
       { value: 'social', label: 'Social media' },
-      { value: 'other', label: 'Somewhere else' },
+      { value: 'other', label: 'Other' },
     ],
   },
   {
     name: 'analyticsConsent',
-    title: 'Help us make Rhyme better?',
+    title: 'Usage analytics',
     description:
-      'Allow usage analytics to improve the experience. Your answers are stored in your profile; canvas content is never included in usage analytics.',
+      'Choose whether to share usage analytics. Canvas content is excluded. Your selection is saved to your profile.',
     required: true,
     choices: [
       {
         value: 'yes',
-        label: 'Yes, share usage analytics',
-        detail: 'Help us understand what works',
+        label: 'Share usage analytics',
+        detail: 'Allow optional usage analytics',
       },
       {
         value: 'no',
-        label: 'No thanks',
-        detail: 'Keep optional analytics off',
+        label: 'Don’t share usage analytics',
+        detail: 'Disable optional usage analytics',
       },
     ],
   },
 ] as const
 
-export function OnboardingForm({
-  user,
-  redirectTo,
-}: {
-  user: SessionUser
-  redirectTo: string
-}) {
-  const [item, setItem] = useState('name')
+export function OnboardingForm({ user }: { user: SessionUser }) {
+  const [draft, setDraft] = useState(() =>
+    onboardingDraft.get(user.id, user.name || displayName(user)),
+  )
+  const draftRef = useRef(draft)
+  const [storageError, setStorageError] = useState(false)
+  const item = draft.step
+  const updateDraft = (next: OnboardingDraft) => {
+    draftRef.current = next
+    setDraft(next)
+    try {
+      onboardingDraft.set(user.id, next)
+      setStorageError(false)
+    } catch {
+      setStorageError(true)
+    }
+  }
+  const setItem = (step: string) => {
+    if (onboardingSteps.includes(step as OnboardingDraft['step']))
+      updateDraft({
+        ...draftRef.current,
+        step: step as OnboardingDraft['step'],
+      })
+  }
   const [validationError, setValidationError] = useState<string | null>(null)
   const complete = useCompleteProfile()
+  const profile = useProfile()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const activeIndex = questions.findIndex((question) => question.name === item)
@@ -155,35 +163,37 @@ export function OnboardingForm({
       className="w-full max-w-lg"
       onSubmit={(event) => {
         event.preventDefault()
-        const data = new FormData(event.currentTarget)
+        if (!draft.answers.analyticsConsent) {
+          setItem('analyticsConsent')
+          return
+        }
         const result = profileSchema.safeParse({
-          name: data.get('name'),
-          role: data.get('role') ?? null,
-          useCases: data.getAll('useCases'),
-          teamSize: data.get('teamSize') ?? null,
-          referral: data.get('referral') ?? null,
-          analyticsConsent: data.get('analyticsConsent') === 'yes',
+          ...draft.answers,
+          analyticsConsent: draft.answers.analyticsConsent === 'yes',
         })
         if (!result.success) {
           setValidationError(
             result.error.issues[0]?.message ??
               'Check your answers and try again.',
           )
-          setItem('name')
+          const field = result.error.issues[0]?.path[0]
+          setItem(typeof field === 'string' ? field : 'name')
           return
         }
         setValidationError(null)
         complete.mutate(result.data, {
           onSuccess: async () => {
+            await profile.refetch({ throwOnError: true })
             await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
-            await navigate({ href: guestDraft.get() ? '/' : redirectTo })
+            onboardingDraft.clear(user.id)
+            await navigate({ to: '/auth/complete', replace: true })
           },
         })
       }}
     >
       <div className="mb-10 flex items-center justify-between">
-        <span className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
-          Make yourself at home
+        <span className="text-muted-foreground text-sm font-medium">
+          Profile
         </span>
         <Questionnaire.Progress className="text-muted-foreground text-xs" />
       </div>
@@ -218,7 +228,13 @@ export function OnboardingForm({
                 <Questionnaire.Input
                   aria-label="Your name"
                   autoComplete="given-name"
-                  defaultValue={user.name || displayName(user)}
+                  value={draft.answers.name}
+                  onChange={(event) =>
+                    updateDraft({
+                      ...draft,
+                      answers: { ...draft.answers, name: event.target.value },
+                    })
+                  }
                   maxLength={80}
                   placeholder="Your name"
                   className="border-input focus-visible:border-ring h-12 w-full rounded-lg border bg-transparent px-4 text-lg outline-none"
@@ -228,6 +244,29 @@ export function OnboardingForm({
                   <Questionnaire.Choice
                     key={choice.value}
                     value={choice.value}
+                    checked={
+                      question.name === 'useCases'
+                        ? draft.answers.useCases.includes(
+                            choice.value as OnboardingDraft['answers']['useCases'][number],
+                          )
+                        : draft.answers[question.name] === choice.value
+                    }
+                    onChange={(event) => {
+                      const value =
+                        question.name === 'useCases'
+                          ? event.target.checked
+                            ? [...draft.answers.useCases, choice.value]
+                            : draft.answers.useCases.filter(
+                                (entry) => entry !== choice.value,
+                              )
+                          : event.target.checked
+                            ? choice.value
+                            : null
+                      updateDraft({
+                        ...draft,
+                        answers: { ...draft.answers, [question.name]: value },
+                      })
+                    }}
                     className="border-border hover:bg-muted/50 focus-within:border-ring data-[checked]:border-foreground data-[checked]:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
                   >
                     <Questionnaire.ChoiceInput className="accent-foreground size-4 shrink-0" />
@@ -255,6 +294,15 @@ export function OnboardingForm({
           </Questionnaire.Previous>
           <div className="ml-auto flex items-center gap-2">
             <Questionnaire.Skip
+              onClick={() =>
+                updateDraft({
+                  ...draft,
+                  answers: {
+                    ...draft.answers,
+                    [item]: item === 'useCases' ? [] : null,
+                  },
+                })
+              }
               className={buttonVariants({ variant: 'ghost' })}
             >
               Skip
@@ -268,11 +316,17 @@ export function OnboardingForm({
               ) : (
                 <Check className="size-4" />
               )}{' '}
-              Open my canvas
+              {complete.isPending ? 'Saving…' : 'Finish setup'}
             </Questionnaire.Submit>
           </div>
         </div>
       </fieldset>
+      {storageError && (
+        <p role="status" className="text-muted-foreground mt-4 text-xs">
+          Browser storage is unavailable. Keep this page open until setup is
+          complete.
+        </p>
+      )}
       {(complete.error || validationError) && (
         <p role="alert" className="text-destructive mt-4 text-sm">
           {complete.error?.message ?? validationError}

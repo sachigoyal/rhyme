@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
+import { RecoveryPage, RecoveryState } from '@/components/recovery-state'
+import { CanvasSkeleton } from '@/components/loading-states'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { useFile } from '@rhyme/hooks/queries'
@@ -13,6 +14,11 @@ import { useInitialDocument } from '@/features/editor/use-initial-document'
 
 export const Route = createFileRoute('/_app/files/$fileId')({
   validateSearch: z.object({ chat: z.string().optional() }),
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(
+      context.trpc.files.get.queryOptions({ id: params.fileId }),
+    )
+  },
   component: EditorPage,
 })
 
@@ -23,10 +29,9 @@ function EditorPage() {
   const trpc = useTRPC()
 
   const reload = async () => {
-    await documentCache.delete(fileId)
-    await queryClient.resetQueries(
-      trpc.files.document.queryFilter({ id: fileId }),
-    )
+    await documentCache.delete(fileId).catch(() => undefined)
+    queryClient.removeQueries(trpc.files.document.queryFilter({ id: fileId }))
+    queryClient.removeQueries(trpc.files.get.queryFilter({ id: fileId }))
     setSession((value) => value + 1)
   }
 
@@ -49,7 +54,7 @@ function EditorLoader({
   const { user } = Route.useRouteContext()
   const { chat } = Route.useSearch()
   const file = useFile(fileId)
-  const { initial, failed } = useInitialDocument(fileId)
+  const { initial, failed, error: documentError } = useInitialDocument(fileId)
 
   useEffect(() => {
     if (file.data) document.title = `${file.data.name} · Rhyme`
@@ -57,40 +62,48 @@ function EditorLoader({
 
   useEffect(() => {
     if (initial?.offline)
-      toast('You are offline. Editing the copy saved on this device.')
+      toast('Offline. Editing the version saved on this device.')
   }, [initial?.offline])
 
-  if (file.isError || failed) {
-    const missing =
-      errorCode(file.error) === 'NOT_FOUND' ||
-      errorCode(file.error) === 'FORBIDDEN'
+  const code = errorCode(file.error ?? documentError)
+  const forbidden = code === 'FORBIDDEN'
+  const missing = code === 'NOT_FOUND' || code === 'BAD_REQUEST'
+  if ((file.isError && (!file.data || forbidden || missing)) || failed) {
     return (
-      <div className="grid h-svh place-items-center p-6 text-center">
-        <div className="space-y-4">
-          <h1 className="text-lg font-semibold">
-            {missing ? 'File not found' : 'Couldn’t open this file'}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {missing
-              ? 'It may have been deleted or you no longer have access.'
-              : 'Check your connection and try again.'}
-          </p>
-          <Button asChild variant="outline">
+      <RecoveryPage>
+        <RecoveryState
+          sketch={forbidden ? 'access' : missing ? 'canvas' : 'connection'}
+          title={
+            forbidden
+              ? 'Access denied'
+              : missing
+                ? 'Canvas unavailable'
+                : 'Unable to load canvas'
+          }
+          description={
+            forbidden
+              ? 'You don’t have access to this canvas. Ask the owner to share it with you.'
+              : missing
+                ? 'This canvas may have been deleted, or you may no longer have access. Ask the owner for a new link.'
+                : 'Check your connection and try again.'
+          }
+          onRetry={missing || forbidden ? undefined : async () => onReload()}
+        >
+          <Button
+            asChild
+            variant={missing || forbidden ? 'default' : 'outline'}
+          >
             <Link to="/files" search={{ view: 'mine' }}>
-              Back to files
+              View canvases
             </Link>
           </Button>
-        </div>
-      </div>
+        </RecoveryState>
+      </RecoveryPage>
     )
   }
 
   if (!file.data || !initial) {
-    return (
-      <div className="grid h-svh place-items-center">
-        <Loader2 className="text-muted-foreground size-5 animate-spin" />
-      </div>
-    )
+    return <CanvasSkeleton title={file.data?.name} />
   }
 
   return (

@@ -1,6 +1,3 @@
-import { Link } from '@tanstack/react-router'
-import { ArrowUpRight } from 'lucide-react'
-import { Button } from '@rhyme/ui/components/button'
 import { Separator } from '@rhyme/ui/components/separator'
 import {
   SidebarInset,
@@ -9,6 +6,9 @@ import {
 } from '@rhyme/ui/components/sidebar'
 import type { SessionUser } from '@/lib/auth'
 import { AppSidebar } from './app-sidebar'
+import type { FileView } from '@rhyme/trpc-client'
+import { WorkspaceBreadcrumbs } from '@/components/workspace-breadcrumbs'
+import type { WorkspaceCrumb } from '@/components/workspace-breadcrumbs'
 
 export function WorkspaceShell({
   user,
@@ -16,33 +16,42 @@ export function WorkspaceShell({
   title,
   chatId,
   hideHeader = false,
+  view,
+  folderId,
+  actions,
+  breadcrumbs,
   children,
 }: {
   user: SessionUser
-  section: 'chats' | 'activity'
+  section: 'files' | 'chats' | 'activity' | 'settings'
   title: string
   chatId?: string
   hideHeader?: boolean
+  view?: FileView
+  folderId?: string
+  actions?: React.ReactNode
+  breadcrumbs?: WorkspaceCrumb[]
   children: React.ReactNode
 }) {
   return (
     <SidebarProvider>
-      <AppSidebar user={user} section={section} chatId={chatId} />
+      <AppSidebar
+        user={user}
+        section={section}
+        chatId={chatId}
+        view={view}
+        folderId={folderId}
+      />
       <SidebarInset className="h-svh min-w-0 overflow-hidden">
         {!hideHeader && (
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <header className="bg-card flex h-16 shrink-0 items-center gap-3 border-b px-4 sm:px-6">
             <SidebarTrigger className="-ml-1" />
             <Separator
               orientation="vertical"
               className="mr-1 data-[orientation=vertical]:h-4"
             />
-            <h1 className="text-sm font-medium">{title}</h1>
-            <Button asChild variant="ghost" size="sm" className="ml-auto">
-              <Link to="/">
-                Back to canvas
-                <ArrowUpRight className="size-3.5" />
-              </Link>
-            </Button>
+            <WorkspaceBreadcrumbs items={breadcrumbs ?? [{ label: title }]} />
+            {actions}
           </header>
         )}
         {children}

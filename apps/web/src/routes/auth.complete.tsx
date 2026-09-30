@@ -1,52 +1,61 @@
 import { useEffect } from 'react'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
-import { useFiles, useProfile } from '@rhyme/hooks/queries'
+import { AppSkeleton } from '@/components/loading-states'
+import { useProfile } from '@rhyme/hooks/queries'
 import { Button } from '@rhyme/ui/components/button'
 import { authSearch } from '@/features/auth/redirect'
+import { useImportGuestDraft } from '@/features/auth/use-import-guest-draft'
 import { sessionQuery } from '@/lib/auth'
 
 export const Route = createFileRoute('/auth/complete')({
   ssr: false,
   validateSearch: authSearch,
   beforeLoad: async ({ context, search }) => {
-    if (!(await context.queryClient.ensureQueryData(sessionQuery))) {
-      throw redirect({ to: '/sign-in', search })
-    }
+    const session = await context.queryClient.ensureQueryData(sessionQuery)
+    if (!session) throw redirect({ to: '/sign-in', search })
+    return { user: session.user }
+  },
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(
+      context.trpc.profile.get.queryOptions(),
+    )
+    void context.queryClient.prefetchQuery(
+      context.trpc.files.list.queryOptions({
+        view: 'mine',
+        folderId: undefined,
+      }),
+    )
   },
   component: CompleteSignIn,
 })
 
 function CompleteSignIn() {
-  const { redirect: next } = Route.useSearch()
-  const files = useFiles()
-  const shared = useFiles({ view: 'shared' })
+  const { user } = Route.useRouteContext()
   const profile = useProfile()
+  const imported = useImportGuestDraft(user.id)
   const navigate = useNavigate()
   useEffect(() => {
-    if (!files.data || !shared.data || profile.data === undefined) return
-    if (!profile.data && !files.data.length && !shared.data.length) {
-      void navigate({ to: '/onboarding', search: { redirect: next } })
-    } else {
-      void navigate({ href: next ?? '/' })
-    }
-  }, [files.data, shared.data, profile.data, navigate, next])
-  const error = files.error ?? shared.error ?? profile.error
+    if (!imported.ready || profile.data === undefined || profile.isFetching)
+      return
+    void navigate({
+      to: profile.data ? '/files' : '/onboarding',
+      replace: true,
+    })
+  }, [imported.ready, profile.data, profile.isFetching, navigate])
+  const error = imported.error ?? profile.error
+  if (!error) return <AppSkeleton />
   return (
     <main className="grid min-h-svh place-items-center p-6">
-      {error ? (
-        <div className="space-y-4 text-center">
-          <p className="text-sm">{error.message}</p>
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Try again
-          </Button>
-        </div>
-      ) : (
-        <Loader2
-          aria-label="Preparing your workspace"
-          className="text-muted-foreground size-5 animate-spin"
-        />
-      )}
+      <div className="max-w-sm space-y-4 text-center">
+        <h1 className="font-medium">Unable to finish sign-in</h1>
+        <p className="text-muted-foreground text-sm">{error.message}</p>
+        <p className="text-muted-foreground text-xs">
+          Your guest canvas is still saved on this device.
+        </p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Try again
+        </Button>
+      </div>
     </main>
   )
 }

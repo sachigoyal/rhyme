@@ -18,7 +18,8 @@ async function unwrap<T>(
   request: Promise<{ data: T; error: { message?: string } | null }>,
 ) {
   const { data, error } = await request
-  if (error) throw new Error(error.message ?? 'Something went wrong')
+  if (error)
+    throw new Error(error.message ?? 'Unable to complete sign-in. Try again.')
   return data
 }
 
@@ -46,6 +47,10 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
     mutationFn: (otp: string) =>
       unwrap(authClient.signIn.emailOtp({ email: email.trim(), otp })),
     onSuccess: async () => {
+      await queryClient.cancelQueries()
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] !== 'session',
+      })
       await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
       await router.navigate({
         to: '/auth/complete',
@@ -67,16 +72,11 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
   if (step === 'email') {
     return (
       <div>
-        <p className="text-muted-foreground mb-3 text-xs uppercase tracking-widest">
-          Your ideas belong here
-        </p>
         <h1 className="text-3xl font-medium tracking-tight">
-          Welcome to Rhyme.
+          Sign in to Rhyme
         </h1>
         <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-          Sign in or create your account.
-          <br />
-          Your next idea already has a home.
+          Enter your email to sign in or create an account.
         </p>
         <form
           className="mt-9 space-y-5"
@@ -114,7 +114,7 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
             )}
           </Button>
           <p className="text-muted-foreground text-center text-xs">
-            We’ll send a sign-in code. No password to remember.
+            We’ll email you a verification code.
           </p>
         </form>
       </div>
@@ -126,7 +126,9 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
       <span className="bg-muted mb-6 grid size-10 place-items-center rounded-xl border">
         <Mail className="size-4" />
       </span>
-      <h1 className="text-3xl font-medium tracking-tight">Check your inbox.</h1>
+      <h1 className="text-3xl font-medium tracking-tight">
+        Enter verification code
+      </h1>
       <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
         Enter the {CODE_LENGTH}-digit code we sent to
         <br />
@@ -217,7 +219,8 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
         </Button>
       </div>
       <p className="text-muted-foreground mt-5 text-xs">
-        The code expires in 10 minutes. Check spam if it is missing.
+        The code expires in 10 minutes. Check your spam folder if it hasn’t
+        arrived.
       </p>
     </div>
   )

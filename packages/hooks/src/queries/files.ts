@@ -1,15 +1,32 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@rhyme/trpc-client'
-import type { FilesListInput } from '@rhyme/trpc-client'
+import type { FileSummary, FilesListInput } from '@rhyme/trpc-client'
 
 export function useFiles(input: FilesListInput = {}) {
   const trpc = useTRPC()
-  return useQuery(trpc.files.list.queryOptions(input))
+  return useQuery(
+    trpc.files.list.queryOptions({
+      view: input.view ?? 'mine',
+      folderId: input.folderId,
+    }),
+  )
 }
 
 export function useFile(id: string) {
   const trpc = useTRPC()
-  return useQuery(trpc.files.get.queryOptions({ id }))
+  const queryClient = useQueryClient()
+  return useQuery(
+    trpc.files.get.queryOptions(
+      { id },
+      {
+        placeholderData: () =>
+          queryClient
+            .getQueriesData<FileSummary[]>(trpc.files.list.queryFilter())
+            .flatMap(([, rows]) => rows ?? [])
+            .find((file) => file.id === id),
+      },
+    ),
+  )
 }
 
 // Read once when the editor opens; the canvas owns the state afterwards.

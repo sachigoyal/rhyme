@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowUpRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { toast } from 'sonner'
 import type { ChatSummary } from '@rhyme/trpc-client'
 import { useDeleteChat, useRenameChat } from '@rhyme/hooks/mutations'
 import { Button } from '@rhyme/ui/components/button'
@@ -98,21 +97,13 @@ export function ConversationActions({
       <ConfirmDialog
         open={dialog === 'delete'}
         onOpenChange={(open) => !open && setDialog(null)}
-        title="Delete this conversation?"
-        description="This removes its messages and change previews. Your canvas stays as it is."
+        title="Delete conversation?"
+        description="Messages and change previews will be permanently deleted. Canvas content will not be changed."
         confirmLabel="Delete conversation"
-        onConfirm={() =>
-          remove.mutate(
-            { id: chat.id },
-            {
-              onSuccess: onDeleted,
-              onError: (error) =>
-                toast.error(
-                  error.message || 'Could not delete the conversation',
-                ),
-            },
-          )
-        }
+        onConfirm={async () => {
+          await remove.mutateAsync({ id: chat.id })
+          onDeleted?.()
+        }}
       />
     </>
   )

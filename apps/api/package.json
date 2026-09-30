@@ -7,7 +7,8 @@
     "./router": "./src/router.ts",
     "./canvas-schema": "./src/agents/canvas-schema.ts",
     "./agent-config": "./src/agents/agent-config.ts",
-    "./profile-schema": "./src/profile-schema.ts"
+    "./profile-schema": "./src/profile-schema.ts",
+    "./preferences-schema": "./src/preferences-schema.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
@@ -15,7 +16,10 @@
     "db:migrate": "wrangler d1 migrations apply rhyme --local",
     "db:migrate:remote": "wrangler d1 migrations apply rhyme --remote",
     "check-types": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "deploy:production": "wrangler deploy --minify --config wrangler.production.jsonc",
+    "db:migrate:production": "wrangler d1 migrations apply rhyme --remote --config wrangler.production.jsonc",
+    "types:production": "wrangler types src/production-bindings.d.ts --config wrangler.production.jsonc --env-interface ProductionBindings --include-runtime false --strict-vars false && node scripts/module-bindings.mjs"
   },
   "dependencies": {
     "@cloudflare/ai-chat": "catalog:",

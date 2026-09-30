@@ -18,6 +18,7 @@ export function useCanvasAgent(
 ) {
   const [runner] = useState(() => createCanvasToolRunner(editor))
   const [requestPending, setRequestPending] = useState(false)
+  const [activeTools, setActiveTools] = useState(0)
   const requestInFlight = useRef(false)
   const [configSaving, setConfigSaving] = useState(false)
   const configInFlight = useRef(false)
@@ -53,24 +54,30 @@ export function useCanvasAgent(
     },
     onToolCall: async ({ toolCall, addToolOutput }) => {
       if (toolCall.toolName === 'delete_shapes') return
-      const execution = runner.run(
-        toolCall.toolCallId,
-        toolCall.toolName,
-        toolCall.input,
-      )
-      const preview = execution.applied
-        ? await captureCanvasPreview(editor, 480)
-        : null
-      await addToolOutput({
-        toolCallId: toolCall.toolCallId,
-        ...execution.result,
-      })
-      savePreview(toolCall.toolCallId, preview)
+      setActiveTools((count) => count + 1)
+      try {
+        const execution = runner.run(
+          toolCall.toolCallId,
+          toolCall.toolName,
+          toolCall.input,
+        )
+        const preview = execution.applied
+          ? await captureCanvasPreview(editor, 480)
+          : null
+        await addToolOutput({
+          toolCallId: toolCall.toolCallId,
+          ...execution.result,
+        })
+        savePreview(toolCall.toolCallId, preview)
+      } finally {
+        setActiveTools((count) => count - 1)
+      }
     },
   })
 
   const busy =
     requestPending ||
+    activeTools > 0 ||
     agent.state?.status === 'running' ||
     chat.status === 'submitted' ||
     chat.status === 'streaming' ||
@@ -146,17 +153,23 @@ export function useCanvasAgent(
       })
       return
     }
-    const execution = runner.run(toolCallId, 'delete_shapes', input)
-    const preview = execution.applied
-      ? await captureCanvasPreview(editor, 480)
-      : null
-    await chat.addToolOutput({ toolCallId, ...execution.result })
-    savePreview(toolCallId, preview)
+    setActiveTools((count) => count + 1)
+    try {
+      const execution = runner.run(toolCallId, 'delete_shapes', input)
+      const preview = execution.applied
+        ? await captureCanvasPreview(editor, 480)
+        : null
+      await chat.addToolOutput({ toolCallId, ...execution.result })
+      savePreview(toolCallId, preview)
+    } finally {
+      setActiveTools((count) => count - 1)
+    }
   }
 
   return {
     ...chat,
     busy,
+    usingTools: activeTools > 0,
     config,
     configure,
     configSaving,

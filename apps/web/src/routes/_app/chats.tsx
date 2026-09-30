@@ -5,7 +5,13 @@ import { ChatHistory } from '@/features/chats/chat-history'
 
 export const Route = createFileRoute('/_app/chats')({
   validateSearch: z.object({ chat: z.string().optional() }),
-  head: () => ({ meta: [{ title: 'Conversations · Rhyme' }] }),
+  loaderDeps: ({ search }) => ({ chatId: search.chat }),
+  loader: ({ context, deps }) => {
+    if (deps.chatId)
+      void context.queryClient.prefetchQuery(
+        context.trpc.chats.get.queryOptions({ id: deps.chatId }),
+      )
+  },
   component: ConversationsPage,
 })
 

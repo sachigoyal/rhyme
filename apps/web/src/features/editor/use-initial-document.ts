@@ -1,46 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useFileDocument } from '@rhyme/hooks/queries'
-import type { DocumentSnapshot, FileDocument } from '@rhyme/trpc-client'
-import { documentCache } from './document-cache'
+import { errorCode } from '@rhyme/trpc-client'
+import type { DocumentSnapshot } from '@rhyme/trpc-client'
+import { resolveInitialDocument } from './initial-document'
 
 export interface InitialDocument {
   document: DocumentSnapshot | null
   version: number
   dirty: boolean
   offline: boolean
-}
-
-// Prefers unsynced local edits when they were made on top of the server's current version.
-async function resolveInitialDocument(
-  fileId: string,
-  remote: FileDocument | undefined,
-) {
-  const local = await documentCache.get(fileId)
-
-  if (!remote) {
-    return local
-      ? {
-          document: local.document,
-          version: local.baseVersion,
-          dirty: local.dirty,
-          offline: true,
-        }
-      : null
-  }
-  if (local?.dirty && local.baseVersion === remote.version) {
-    return {
-      document: local.document,
-      version: remote.version,
-      dirty: true,
-      offline: false,
-    }
-  }
-  return {
-    document: remote.document,
-    version: remote.version,
-    dirty: false,
-    offline: false,
-  }
 }
 
 export function useInitialDocument(fileId: string) {
@@ -51,16 +19,26 @@ export function useInitialDocument(fileId: string) {
 
   useEffect(() => {
     if (!settled || initial) return
+    if (
+      ['FORBIDDEN', 'UNAUTHORIZED', 'NOT_FOUND'].includes(
+        errorCode(remote.error) ?? '',
+      )
+    ) {
+      setFailed(true)
+      return
+    }
     let cancelled = false
     void resolveInitialDocument(fileId, remote.data).then((resolved) => {
       if (cancelled) return
-      if (resolved) setInitial(resolved)
-      else setFailed(true)
+      if (resolved) {
+        setFailed(false)
+        setInitial(resolved)
+      } else setFailed(true)
     })
     return () => {
       cancelled = true
     }
-  }, [fileId, settled, remote.data, initial])
+  }, [fileId, settled, remote.data, remote.error, initial])
 
-  return { initial, failed }
+  return { initial, failed, error: remote.error }
 }

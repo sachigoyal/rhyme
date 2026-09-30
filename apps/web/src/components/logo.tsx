@@ -1,19 +1,44 @@
 import { cn } from '@rhyme/ui/lib/utils'
+import { brandMarkPath, brandWordmarkPath, brandWordmarkViewBox } from './brand'
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({
+  className,
+  compactOnMobile = false,
+}: {
+  className?: string
+  compactOnMobile?: boolean
+}) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
-        <rect width="24" height="24" rx="7" className="fill-foreground" />
-        <path
-          d="M6.5 15.5c2-5.5 4.5-7.5 6-6s-1.5 5-0 6.5 3.5-1 5-4"
-          className="stroke-background"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-        />
+    <div
+      role="img"
+      aria-label="Rhyme"
+      className={cn('flex w-fit shrink-0 items-center gap-2.5', className)}
+    >
+      <LogoMark className="size-7" />
+      <svg
+        viewBox={brandWordmarkViewBox}
+        className={cn(
+          'text-foreground h-7 w-auto',
+          compactOnMobile && 'hidden sm:block',
+        )}
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d={brandWordmarkPath} />
       </svg>
-      <span className="text-[15px] font-semibold tracking-tight">Rhyme</span>
     </div>
+  )
+}
+
+export function LogoMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      className={cn('text-primary shrink-0', className)}
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d={brandMarkPath} />
+    </svg>
   )
 }

@@ -13,7 +13,8 @@ import {
   MessageScrollerViewport,
 } from '@rhyme/ui/components/message-scroller'
 import { ActivityIndicator, pendingActivity } from './agent-activity'
-import type { AgentStatus } from './agent-launcher'
+import { resolveAgentStatus } from './agent-status'
+import type { AgentStatus } from './agent-status'
 import { AgentMessage } from './agent-message'
 import { AgentComposer, AgentEmptyState } from './agent-composer'
 import { useCanvasAgent } from './use-canvas-agent'
@@ -39,12 +40,9 @@ export class AgentChatBoundary extends Component<{
       return (
         <div className="flex flex-1 flex-col justify-center gap-3 px-5 py-10">
           <AlertTriangle className="size-5 text-muted-foreground" />
-          <h3 className="text-sm font-medium">
-            This conversation couldn’t be opened
-          </h3>
+          <h3 className="text-sm font-medium">Unable to open conversation</h3>
           <p className="text-muted-foreground text-xs leading-5">
-            Your canvas is ready to use. Start a fresh conversation or pick
-            another one from history.
+            Start a new conversation or select one from history.
           </p>
           <Button
             variant="outline"
@@ -84,52 +82,40 @@ export function AgentChat({
   const [draft, setDraft] = useState('')
   const initialSent = useRef(false)
   const wasBusy = useRef(false)
+  const [completed, setCompleted] = useState(false)
   const completionRef = useRef(onComplete)
   completionRef.current = onComplete
   const busy = chat.busy
   const lastMessageId = chat.messages.at(-1)?.id
   const activity = pendingActivity(chat.messages, busy)
-  const editing =
-    busy &&
-    chat.messages
-      .at(-1)
-      ?.parts.some(
-        (part) =>
-          (part.type.startsWith('tool-') || part.type === 'dynamic-tool') &&
-          'state' in part &&
-          part.state === 'input-available',
-      )
-  const needsApproval = chat.messages.some((message) =>
-    message.parts.some(
-      (part) =>
-        part.type === 'tool-delete_shapes' &&
-        'state' in part &&
-        part.state === 'input-available',
-    ),
-  )
-  const status =
-    chat.error || chat.connectionError
-      ? 'error'
-      : !chat.connected
-        ? 'connecting'
-        : needsApproval
-          ? 'approval'
-          : busy
-            ? editing
-              ? 'editing'
-              : 'thinking'
-            : wasBusy.current
-              ? 'done'
-              : 'idle'
+  const status = resolveAgentStatus({
+    messages: chat.messages,
+    connected: chat.connected,
+    busy,
+    usingTools: chat.usingTools,
+    error: Boolean(chat.error || chat.connectionError),
+    completed,
+  })
 
   useEffect(() => {
     onStatus(status)
   }, [status, onStatus])
   useEffect(() => {
     onBusy(busy || chat.configSaving)
-    if (busy) wasBusy.current = true
-    else if (wasBusy.current) completionRef.current()
+    if (busy) {
+      wasBusy.current = true
+      setCompleted(false)
+    } else if (wasBusy.current) {
+      wasBusy.current = false
+      setCompleted(true)
+      completionRef.current()
+    }
   }, [busy, chat.configSaving, onBusy])
+  useEffect(() => {
+    if (!completed) return
+    const timer = setTimeout(() => setCompleted(false), 2200)
+    return () => clearTimeout(timer)
+  }, [completed])
 
   useEffect(() => {
     if (
@@ -202,6 +188,7 @@ export function AgentChat({
               {chat.messages.length === 0 ? (
                 <MessageScrollerItem messageId="empty">
                   <AgentEmptyState
+                    status={status}
                     disabled={!chat.connected || chat.configSaving}
                     onSubmit={submit}
                   />
@@ -242,11 +229,9 @@ export function AgentChat({
                   <div className="bg-muted/40 flex items-start gap-2 rounded-xl border p-3 text-xs">
                     <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium">
-                        The assistant couldn’t finish
-                      </p>
+                      <p className="font-medium">Response failed</p>
                       <p className="text-muted-foreground mt-1 leading-5">
-                        {chat.error.message || 'Please try again.'}
+                        {chat.error.message || 'Try again.'}
                       </p>
                       <Button
                         size="xs"
@@ -270,7 +255,7 @@ export function AgentChat({
       {layout === 'panel' && chat.messages.length > 0 && !busy && (
         <div className="flex shrink-0 items-center justify-between px-4 pb-2">
           <span className="text-muted-foreground text-[10px]">
-            {chat.messages.length} messages · Canvas-aware
+            {chat.messages.length} messages
           </span>
           <Button
             size="icon-xs"

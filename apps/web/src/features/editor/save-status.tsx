@@ -15,16 +15,16 @@ const labels: Record<
   saved: { text: 'Saved', hint: 'All changes are saved to your account.' },
   unsaved: {
     text: 'Unsaved',
-    hint: 'Changes are kept on this device and will sync in a moment.',
+    hint: 'Changes are waiting to sync.',
   },
-  saving: { text: 'Saving…', hint: 'Syncing your latest changes.' },
+  saving: { text: 'Saving…', hint: 'Saving changes to your account.' },
   offline: {
     text: 'Offline',
-    hint: 'Changes are kept on this device and will sync when you reconnect.',
+    hint: 'Changes will sync when you reconnect.',
   },
   error: {
     text: 'Retrying',
-    hint: 'Saving failed. Changes are safe on this device and will retry.',
+    hint: 'Couldn’t sync changes. Retrying automatically.',
   },
 }
 
@@ -54,7 +54,12 @@ export function SaveStatus({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="text-muted-foreground flex items-center gap-1.5 px-1 text-xs select-none">
+        <span
+          tabIndex={0}
+          role="status"
+          aria-live="polite"
+          className="text-muted-foreground flex items-center gap-1.5 rounded-sm px-1 text-xs select-none focus-visible:outline-2 focus-visible:outline-ring"
+        >
           <StatusIcon status={status} />
           {text}
         </span>

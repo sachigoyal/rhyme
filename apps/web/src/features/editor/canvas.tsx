@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Tldraw } from 'tldraw'
 import type { Editor, TLStoreSnapshot } from 'tldraw'
+import { useSettings } from '@rhyme/hooks/queries'
+import { useThumbnailUploaded } from '@rhyme/hooks/mutations'
 import { useTheme } from '@rhyme/ui/components/theme'
 import { env } from '@/lib/env'
 import { createAssetStore, createThumbnailer } from './assets'
@@ -24,14 +26,25 @@ export function Canvas({
 }: CanvasProps) {
   const [editor, setEditor] = useState<Editor | null>(null)
   const { resolvedTheme } = useTheme()
+  const { data: preferences } = useSettings()
   const assets = useMemo(() => createAssetStore(fileId), [fileId])
-  const thumbnailer = useMemo(() => createThumbnailer(fileId), [fileId])
+  const thumbnailUploaded = useThumbnailUploaded()
+  const thumbnailer = useMemo(
+    () => createThumbnailer(fileId, () => thumbnailUploaded(fileId)),
+    [fileId, thumbnailUploaded],
+  )
 
   useEffect(() => {
     editor?.user.updateUserPreferences({
       colorScheme: resolvedTheme === 'dark' ? 'dark' : 'light',
     })
   }, [editor, resolvedTheme])
+
+  useEffect(() => {
+    if (!editor || !preferences || headless) return
+    editor.updateInstanceState({ isGridMode: preferences.showGrid })
+    editor.user.updateUserPreferences({ isSnapMode: preferences.snapToShapes })
+  }, [editor, preferences?.showGrid, preferences?.snapToShapes, headless])
 
   const onMount = (mounted: Editor) => {
     setEditor(mounted)

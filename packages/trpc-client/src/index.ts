@@ -5,7 +5,11 @@ import {
   httpLink,
   splitLink,
 } from '@trpc/client'
-import { createTRPCContext } from '@trpc/tanstack-react-query'
+import {
+  createTRPCOptionsProxy,
+  createTRPCContext,
+} from '@trpc/tanstack-react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
 import superjson from 'superjson'
 import type { AppRouter } from 'api/router'
@@ -33,6 +37,11 @@ export function createApiClient(url: string) {
   })
 }
 
+export function createApiOptions(client: ApiClient, queryClient: QueryClient) {
+  return createTRPCOptionsProxy<AppRouter>({ client, queryClient })
+}
+
+export type ApiOptions = ReturnType<typeof createApiOptions>
 export type ApiClient = ReturnType<typeof createApiClient>
 export type RouterInputs = inferRouterInputs<AppRouter>
 export type RouterOutputs = inferRouterOutputs<AppRouter>

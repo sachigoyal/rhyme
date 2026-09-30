@@ -1,6 +1,12 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
-import { createApiClient, errorCode } from '@rhyme/trpc-client'
+import {
+  createApiClient,
+  createApiOptions,
+  errorCode,
+} from '@rhyme/trpc-client'
+import { RouteError } from './components/route-error'
+import { RoutePending } from './components/route-pending'
 import { Providers } from './components/providers'
 import { env } from './lib/env'
 import { sessionQuery } from './lib/auth'
@@ -17,6 +23,7 @@ const FINAL_ERRORS = new Set([
 export function getRouter() {
   const onError = (error: unknown) => {
     if (errorCode(error) !== 'UNAUTHORIZED') return
+    queryClient.clear()
     queryClient.setQueryData(sessionQuery.queryKey, null)
     void router.navigate({ to: '/sign-in' })
   }
@@ -37,7 +44,11 @@ export function getRouter() {
 
   const router = createRouter({
     routeTree,
-    context: { queryClient },
+    context: { queryClient, trpc: createApiOptions(trpcClient, queryClient) },
+    defaultPendingComponent: RoutePending,
+    defaultErrorComponent: RouteError,
+    defaultPendingMs: 100,
+    defaultPendingMinMs: 0,
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,

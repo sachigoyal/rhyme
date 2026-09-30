@@ -1,0 +1,1 @@
+ALTER TABLE `user_settings` ADD `last_edited_canvas_id` text REFERENCES files(id);

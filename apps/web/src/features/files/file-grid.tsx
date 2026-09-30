@@ -3,6 +3,9 @@ import { useFiles } from '@rhyme/hooks/queries'
 import type { FileView } from '@rhyme/trpc-client'
 import { Button } from '@rhyme/ui/components/button'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { RefreshNotice } from '@/components/refresh-notice'
+import { RecoveryState } from '@/components/recovery-state'
+import { EmptyState } from '@/components/empty-state'
 import { FileCard } from './file-card'
 import type { FolderNode } from './folder-tree'
 import { useCreateAndOpenFile } from './use-create-file'
@@ -15,7 +18,8 @@ interface FileGridProps {
   sort?: 'recent' | 'name'
 }
 
-const GRID = 'grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4'
+const GRID =
+  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-5'
 
 export function FileGrid({
   view,
@@ -35,26 +39,32 @@ export function FileGrid({
     return (
       <div className={GRID}>
         {Array.from({ length: 8 }, (_, index) => (
-          <Skeleton key={index} className="aspect-[16/13] rounded-xl" />
+          <Skeleton key={index} className="aspect-[16/13] rounded-lg" />
         ))}
       </div>
     )
   }
 
-  if (isError) {
+  if (!files)
     return (
-      <EmptyState
-        title="Couldn't load your files"
-        body="Check your connection and try again."
-      >
-        <Button variant="outline" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </EmptyState>
+      <RecoveryState
+        title="Unable to load canvases"
+        description="Check your connection and try again."
+        onRetry={async () => {
+          const result = await refetch()
+          if (result.error) throw result.error
+        }}
+      />
     )
-  }
 
-  if (files.length === 0) return <EmptyView view={view} folderId={folderId} />
+  const notice = isError && <RefreshNotice onRetry={refetch} />
+  if (files.length === 0)
+    return (
+      <>
+        {notice}
+        <EmptyView view={view} folderId={folderId} />
+      </>
+    )
 
   const visible = files
     .filter((file) =>
@@ -67,19 +77,25 @@ export function FileGrid({
     )
   if (!visible.length)
     return (
-      <EmptyState
-        icon={Search}
-        title="No matching canvases"
-        body="Try a different name or clear your search."
-      />
+      <>
+        {notice}
+        <EmptyState
+          icon={Search}
+          title="No matching canvases"
+          body="Try a different name or clear your search."
+        />
+      </>
     )
 
   return (
-    <div className={GRID}>
-      {visible.map((file) => (
-        <FileCard key={file.id} file={file} folders={folders} />
-      ))}
-    </div>
+    <>
+      {notice}
+      <div className={GRID}>
+        {visible.map((file) => (
+          <FileCard key={file.id} file={file} folders={folders} />
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -91,7 +107,7 @@ function EmptyView({ view, folderId }: { view: FileView; folderId?: string }) {
       <EmptyState
         icon={Trash2}
         title="Trash is empty"
-        body="Files you move to trash show up here."
+        body="Deleted canvases appear here until permanently removed."
       />
     )
   }
@@ -99,42 +115,20 @@ function EmptyView({ view, folderId }: { view: FileView; folderId?: string }) {
     return (
       <EmptyState
         icon={Users}
-        title="Nothing shared yet"
-        body="Files other people share with you appear here."
+        title="No shared canvases"
+        body="Canvases shared with your account appear here."
       />
     )
   }
   return (
     <EmptyState
       icon={FilePlus2}
-      title="Start with a blank canvas"
-      body="Sketch an idea, map a system or plan a flow."
+      title="No canvases"
+      body="Create a canvas to start drawing."
     >
       <Button onClick={() => create(folderId)} disabled={isPending}>
         New canvas
       </Button>
     </EmptyState>
-  )
-}
-
-interface EmptyStateProps {
-  icon?: typeof Trash2
-  title: string
-  body: string
-  children?: React.ReactNode
-}
-
-function EmptyState({ icon: Icon, title, body, children }: EmptyStateProps) {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-24 text-center">
-      {Icon && (
-        <div className="bg-muted mb-4 grid size-11 place-items-center rounded-xl">
-          <Icon className="text-muted-foreground size-5" />
-        </div>
-      )}
-      <h2 className="font-medium">{title}</h2>
-      <p className="text-muted-foreground mt-1 max-w-xs text-sm">{body}</p>
-      {children && <div className="mt-6">{children}</div>}
-    </div>
   )
 }

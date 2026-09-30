@@ -1,6 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { LogOut, Monitor, Moon, Sun } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { LogOut, Monitor, Moon, Sun, Settings } from 'lucide-react'
+import { useSettings } from '@rhyme/hooks/queries'
+import { useUpdateSettings } from '@rhyme/hooks/mutations'
+import { toast } from 'sonner'
 import { useTheme } from '@rhyme/ui/components/theme'
 import type { Theme } from '@rhyme/ui/components/theme'
 import { Avatar, AvatarFallback } from '@rhyme/ui/components/avatar'
@@ -49,14 +52,16 @@ export function UserMenu({
   user: SessionUser
   children: React.ReactNode
 }) {
-  const { theme, setTheme } = useTheme()
+  const { theme } = useTheme()
+  const { data: preferences } = useSettings()
+  const updateSettings = useUpdateSettings()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   const signOut = async () => {
     await authClient.signOut()
     queryClient.clear()
-    await navigate({ to: '/sign-in' })
+    await navigate({ to: '/' })
   }
 
   return (
@@ -68,15 +73,34 @@ export function UserMenu({
           <p className="text-muted-foreground truncate text-xs">{user.email}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/settings">
+            <Settings />
+            Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Theme</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup
               value={theme}
-              onValueChange={(value) => setTheme(value as Theme)}
+              onValueChange={(value) => {
+                if (!preferences || updateSettings.isPending) return
+                updateSettings.mutate(
+                  { theme: value as Theme },
+                  {
+                    onError: () =>
+                      toast.error('Unable to save theme preference'),
+                  },
+                )
+              }}
             >
               {themes.map(({ value, label, icon: Icon }) => (
-                <DropdownMenuRadioItem key={value} value={value}>
+                <DropdownMenuRadioItem
+                  key={value}
+                  value={value}
+                  disabled={updateSettings.isPending || !preferences}
+                >
                   <Icon />
                   {label}
                 </DropdownMenuRadioItem>

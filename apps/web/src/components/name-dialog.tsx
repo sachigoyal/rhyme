@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@rhyme/ui/components/button'
 import {
@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@rhyme/ui/components/dialog'
 import { Input } from '@rhyme/ui/components/input'
+import { Label } from '@rhyme/ui/components/label'
 
 interface NameDialogProps {
   open: boolean
@@ -44,6 +45,7 @@ function NameForm({
   const [name, setName] = useState(initialName)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const inputId = useId()
   const trimmed = name.trim()
 
   return (
@@ -51,7 +53,8 @@ function NameForm({
       className="grid gap-4"
       onSubmit={async (event) => {
         event.preventDefault()
-        if (!trimmed || trimmed === initialName) return onDone()
+        if (pending || !trimmed) return
+        if (trimmed === initialName) return onDone()
         setPending(true)
         setError(null)
         try {
@@ -61,7 +64,7 @@ function NameForm({
           setError(
             failure instanceof Error
               ? failure.message
-              : 'Could not save the name. Please try again.',
+              : 'Unable to save the name. Try again.',
           )
         } finally {
           setPending(false)
@@ -70,10 +73,17 @@ function NameForm({
     >
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
-        {description && <DialogDescription>{description}</DialogDescription>}
+        <DialogDescription className={description ? undefined : 'sr-only'}>
+          {description ?? 'Enter a name.'}
+        </DialogDescription>
       </DialogHeader>
+      <Label htmlFor={inputId} className="sr-only">
+        {placeholder ?? title}
+      </Label>
       <Input
+        id={inputId}
         autoFocus
+        disabled={pending}
         value={name}
         placeholder={placeholder}
         maxLength={120}
@@ -86,7 +96,12 @@ function NameForm({
         </p>
       )}
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onDone}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onDone}
+          disabled={pending}
+        >
           Cancel
         </Button>
         <Button type="submit" disabled={!trimmed || pending}>

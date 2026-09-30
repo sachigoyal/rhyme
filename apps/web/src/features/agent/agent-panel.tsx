@@ -33,8 +33,9 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ConversationHoverCard } from '@/features/chats/conversation-hover-card'
 import { ConversationActions } from '@/features/chats/conversation-actions'
 import { MessagesSkeleton } from './agent-activity'
-import { AgentFace } from './agent-launcher'
-import type { AgentStatus } from './agent-launcher'
+import { AgentFace } from './agent-face'
+import { agentStatusLabels } from './agent-status'
+import type { AgentStatus } from './agent-status'
 import { AgentChat, AgentChatBoundary } from './agent-chat'
 import { AgentComposer, AgentEmptyState } from './agent-composer'
 
@@ -100,6 +101,7 @@ export function AgentPanel({
 
   const start = async (prompt = '', config?: AgentConfig) => {
     if (busy || createChat.isPending) return
+    setStatus('connecting')
     try {
       const chat = await createChat.mutateAsync({ fileId })
       setInitialPrompt(prompt)
@@ -107,6 +109,7 @@ export function AgentPanel({
       setActiveId(chat.id)
       setHistory(false)
     } catch (error) {
+      setStatus('error')
       toast.error(
         error instanceof Error
           ? error.message
@@ -116,20 +119,12 @@ export function AgentPanel({
   }
 
   const remove = async (id: string) => {
-    try {
-      await deleteChat.mutateAsync({ id })
-      if (activeId === id) {
-        setActiveId(null)
-        setInitialPrompt('')
-        setInitialConfig(undefined)
-        setStatus('idle')
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Could not delete the conversation',
-      )
+    await deleteChat.mutateAsync({ id })
+    if (activeId === id) {
+      setActiveId(null)
+      setInitialPrompt('')
+      setInitialConfig(undefined)
+      setStatus('idle')
     }
   }
 
@@ -138,12 +133,14 @@ export function AgentPanel({
       className="bg-background flex h-full min-h-0 flex-col"
       aria-label="Canvas assistant"
     >
-      <div className="flex h-16 shrink-0 items-center gap-2.5 border-b px-4">
+      <div className="bg-card flex h-16 shrink-0 items-center gap-2.5 border-b px-4">
         <AgentFace status={status} className="size-8" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-medium">Rhyme assistant</h2>
-          <p className="text-muted-foreground text-[11px]">
-            A little help for your big ideas
+          <p className="text-muted-foreground text-[11px]" role="status">
+            {status === 'idle'
+              ? 'Draw, edit, and organize shapes'
+              : agentStatusLabels[status]}
           </p>
         </div>
         <Button
@@ -211,10 +208,9 @@ export function AgentPanel({
           ) : !chats.data.length ? (
             <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
               <MessageSquare className="size-6 text-muted-foreground" />
-              <p className="text-sm">Your ideas start here</p>
+              <p className="text-sm">No conversations</p>
               <p className="text-muted-foreground text-xs leading-5">
-                Conversations stay with this canvas, so you can pick up where
-                you left off.
+                Start a conversation using the New conversation button.
               </p>
             </div>
           ) : (
@@ -230,6 +226,7 @@ export function AgentPanel({
                       className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left disabled:opacity-50"
                       disabled={busy && chat.id !== activeId}
                       onClick={() => {
+                        setStatus('connecting')
                         setActiveId(chat.id)
                         setInitialPrompt('')
                         setInitialConfig(undefined)
@@ -377,11 +374,11 @@ export function AgentPanel({
         onOpenChange={(open) => {
           if (!open) setDeletingId(null)
         }}
-        title="Delete this conversation?"
-        description="This removes the messages and change previews. Your canvas stays as it is."
+        title="Delete conversation?"
+        description="Messages and change previews will be permanently deleted. Canvas content will not be changed."
         confirmLabel="Delete conversation"
-        onConfirm={() => {
-          if (deletingId) void remove(deletingId)
+        onConfirm={async () => {
+          if (deletingId) await remove(deletingId)
         }}
       />
     </section>
@@ -403,7 +400,11 @@ function EmptyChat({
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <AgentEmptyState disabled={pending} onSubmit={submit} />
+        <AgentEmptyState
+          status={pending ? 'connecting' : 'idle'}
+          disabled={pending}
+          onSubmit={submit}
+        />
       </div>
       <AgentComposer
         draft={draft}

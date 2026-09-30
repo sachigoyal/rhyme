@@ -52,8 +52,8 @@ export function ThinkingBlock({
   const label = streaming
     ? 'Thinking'
     : wasLive && seconds > 0
-      ? `Thought for ${seconds}s`
-      : 'Thought'
+      ? `Reasoning · ${seconds}s`
+      : 'Reasoning'
 
   return (
     <div className="text-xs">
@@ -102,7 +102,7 @@ export function pendingActivity(messages: UIMessage[], busy: boolean) {
   const part: Part | undefined = lastVisiblePart(last)
   if (!part) return 'Thinking'
   if (isToolUIPart(part)) {
-    if (part.state === 'output-available') return 'Looking at the result'
+    if (part.state === 'output-available') return 'Reviewing result'
     if (part.state === 'output-error') return 'Recovering'
     return null
   }

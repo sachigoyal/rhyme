@@ -13,7 +13,7 @@ export function createAssetStore(fileId: string): TLAssetStore {
 const THUMBNAIL_SIZE = 800
 const THUMBNAIL_INTERVAL = 15_000
 
-export function createThumbnailer(fileId: string) {
+export function createThumbnailer(fileId: string, onUploaded: () => void) {
   let lastRun = 0
   let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -31,6 +31,7 @@ export function createThumbnailer(fileId: string) {
         scale: Math.min(1, THUMBNAIL_SIZE / Math.max(bounds.w, bounds.h)),
       })
       await uploadThumbnail(fileId, blob)
+      onUploaded()
     } catch (error) {
       console.warn('Thumbnail capture failed', error)
     }

@@ -1,12 +1,13 @@
 import { Suspense, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { toast } from 'sonner'
 import type { Editor } from 'tldraw'
 import { useFile } from '@rhyme/hooks/queries'
 import { useCreateChat } from '@rhyme/hooks/mutations'
-import { useTRPC } from '@rhyme/trpc-client'
+import { RecoveryState } from '@/components/recovery-state'
+import { errorCode, useTRPC } from '@rhyme/trpc-client'
 import type { ChatDetail, FileSummary } from '@rhyme/trpc-client'
 import { Button } from '@rhyme/ui/components/button'
 import {
@@ -42,8 +43,8 @@ export function ConversationSession({
   const queryClient = useQueryClient()
   const trpc = useTRPC()
   const reload = async () => {
-    await documentCache.delete(detail.chat.fileId)
-    await queryClient.resetQueries(
+    await documentCache.delete(detail.chat.fileId).catch(() => undefined)
+    queryClient.removeQueries(
       trpc.files.document.queryFilter({ id: detail.chat.fileId }),
     )
     setRevision((value) => value + 1)
@@ -72,23 +73,53 @@ function ConversationDocument({
   onReload: () => void
 }) {
   const file = useFile(detail.chat.fileId)
-  const { initial, failed } = useInitialDocument(detail.chat.fileId)
+  const {
+    initial,
+    failed,
+    error: documentError,
+  } = useInitialDocument(detail.chat.fileId)
 
-  if (file.isError || failed)
+  const unavailable = ['NOT_FOUND', 'FORBIDDEN', 'BAD_REQUEST'].includes(
+    errorCode(file.error ?? documentError) ?? '',
+  )
+  if ((file.isError && (!file.data || unavailable)) || failed)
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <ChatTranscript messages={detail.messages} />
-        <div className="space-y-3 border-t p-5 text-sm">
-          <p className="text-muted-foreground">
-            Couldn’t load the canvas needed to continue this conversation.
-          </p>
-          <Button variant="outline" size="sm" onClick={onReload}>
-            Try again
-          </Button>
+        <div className="border-t">
+          <RecoveryState
+            className="py-8"
+            sketch={unavailable ? 'canvas' : 'connection'}
+            title={unavailable ? 'Canvas unavailable' : 'Unable to load canvas'}
+            description={
+              unavailable
+                ? 'You can view the messages, but the canvas is no longer accessible.'
+                : 'The canvas must load before you can send a message. Try again.'
+            }
+            onRetry={unavailable ? undefined : async () => onReload()}
+          >
+            <Button asChild variant="outline">
+              <Link to="/files" search={{ view: 'mine' }}>
+                View canvases
+              </Link>
+            </Button>
+          </RecoveryState>
         </div>
       </div>
     )
-  if (!file.data || !initial) return <MessagesSkeleton />
+  if (!file.data || !initial)
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <ChatTranscript messages={detail.messages} />
+        <div
+          className="mx-auto w-full max-w-3xl p-5"
+          role="status"
+          aria-label="Loading canvas"
+        >
+          <Skeleton className="h-24" />
+        </div>
+      </div>
+    )
   if (file.data.role === 'viewer')
     return (
       <div className="flex min-h-0 flex-1 flex-col">
@@ -185,26 +216,24 @@ function LiveConversation({
         </AgentChatBoundary>
       ) : (
         <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="text-muted-foreground size-5 animate-spin" />
+          <Skeleton className="mx-5 h-24 w-full max-w-3xl" />
         </div>
       )}
       <AlertDialog open={resolving} onOpenChange={setResolving}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              This canvas changed somewhere else
-            </AlertDialogTitle>
+            <AlertDialogTitle>Canvas version conflict</AlertDialogTitle>
             <AlertDialogDescription>
-              Keep the assistant’s changes to overwrite the newer version, or
-              load the latest canvas before continuing.
+              A newer version is available. Load it to discard the assistant’s
+              local changes, or overwrite it with those changes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={onReload}>
-              Load latest
+              Load latest version
             </AlertDialogCancel>
             <AlertDialogAction onClick={() => void sync.keepLocal()}>
-              Keep mine
+              Overwrite latest version
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

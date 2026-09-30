@@ -4,3 +4,5 @@ export * from './relations'
 export * from './profile'
 
 export * from './chats'
+
+export * from './settings'

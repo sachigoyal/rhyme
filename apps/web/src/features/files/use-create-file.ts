@@ -12,7 +12,7 @@ export function useCreateAndOpenFile() {
       {
         onSuccess: ({ id }) =>
           navigate({ to: '/files/$fileId', params: { fileId: id } }),
-        onError: () => toast.error('Could not create a file'),
+        onError: () => toast.error('Unable to create canvas'),
       },
     )
 

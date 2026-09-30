@@ -3,34 +3,46 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
+import type { ApiOptions } from '@rhyme/trpc-client'
+import { PageNotFound } from '@/components/recovery-state'
+import { RoutePending } from '@/components/route-pending'
 import type { QueryClient } from '@tanstack/react-query'
 import { themeScript } from '@rhyme/ui/components/theme'
 import appCss from '../styles.css?url'
+import { createSeoHead, getSeoPage } from '@/lib/seo'
+import { env } from '@/lib/env'
 
 export interface RouterContext {
   queryClient: QueryClient
+  trpc: ApiOptions
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
-      },
-      { title: 'Rhyme' },
-      {
-        name: 'description',
-        content: 'Sketch, diagram and think on an infinite canvas.',
-      },
-    ],
-    links: [
-      { rel: 'stylesheet', href: appCss },
-      { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-    ],
-  }),
-  notFoundComponent: NotFound,
+  beforeLoad: ({ location }) => ({ seoLocation: location.href }),
+  head: ({ match }) => {
+    const seo = createSeoHead(
+      getSeoPage(match.context.seoLocation),
+      env.siteUrl,
+      env.allowIndexing,
+    )
+    return {
+      meta: [
+        { charSet: 'utf-8' },
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        },
+        ...seo.meta,
+      ],
+      links: [
+        { rel: 'stylesheet', href: appCss },
+        { rel: 'icon', href: '/favicon.svg?v=4', type: 'image/svg+xml' },
+        ...seo.links,
+      ],
+    }
+  },
+  pendingComponent: RoutePending,
+  notFoundComponent: () => <PageNotFound />,
   shellComponent: RootDocument,
 })
 
@@ -46,18 +58,5 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
-}
-
-function NotFound() {
-  return (
-    <main className="grid min-h-svh place-items-center p-6 text-center">
-      <div className="space-y-2">
-        <p className="text-muted-foreground text-sm">404</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Nothing drawn here yet
-        </h1>
-      </div>
-    </main>
   )
 }

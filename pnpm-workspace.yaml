@@ -3,6 +3,8 @@ packages:
   - packages/*
 
 catalog:
+  '@resvg/resvg-js': 2.6.2
+  fontkit: 2.0.4
   '@shadcn/react': 0.3.1
   react-markdown: 10.1.0
   '@ai-sdk/react': 4.0.125

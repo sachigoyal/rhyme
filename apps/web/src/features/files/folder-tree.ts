@@ -19,3 +19,16 @@ export function buildFolderTree(folders: Folder[]) {
 export function flattenFolderTree(nodes: FolderNode[]): FolderNode[] {
   return nodes.flatMap((node) => [node, ...flattenFolderTree(node.children)])
 }
+
+export function getFolderPath(folders: Folder[], folderId: string): Folder[] {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]))
+  const path: Folder[] = []
+  const visited = new Set<string>()
+  let folder = byId.get(folderId)
+  while (folder && !visited.has(folder.id)) {
+    visited.add(folder.id)
+    path.unshift(folder)
+    folder = folder.parentId ? byId.get(folder.parentId) : undefined
+  }
+  return path
+}

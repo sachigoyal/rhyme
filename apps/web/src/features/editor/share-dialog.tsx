@@ -31,13 +31,21 @@ type Role = Collaborator['role']
 function RoleSelect({
   value,
   onChange,
+  label = 'Access level',
+  disabled,
 }: {
   value: Role
   onChange: (role: Role) => void
+  label?: string
+  disabled?: boolean
 }) {
   return (
-    <Select value={value} onValueChange={(role) => onChange(role as Role)}>
-      <SelectTrigger size="sm" className="w-24">
+    <Select
+      value={value}
+      disabled={disabled}
+      onValueChange={(role) => onChange(role as Role)}
+    >
+      <SelectTrigger aria-label={label} size="sm" className="w-24">
         <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
@@ -58,14 +66,20 @@ export function ShareDialog({
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<Role>('editor')
-  const { data: collaborators, isPending } = useCollaborators(fileId, open)
+  const {
+    data: collaborators,
+    isPending,
+    isError,
+    refetch,
+  } = useCollaborators(fileId, open)
   const upsert = useUpsertCollaborator()
   const remove = useRemoveCollaborator()
 
   const invite = (event: React.FormEvent) => {
     event.preventDefault()
+    if (upsert.isPending || !email.trim()) return
     upsert.mutate(
-      { id: fileId, email, role },
+      { id: fileId, email: email.trim(), role },
       {
         onSuccess: () => {
           toast.success(`Shared with ${email}`)
@@ -88,19 +102,26 @@ export function ShareDialog({
         <DialogHeader>
           <DialogTitle>Share “{fileName}”</DialogTitle>
           <DialogDescription>
-            People you invite need a Rhyme account with that email.
+            Enter the email address of an existing Rhyme account.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={invite} className="flex gap-2">
+        <form onSubmit={invite} className="flex flex-wrap gap-2">
           <Input
+            aria-label="Invite by email"
+            className="min-w-40 flex-1"
+            disabled={upsert.isPending}
             type="email"
             required
             placeholder="name@example.com"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <RoleSelect value={role} onChange={setRole} />
+          <RoleSelect
+            value={role}
+            onChange={setRole}
+            disabled={upsert.isPending}
+          />
           <Button type="submit" disabled={upsert.isPending}>
             {upsert.isPending && <Loader2 className="animate-spin" />}
             Invite
@@ -112,9 +133,21 @@ export function ShareDialog({
             People with access
           </p>
           {isPending && <Skeleton className="h-10 w-full" />}
+          {isError && (
+            <div role="alert" className="space-y-2 py-3 text-sm">
+              <p>Couldn’t load people with access.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void refetch()}
+              >
+                Try again
+              </Button>
+            </div>
+          )}
           {collaborators?.length === 0 && (
             <p className="text-muted-foreground py-3 text-sm">
-              Only you can see this file.
+              Only you have access to this canvas.
             </p>
           )}
           {collaborators?.map((person) => (
@@ -130,6 +163,12 @@ export function ShareDialog({
                 )}
               </div>
               <RoleSelect
+                label={`Access for ${person.email}`}
+                disabled={
+                  person.userId.startsWith('pending:') ||
+                  upsert.isPending ||
+                  remove.isPending
+                }
                 value={person.role}
                 onChange={(next) =>
                   upsert.mutate({ id: fileId, email: person.email, role: next })
@@ -139,6 +178,11 @@ export function ShareDialog({
                 size="icon-sm"
                 variant="ghost"
                 aria-label={`Remove ${person.email}`}
+                disabled={
+                  person.userId.startsWith('pending:') ||
+                  upsert.isPending ||
+                  remove.isPending
+                }
                 onClick={() =>
                   remove.mutate({ id: fileId, userId: person.userId })
                 }

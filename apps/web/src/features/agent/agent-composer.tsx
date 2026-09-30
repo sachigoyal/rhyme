@@ -20,21 +20,22 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@rhyme/ui/components/tooltip'
-import { AgentFace } from './agent-launcher'
+import { AgentFace } from './agent-face'
+import type { AgentStatus } from './agent-status'
 import { AgentModelSelector } from './agent-model-selector'
 
 const SUGGESTIONS = [
   {
-    label: 'Map an idea',
+    label: 'Create a mind map',
     prompt:
       'Create a clear mind map for a new project idea. Start with goals, users, and next steps.',
   },
   {
-    label: 'Sketch a flow',
+    label: 'Create a flowchart',
     prompt: 'Sketch a simple sign-up flow as a diagram with connected steps.',
   },
   {
-    label: 'Organize my canvas',
+    label: 'Organize shapes',
     prompt:
       'Look at the canvas and organize its shapes into a clearer layout, preserving their content.',
   },
@@ -43,25 +44,25 @@ const SUGGESTIONS = [
 export function AgentEmptyState({
   onSubmit,
   disabled,
+  status = 'idle',
 }: {
   onSubmit: (text: string) => void
   disabled?: boolean
+  status?: AgentStatus
 }) {
   return (
     <div className="flex min-h-full flex-col justify-center px-5 py-8">
-      <AgentFace className="mb-5 size-10" />
-      <h3 className="text-lg font-medium tracking-tight">
-        What are we making?
-      </h3>
+      <AgentFace status={status} className="mb-5 size-12" />
+      <h3 className="text-lg font-medium tracking-tight">Canvas assistant</h3>
       <p className="text-muted-foreground mt-2 text-sm leading-6">
-        Sketch a flow, explore an idea, or bring a little order to your canvas.
+        Create diagrams or edit shapes using a prompt.
       </p>
       <div className="mt-6 flex flex-col gap-2">
         {SUGGESTIONS.map((suggestion) => (
           <Button
             key={suggestion.label}
             variant="outline"
-            className="h-10 justify-between rounded-xl px-3 text-xs font-normal shadow-none"
+            className="h-11 justify-between rounded-lg px-3 text-sm font-normal shadow-none"
             disabled={disabled}
             onClick={() => onSubmit(suggestion.prompt)}
           >
@@ -71,8 +72,8 @@ export function AgentEmptyState({
         ))}
       </div>
       <p className="text-muted-foreground mt-6 text-[11px] leading-5">
-        Your assistant sees the canvas and your selection. You can undo its
-        edits just like your own.
+        The assistant can read the canvas and your selection. Use Undo to revert
+        its edits.
       </p>
     </div>
   )
@@ -146,7 +147,7 @@ export function AgentComposer({
           ref={textareaRef}
           aria-label="Message the assistant"
           aria-describedby={hintId}
-          placeholder="Ask Rhyme to make something…"
+          placeholder="Describe a change…"
           value={draft}
           rows={1}
           onChange={(event) => onDraft(event.target.value)}
@@ -169,8 +170,8 @@ export function AgentComposer({
           className="justify-between gap-2 p-0 pt-1"
         >
           <span id={hintId} className="sr-only">
-            Enter sends your message. Shift + Enter adds a new line. You can
-            keep writing while a response is running or reconnecting.
+            Press Enter to send. Shift + Enter adds a new line. You can edit
+            your draft while the assistant is responding or reconnecting.
           </span>
           <div className="flex min-w-0 items-center gap-2">
             <AgentModelSelector
@@ -185,7 +186,7 @@ export function AgentComposer({
                   <DropdownMenuTrigger asChild>
                     <InputGroupButton
                       size="icon-sm"
-                      aria-label="Prompt ideas"
+                      aria-label="Example prompts"
                       className="rounded-lg"
                     >
                       <Lightbulb className="size-4" />
@@ -193,7 +194,7 @@ export function AgentComposer({
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={6}>
-                  Prompt ideas
+                  Example prompts
                 </TooltipContent>
               </Tooltip>
               <DropdownMenuContent
@@ -206,7 +207,7 @@ export function AgentComposer({
                 }}
               >
                 <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                  Start with an editable prompt
+                  Choose a prompt to edit
                 </DropdownMenuLabel>
                 {SUGGESTIONS.map((suggestion) => (
                   <DropdownMenuItem

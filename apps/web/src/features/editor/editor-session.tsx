@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import { useSettings } from '@rhyme/hooks/queries'
 import { Link } from '@tanstack/react-router'
 import { LayoutGrid } from 'lucide-react'
 import type { Editor } from 'tldraw'
@@ -23,10 +24,10 @@ import {
 } from '@rhyme/ui/components/resizable'
 import { UserAvatar, UserMenu } from '@/components/user-menu'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
-import type { AgentStatus } from '@/features/agent/agent-launcher'
+import type { AgentStatus } from '@/features/agent/agent-status'
 import { Logo } from '@/components/logo'
 import { Separator } from '@rhyme/ui/components/separator'
-import { AgentPanel } from '@/features/agent/agent-panel'
+import { AssistantSkeleton } from '@/components/loading-states'
 import type { SessionUser } from '@/lib/auth'
 import { Canvas } from './canvas'
 import { useDocumentSync } from './use-document-sync'
@@ -34,6 +35,12 @@ import { FileTitle } from './file-title'
 import { SaveStatus } from './save-status'
 import { ShareDialog } from './share-dialog'
 import type { InitialDocument } from './use-initial-document'
+
+const AgentPanel = lazy(() =>
+  import('@/features/agent/agent-panel').then((module) => ({
+    default: module.AgentPanel,
+  })),
+)
 
 interface EditorSessionProps {
   file: FileSummary
@@ -50,11 +57,15 @@ export function EditorSession({
   onReload,
   chatId,
 }: EditorSessionProps) {
+  const { data: preferences } = useSettings()
+  const initiallyOpen = Boolean(
+    chatId || (preferences?.openAssistant && file.role !== 'viewer'),
+  )
   const canEdit = file.role !== 'viewer'
   const [resolving, setResolving] = useState(false)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [agentOpen, setAgentOpen] = useState(Boolean(chatId))
-  const [agentStarted, setAgentStarted] = useState(Boolean(chatId))
+  const [agentOpen, setAgentOpen] = useState(initiallyOpen)
+  const [agentStarted, setAgentStarted] = useState(initiallyOpen)
   const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle')
   const agentPanel = usePanelRef()
   const sync = useDocumentSync(file.id, initial, canEdit)
@@ -74,11 +85,11 @@ export function EditorSession({
 
   return (
     <div className="flex h-svh flex-col">
-      <header className="bg-background flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+      <header className="bg-card flex h-16 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
         <Link
-          to="/"
+          to="/files"
           className="mr-1 hidden shrink-0 sm:block"
-          aria-label="Open your most recent canvas"
+          aria-label="Open workspace"
         >
           <Logo />
         </Link>
@@ -102,7 +113,7 @@ export function EditorSession({
         <FileTitle id={file.id} name={file.name} editable={canEdit} />
         {!canEdit && <Badge variant="secondary">View only</Badge>}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {sync && (
             <SaveStatus sync={sync} onResolve={() => setResolving(true)} />
           )}
@@ -140,7 +151,7 @@ export function EditorSession({
                 panelRef={agentPanel}
                 collapsible
                 collapsedSize={0}
-                defaultSize={chatId ? 380 : 0}
+                defaultSize={initiallyOpen ? 380 : 0}
                 minSize={300}
                 maxSize={520}
                 onResize={(size) => setAgentOpen(size.inPixels > 0)}
@@ -150,13 +161,15 @@ export function EditorSession({
                     className={agentOpen ? 'h-full' : 'hidden'}
                     inert={!agentOpen}
                   >
-                    <AgentPanel
-                      fileId={file.id}
-                      editor={editor}
-                      onClose={() => setAgentVisible(false)}
-                      onStateChange={setAgentStatus}
-                      initialChatId={chatId}
-                    />
+                    <Suspense fallback={<AssistantSkeleton />}>
+                      <AgentPanel
+                        fileId={file.id}
+                        editor={editor}
+                        onClose={() => setAgentVisible(false)}
+                        onStateChange={setAgentStatus}
+                        initialChatId={chatId}
+                      />
+                    </Suspense>
                   </div>
                 )}
               </ResizablePanel>
@@ -164,7 +177,7 @@ export function EditorSession({
           )}
         </ResizablePanelGroup>
         {canEdit && editor && !agentOpen && (
-          <div className="absolute bottom-20 right-4 z-350 sm:bottom-5 sm:right-5">
+          <div className="absolute bottom-20 right-4 z-350 sm:right-5">
             <AgentLauncher
               status={agentStatus}
               open={agentOpen}
@@ -178,21 +191,18 @@ export function EditorSession({
         <AlertDialog open={resolving} onOpenChange={setResolving}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                This file changed somewhere else
-              </AlertDialogTitle>
+              <AlertDialogTitle>Canvas version conflict</AlertDialogTitle>
               <AlertDialogDescription>
-                Someone saved a newer version while you were editing. Keep your
-                version to overwrite it, or load the latest and discard your
-                recent changes.
+                A newer version is available. Load it to discard your local
+                changes, or overwrite it with your changes.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={onReload}>
-                Load latest
+                Load latest version
               </AlertDialogCancel>
               <AlertDialogAction onClick={() => void sync.keepLocal()}>
-                Keep mine
+                Overwrite latest version
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

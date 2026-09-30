@@ -6,39 +6,37 @@
 }
 .tl-theme__light,
 .tl-theme__dark {
-  --tl-shadow-1: none;
-  --tl-shadow-2: none;
+  --tl-color-background: var(--background);
+  --tl-color-panel: var(--card);
+  --tl-color-panel-contrast: var(--border);
+  --tl-color-text: var(--foreground);
+  --tl-color-text-0: var(--foreground);
+  --tl-color-text-1: var(--foreground);
+  --tl-color-text-3: var(--muted-foreground);
+  --tl-color-low: var(--muted);
+  --tl-color-low-border: var(--border);
+  --tl-color-divider: var(--border);
+  --tl-color-selected: var(--primary);
+  --tl-color-selected-contrast: var(--primary-foreground);
+  --tl-color-primary: var(--primary);
+  --tl-shadow-1: 0 0 0 1px var(--border);
+  --tl-shadow-2: 0 0 0 1px var(--border);
+  --tl-shadow-3: 0 0 0 1px var(--border);
 }
 
-@keyframes agent-blink {
-  0%,
-  44%,
-  48%,
-  100% {
-    transform: scaleY(1);
-  }
-  46% {
-    transform: scaleY(0.15);
+@layer components {
+  .workspace-page {
+    @apply mx-auto w-full max-w-7xl min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12;
   }
 }
-@keyframes agent-work {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
-}
-.agent-eyes {
-  animation: agent-blink 6s ease-in-out infinite;
-}
-.agent-working {
-  animation: agent-work 1.3s ease-in-out infinite;
-}
+
 @media (prefers-reduced-motion: reduce) {
-  .agent-eyes,
-  .agent-working {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

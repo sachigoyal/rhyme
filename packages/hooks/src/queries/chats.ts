@@ -1,7 +1,13 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@rhyme/trpc-client'
-import type { ChatSummary, ChatsListInput } from '@rhyme/trpc-client'
+import type {
+  ChatDetail,
+  ChatSummary,
+  ChatsListInput,
+} from '@rhyme/trpc-client'
+
+import { patchCache, readCacheBase } from '../cache'
 
 export function useChats(input: ChatsListInput = {}) {
   const trpc = useTRPC()
@@ -39,24 +45,36 @@ export function useChat(id: string) {
   const titleSource = query.data?.chat.titleSource
 
   useEffect(() => {
-    if (!chatId || title === undefined || !titleSource) return
-    queryClient.setQueriesData<ChatSummary[]>(
-      trpc.chats.list.queryFilter(),
-      (rows) => {
+    const confirmed = readCacheBase<ChatDetail>(
+      queryClient,
+      trpc.chats.get.queryKey({ id }),
+    )?.chat
+    if (!confirmed) return
+    patchCache(queryClient, {
+      filter: trpc.chats.list.queryFilter(),
+      update: (data) => {
+        const rows = data as ChatSummary[] | undefined
         if (
           !rows?.some(
             (row) =>
-              row.id === chatId &&
-              (row.title !== title || row.titleSource !== titleSource),
+              row.id === id &&
+              (row.title !== confirmed.title ||
+                row.titleSource !== confirmed.titleSource),
           )
         )
           return rows
         return rows.map((row) =>
-          row.id === chatId ? { ...row, title, titleSource } : row,
+          row.id === id
+            ? {
+                ...row,
+                title: confirmed.title,
+                titleSource: confirmed.titleSource,
+              }
+            : row,
         )
       },
-    )
-  }, [chatId, title, titleSource, queryClient, trpc])
+    })
+  }, [id, chatId, title, titleSource, query.dataUpdatedAt, queryClient, trpc])
 
   return query
 }
