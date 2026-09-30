@@ -12,7 +12,7 @@ Run `pnpm --filter api exec wrangler login` using the Cloudflare account for the
 
 D1, R2, email, and Durable Objects are simulated locally. Sign-in codes appear in the Wrangler console. Workers AI uses the authenticated Cloudflare account even during local development. The model is configured with `AI_MODEL` in `apps/api/wrangler.jsonc`.
 
-A tldraw production license is configured with `VITE_TLDRAW_LICENSE_KEY`. Local development works without one.
+A tldraw production license is configured with `VITE_TLDRAW_LICENSE_KEY` in `apps/web/.env.production` and passed to both the guest and saved canvases. [License keys are public client configuration](https://tldraw.dev/sdk-features/license-key#how-license-keys-work). The current key expires on January 8, 2027; replace it and rebuild when renewing. Local development works without one.
 
 ## Web hosting
 
@@ -51,7 +51,7 @@ See [AGENTS.md](AGENTS.md) for the repository layout and conventions.
 
 ## Production deployment
 
-`pnpm deploy` builds the SPA for `https://rhyme.sachi.dev`, applies remote D1 migrations, and deploys the `rhyme` Worker with the static client, API, and canvas assistant. Production configuration is in `apps/api/wrangler.production.jsonc`; local development continues to use `wrangler.jsonc`. The `BETTER_AUTH_SECRET` is stored as a Worker secret. Sign-in email is sent from `auth@rhyme.sachi.dev` through the configured Cloudflare Email Sending domain.
+`pnpm run deploy` builds the SPA for `https://rhyme.sachi.dev`, applies remote D1 migrations, and deploys the `rhyme` Worker with the static client, API, and canvas assistant. Production configuration is in `apps/api/wrangler.production.jsonc`; local development continues to use `wrangler.jsonc`. The `BETTER_AUTH_SECRET` is stored as a Worker secret. Sign-in email is sent from `auth@rhyme.sachi.dev` through the configured Cloudflare Email Sending domain.
 
 Run `pnpm --filter api types:production` after changing production bindings.
 
