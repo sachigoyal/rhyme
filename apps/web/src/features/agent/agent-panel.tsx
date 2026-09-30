@@ -259,7 +259,7 @@ export function AgentPanel({
 
       <div className={history ? 'hidden' : 'flex min-h-0 flex-1 flex-col'}>
         {activeId && (
-          <div className="flex min-h-9 shrink-0 items-center gap-2 px-4 pt-2">
+          <div className="flex h-9 shrink-0 items-center gap-2 px-3">
             {renaming ? (
               <form
                 className="flex flex-1 items-center gap-1"
@@ -303,7 +303,7 @@ export function AgentPanel({
               </form>
             ) : (
               <>
-                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px]">
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-[11px] leading-6">
                   {active?.title ?? 'New conversation'}
                 </span>
                 <DropdownMenu>
