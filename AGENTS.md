@@ -30,7 +30,8 @@ tldraw-style whiteboard: users sign in, create files, and drawings sync to the c
 
 - pnpm only; shared versions live in the `catalog:` of `pnpm-workspace.yaml`.
 - Access control lives in `apps/api/src/services/access.ts`; use `fileProcedure(role)` for file-scoped procedures.
-- Add shadcn components from `apps/web`: `pnpm dlx shadcn@latest add <name>` (they land in `packages/ui`).
+- Add shadcn components from `apps/web`: `pnpm dlx shadcn@latest add <name>` (they land in `packages/ui`). Both configs use `base-nova`; preserve the shared theme and existing variant sizes.
+- UI composition uses Base UI `render`, not `asChild`. Style navigation links with `buttonVariants`; use `@rhyme/ui/components/toast` for notifications.
 - No comments unless essential; one short line when needed.
 
 <!-- BEGIN:turborepo-agent-rules -->

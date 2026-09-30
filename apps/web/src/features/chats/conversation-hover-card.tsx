@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactElement } from 'react'
 import { Frame } from 'lucide-react'
 import type { ChatSummary } from '@rhyme/trpc-client'
 import {
@@ -14,12 +14,12 @@ export function ConversationHoverCard({
   side = 'right',
 }: {
   chat: Pick<ChatSummary, 'title' | 'fileName' | 'messageCount' | 'updatedAt'>
-  children: ReactNode
+  children: ReactElement
   side?: 'top' | 'right' | 'bottom' | 'left'
 }) {
   return (
-    <HoverCard openDelay={400} closeDelay={100}>
-      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
+    <HoverCard>
+      <HoverCardTrigger delay={400} closeDelay={100} render={children} />
       <HoverCardContent
         side={side}
         align="start"

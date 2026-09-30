@@ -9,7 +9,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useAgentAnalytics, useChats } from '@rhyme/hooks/queries'
-import { Button } from '@rhyme/ui/components/button'
+import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { WorkspaceShell } from '@/features/files/workspace-shell'
 import { PageHeading } from '@/components/page-heading'
@@ -128,12 +128,13 @@ function ActivityPage() {
         <section className="mt-10">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-medium">Recent conversations</h3>
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/chats">
-                View all
-                <ArrowUpRight />
-              </Link>
-            </Button>
+            <Link
+              to="/chats"
+              className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+            >
+              View all
+              <ArrowUpRight />
+            </Link>
           </div>
           <div className="overflow-hidden rounded-lg border">
             {chats.isPending && <Skeleton className="h-48 rounded-none" />}
@@ -168,12 +169,16 @@ function ActivityPage() {
                 <p className="text-muted-foreground mt-2 text-sm">
                   Use the assistant on a canvas to record activity.
                 </p>
-                <Button asChild variant="outline" className="mt-5">
-                  <Link to="/">
-                    Open canvas
-                    <ArrowUpRight />
-                  </Link>
-                </Button>
+                <Link
+                  to="/"
+                  className={buttonVariants({
+                    variant: 'outline',
+                    className: 'mt-5',
+                  })}
+                >
+                  Open canvas
+                  <ArrowUpRight />
+                </Link>
               </div>
             )}
           </div>

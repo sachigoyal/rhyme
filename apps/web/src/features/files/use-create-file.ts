@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { useCreateFile } from '@rhyme/hooks/mutations'
 
 export function useCreateAndOpenFile() {

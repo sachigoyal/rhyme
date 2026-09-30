@@ -3,13 +3,14 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { LogOut, Monitor, Moon, Sun, Settings } from 'lucide-react'
 import { useSettings } from '@rhyme/hooks/queries'
 import { useUpdateSettings } from '@rhyme/hooks/mutations'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { useTheme } from '@rhyme/ui/components/theme'
 import type { Theme } from '@rhyme/ui/components/theme'
 import { Avatar, AvatarFallback } from '@rhyme/ui/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -50,7 +51,7 @@ export function UserMenu({
   children,
 }: {
   user: SessionUser
-  children: React.ReactNode
+  children: React.ReactElement
 }) {
   const { theme } = useTheme()
   const { data: preferences } = useSettings()
@@ -66,19 +67,25 @@ export function UserMenu({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+      <DropdownMenuTrigger render={children} />
       <DropdownMenuContent align="end" collisionPadding={8} className="w-56">
-        <DropdownMenuLabel className="font-normal">
-          <p className="truncate font-medium">{displayName(user)}</p>
-          <p className="text-muted-foreground truncate text-xs">{user.email}</p>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/settings">
-            <Settings />
-            Settings
-          </Link>
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-normal">
+            <p className="truncate font-medium">{displayName(user)}</p>
+            <p className="text-muted-foreground truncate text-xs">
+              {user.email}
+            </p>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            render={
+              <Link to="/settings">
+                <Settings />
+                Settings
+              </Link>
+            }
+          />
+        </DropdownMenuGroup>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Monitor />
@@ -112,7 +119,7 @@ export function UserMenu({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={signOut}>
+        <DropdownMenuItem onClick={signOut}>
           <LogOut />
           Sign out
         </DropdownMenuItem>

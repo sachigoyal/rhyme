@@ -17,7 +17,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import type { Editor } from 'tldraw'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { Button } from '@rhyme/ui/components/button'
 import {
   Message,

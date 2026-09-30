@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Loader2, Share2, X } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import {
   useRemoveCollaborator,
   useUpsertCollaborator,
@@ -42,9 +42,15 @@ function RoleSelect({
 }) {
   return (
     <Select
+      items={[
+        { value: 'viewer', label: 'Viewer' },
+        { value: 'editor', label: 'Editor' },
+      ]}
       value={value}
       disabled={disabled}
-      onValueChange={(role) => onChange(role as Role)}
+      onValueChange={(role) => {
+        if (role) onChange(role)
+      }}
     >
       <SelectTrigger aria-label={label} className="h-8 w-24">
         <SelectValue />
@@ -93,12 +99,14 @@ export function ShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Share2 />
-          Share
-        </Button>
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button size="sm" variant="outline">
+            <Share2 />
+            Share
+          </Button>
+        }
+      />
       <DialogContent className="gap-3 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="pr-6">Share “{fileName}”</DialogTitle>

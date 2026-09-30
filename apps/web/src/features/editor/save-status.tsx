@@ -53,17 +53,20 @@ export function SaveStatus({
   const { text, hint } = labels[status]
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          tabIndex={0}
-          role="status"
-          aria-live="polite"
-          className="text-muted-foreground flex items-center gap-1.5 rounded-sm px-1 text-xs select-none focus-visible:outline-2 focus-visible:outline-ring"
-        >
-          <StatusIcon status={status} />
-          {text}
-        </span>
-      </TooltipTrigger>
+      <TooltipTrigger
+        render={
+          <span
+            tabIndex={0}
+            role="status"
+            aria-live="polite"
+            className="text-muted-foreground flex items-center gap-1.5 rounded-sm px-1 text-xs select-none focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <StatusIcon status={status} />
+            {text}
+            <span className="sr-only">: {hint}</span>
+          </span>
+        }
+      />
       <TooltipContent>{hint}</TooltipContent>
     </Tooltip>
   )

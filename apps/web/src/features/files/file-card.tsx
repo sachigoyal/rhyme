@@ -8,7 +8,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import {
   useDestroyFile,
   useMoveFile,
@@ -139,38 +139,51 @@ function FileMenu({ file, folders }: FileCardProps) {
   const close = (open: boolean) => !open && setDialog(null)
   const trashed = file.trashedAt !== null
 
+  async function restore() {
+    try {
+      await restoreFile.mutateAsync({ id: file.id })
+      toast.success(`Restored “${file.name}”`)
+    } catch {
+      toast.error('Unable to restore canvas')
+    }
+  }
+
+  async function trash() {
+    try {
+      await trashFile.mutateAsync({ id: file.id })
+      toast(`Moved “${file.name}” to trash`, {
+        action: { label: 'Undo', onClick: () => void restore() },
+      })
+    } catch {
+      toast.error('Unable to move canvas to trash')
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="relative z-10 -mr-1.5 shrink-0"
-            aria-label={`Options for ${file.name}`}
-          >
-            <MoreHorizontal />
-          </Button>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="relative z-10 -mr-1.5 shrink-0"
+              aria-label={`Options for ${file.name}`}
+            >
+              <MoreHorizontal />
+            </Button>
+          }
+        />
         <DropdownMenuContent align="end" className="w-48">
           {trashed ? (
             <>
-              <DropdownMenuItem
-                onSelect={() =>
-                  restoreFile.mutate(
-                    { id: file.id },
-                    {
-                      onSuccess: () => toast.success(`Restored “${file.name}”`),
-                    },
-                  )
-                }
-              >
+              <DropdownMenuItem onClick={() => void restore()}>
                 <RotateCcw />
                 Restore
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => setDialog('destroy')}
+                onClick={() => setDialog('destroy')}
               >
                 <X />
                 Delete permanently
@@ -178,7 +191,7 @@ function FileMenu({ file, folders }: FileCardProps) {
             </>
           ) : (
             <>
-              <DropdownMenuItem onSelect={() => setDialog('rename')}>
+              <DropdownMenuItem onClick={() => setDialog('rename')}>
                 <Pencil />
                 Rename
               </DropdownMenuItem>
@@ -216,20 +229,7 @@ function FileMenu({ file, folders }: FileCardProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() =>
-                  trashFile.mutate(
-                    { id: file.id },
-                    {
-                      onSuccess: () =>
-                        toast(`Moved “${file.name}” to trash`, {
-                          action: {
-                            label: 'Undo',
-                            onClick: () => restoreFile.mutate({ id: file.id }),
-                          },
-                        }),
-                    },
-                  )
-                }
+                onClick={() => void trash()}
               >
                 <Trash2 />
                 Move to trash

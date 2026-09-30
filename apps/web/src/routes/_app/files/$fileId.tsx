@@ -4,10 +4,10 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { RecoveryPage, RecoveryState } from '@/components/recovery-state'
 import { CanvasSkeleton } from '@/components/loading-states'
 import { z } from 'zod'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { useFile } from '@rhyme/hooks/queries'
 import { errorCode, useTRPC } from '@rhyme/trpc-client'
-import { Button } from '@rhyme/ui/components/button'
+import { buttonVariants } from '@rhyme/ui/components/button'
 import { documentCache } from '@/features/editor/document-cache'
 import { EditorSession } from '@/features/editor/editor-session'
 import { useInitialDocument } from '@/features/editor/use-initial-document'
@@ -89,14 +89,15 @@ function EditorLoader({
           }
           onRetry={missing || forbidden ? undefined : async () => onReload()}
         >
-          <Button
-            asChild
-            variant={missing || forbidden ? 'default' : 'outline'}
+          <Link
+            to="/files"
+            search={{ view: 'mine' }}
+            className={buttonVariants({
+              variant: missing || forbidden ? 'default' : 'outline',
+            })}
           >
-            <Link to="/files" search={{ view: 'mine' }}>
-              View canvases
-            </Link>
-          </Button>
+            View canvases
+          </Link>
         </RecoveryState>
       </RecoveryPage>
     )

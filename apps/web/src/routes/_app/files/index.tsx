@@ -3,7 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowUpDown, Loader2, Plus } from 'lucide-react'
 import { z } from 'zod'
 import { useFolders } from '@rhyme/hooks/queries'
-import { Button } from '@rhyme/ui/components/button'
+import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,11 +122,13 @@ function FilesPage() {
           title="Folder not found"
           description="This folder may have been deleted. Return to your canvases to continue."
         >
-          <Button asChild>
-            <Link to="/files" search={{ view: 'mine' }}>
-              View canvases
-            </Link>
-          </Button>
+          <Link
+            to="/files"
+            search={{ view: 'mine' }}
+            className={buttonVariants({})}
+          >
+            View canvases
+          </Link>
         </RecoveryState>
       ) : waitingFolder ? (
         <WorkspacePage aria-label="Loading folder">
@@ -161,12 +163,14 @@ function FilesPage() {
               className="max-w-sm"
             />
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-auto">
-                  <ArrowUpDown />
-                  {sort === 'recent' ? 'Last edited' : 'Name'}
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    <ArrowUpDown />
+                    {sort === 'recent' ? 'Last edited' : 'Name'}
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup
                   value={sort}

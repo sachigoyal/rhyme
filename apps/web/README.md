@@ -21,6 +21,32 @@ pnpm build
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
 
+Shared UI lives in `packages/ui`. Both shadcn configurations use `base-nova`, so future additions use Base UI. Install from `apps/web` with `pnpm dlx shadcn@latest add <name>` and preserve the shared theme tokens, Nova layouts, and existing button sizes.
+
+The migration replaces primitives inside the shared wrappers, then updates consumers to their Base UI contracts:
+
+| Area                                                                       | Implementation                            | Consumer changes                                                                                        |
+| -------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Buttons, inputs, avatars, switches, separators, scrolling                  | Base UI primitives with existing styles   | Explicit submit buttons; existing scroll viewport customization retained                                |
+| Badges, breadcrumbs, markers, sidebar composition                          | Base UI `useRender`                       | `render` replaces `asChild`; navigation remains a semantic link                                         |
+| Select                                                                     | Base UI Root, Positioner, Popup and List  | Supply `items` label mappings so selected labels display before opening                                 |
+| Dialog, alert dialog, sheet                                                | Base UI Dialog / AlertDialog              | Controlled async confirmation closes only on success; ordinary action buttons close explicitly          |
+| Dropdown, popover, tooltip, hover card                                     | Menu, Popover, Tooltip and PreviewCard    | `render` composition, item `onClick`, group labels inside groups, `finalFocus` for composer restoration |
+| Toasts                                                                     | Base UI global manager and app provider   | Import `toast` from `@rhyme/ui/components/toast`; trash Undo remains supported                          |
+| Cards, skeletons, textareas, input groups, OTP, resizable panels, messages | Existing native or independent components | Already compatible with the Base shadcn registry; retain their established APIs                         |
+
+Popup position and animation styles use Base UI variables (`--available-height`, `--anchor-width`, `--transform-origin`) and state attributes. Colors, radii, typography, spacing and button variants remain in the shared CSS and wrappers. Keep `DropdownMenuLabel` within `DropdownMenuGroup`, and distinguish ordinary dismissible dialogs from alert dialogs that reject outside clicks. Async delete confirmations keep pending/error state visible and block dismissal while pending. The app content uses an isolated stacking context, while dialog backdrops and the positioned body follow Base UI’s Safari setup.
+
+Base UI tooltips are visual hints; keep an accessible name on each trigger, including icon buttons and disabled-action wrappers.
+
+Radio and checkbox menu items close on selection to preserve the previous behavior. Trash and restore notifications await mutation promises so optimistic card removal cannot suppress the success toast or Undo action.
+
+Style TanStack `Link` and plain anchors with `buttonVariants` instead of rendering links through Base UI Button, which applies button semantics. Toasts share one manager and provider, with keyboard access, swipe dismissal, timeout pausing on hover/focus, and reduced-motion support.
+
+`tldraw` still depends internally on Radix UI. Its own canvas controls remain upstream-owned; the application and shared shadcn components no longer import Radix or Sonner.
+
+API references: [shadcn Base button](https://ui.shadcn.com/docs/components/base/button), [Base UI composition](https://base-ui.com/react/handbook/composition), [Dialog](https://base-ui.com/react/components/dialog), [Alert Dialog](https://base-ui.com/react/components/alert-dialog), [Toast](https://base-ui.com/react/components/toast).
+
 ### Removing Tailwind CSS
 
 If you prefer not to use Tailwind CSS:
@@ -32,7 +58,6 @@ If you prefer not to use Tailwind CSS:
 
 ## Linting & Formatting
 
-
 This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
 
 ```bash
@@ -41,7 +66,22 @@ pnpm format
 pnpm check
 ```
 
+## Testing
 
+Run unit tests with `pnpm --filter web test`. The separate Base UI browser suite
+uses actual shared wrappers and application dialogs in an isolated Vite fixture,
+so it needs no authentication or API server:
+
+```sh
+pnpm --filter web exec playwright install chromium
+pnpm --filter web test:ui
+```
+
+Use `PLAYWRIGHT_CHANNEL=chrome pnpm --filter web test:ui` with an installed Google
+Chrome. The suite checks dialog focus and async confirmation, nested select
+portals, composed tooltip/menu triggers, semantic navigation links, mobile
+sheets, toast Undo, scrollbar sizing, and light/dark brand styles. See
+[`tests/README.md`](tests/README.md) for details.
 
 ## Routing
 
@@ -60,7 +100,7 @@ Now that you have two routes you can use a `Link` component to navigate between 
 To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
 
 ```tsx
-import { Link } from "@tanstack/react-router";
+import { Link } from '@tanstack/react-router'
 ```
 
 Then anywhere in your JSX you can use it like so:
@@ -128,11 +168,11 @@ const getServerTime = createServerFn({
 // Use in a component
 function MyComponent() {
   const [time, setTime] = useState('')
-  
+
   useEffect(() => {
     getServerTime().then(setTime)
   }, [])
-  
+
   return <div>Server time: {time}</div>
 }
 ```
@@ -184,8 +224,6 @@ function PeopleComponent() {
 ```
 
 Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-
 
 # Learn More
 

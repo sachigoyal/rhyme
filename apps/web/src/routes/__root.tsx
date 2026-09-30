@@ -53,8 +53,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
       </head>
-      <body className="min-h-svh antialiased">
-        {children}
+      <body className="relative min-h-svh antialiased">
+        <div className="isolate">{children}</div>
         <Scripts />
       </body>
     </html>

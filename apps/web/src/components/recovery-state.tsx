@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, Loader2, RotateCcw } from 'lucide-react'
-import { Button } from '@rhyme/ui/components/button'
+import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import { cn } from '@rhyme/ui/lib/utils'
 import { Logo } from './logo'
 
@@ -233,11 +233,13 @@ export function PageNotFound({ embedded = false }: { embedded?: boolean }) {
       description="This page doesn’t exist. Check the URL or return to your canvases."
       playful
     >
-      <Button asChild>
-        <Link to="/files" search={{ view: 'mine' }}>
-          View canvases <ArrowRight />
-        </Link>
-      </Button>
+      <Link
+        to="/files"
+        search={{ view: 'mine' }}
+        className={buttonVariants({})}
+      >
+        View canvases <ArrowRight />
+      </Link>
     </RecoveryState>
   )
   return embedded ? state : <RecoveryPage>{state}</RecoveryPage>

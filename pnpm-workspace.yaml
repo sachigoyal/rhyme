@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 catalog:
+  '@base-ui/react': ^1.8.0
   '@resvg/resvg-js': 2.6.2
   fontkit: 2.0.4
   '@shadcn/react': 0.3.1

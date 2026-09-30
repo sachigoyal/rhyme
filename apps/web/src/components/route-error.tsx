@@ -1,6 +1,6 @@
 import { Link, useRouter } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button } from '@rhyme/ui/components/button'
+import { buttonVariants } from '@rhyme/ui/components/button'
 import { RecoveryPage, RecoveryState } from './recovery-state'
 
 export function RouteError({ reset }: ErrorComponentProps) {
@@ -15,11 +15,13 @@ export function RouteError({ reset }: ErrorComponentProps) {
           reset()
         }}
       >
-        <Button asChild variant="outline">
-          <Link to="/files" search={{ view: 'mine' }}>
-            View canvases
-          </Link>
-        </Button>
+        <Link
+          to="/files"
+          search={{ view: 'mine' }}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          View canvases
+        </Link>
       </RecoveryState>
     </RecoveryPage>
   )

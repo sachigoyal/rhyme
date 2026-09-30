@@ -5,6 +5,7 @@ import { Button } from '@rhyme/ui/components/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -182,17 +183,21 @@ export function AgentComposer({
             />
             <DropdownMenu>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <InputGroupButton
-                      size="icon-sm"
-                      aria-label="Example prompts"
-                      className="rounded-lg"
-                    >
-                      <Lightbulb className="size-4" />
-                    </InputGroupButton>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
+                <TooltipTrigger
+                  render={
+                    <DropdownMenuTrigger
+                      render={
+                        <InputGroupButton
+                          size="icon-sm"
+                          aria-label="Example prompts"
+                          className="rounded-lg"
+                        >
+                          <Lightbulb className="size-4" />
+                        </InputGroupButton>
+                      }
+                    />
+                  }
+                />
                 <TooltipContent side="top" sideOffset={6}>
                   Example prompts
                 </TooltipContent>
@@ -201,22 +206,21 @@ export function AgentComposer({
                 side="top"
                 align="start"
                 className="w-56 shadow-none"
-                onCloseAutoFocus={(event) => {
-                  event.preventDefault()
-                  textareaRef.current?.focus()
-                }}
+                finalFocus={textareaRef}
               >
-                <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                  Choose a prompt to edit
-                </DropdownMenuLabel>
-                {SUGGESTIONS.map((suggestion) => (
-                  <DropdownMenuItem
-                    key={suggestion.label}
-                    onSelect={() => onDraft(suggestion.prompt)}
-                  >
-                    {suggestion.label}
-                  </DropdownMenuItem>
-                ))}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                    Choose a prompt to edit
+                  </DropdownMenuLabel>
+                  {SUGGESTIONS.map((suggestion) => (
+                    <DropdownMenuItem
+                      key={suggestion.label}
+                      onClick={() => onDraft(suggestion.prompt)}
+                    >
+                      {suggestion.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
             {(busy || !connected) && (
@@ -229,30 +233,33 @@ export function AgentComposer({
             )}
           </div>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <span
-                data-composer-action=""
-                className="inline-flex shrink-0"
-                tabIndex={actionDisabled ? 0 : undefined}
-                aria-label={actionDisabled ? actionHint : undefined}
-              >
-                <InputGroupButton
-                  type={busy ? 'button' : 'submit'}
-                  size="icon-sm"
-                  variant={busy ? 'secondary' : 'default'}
-                  aria-label={busy ? 'Stop response' : 'Send message'}
-                  disabled={actionDisabled}
-                  onClick={busy ? onStop : undefined}
-                  className="rounded-lg"
+            <TooltipTrigger
+              render={
+                <span
+                  data-composer-action=""
+                  className="inline-flex shrink-0"
+                  role={actionDisabled ? 'group' : undefined}
+                  tabIndex={actionDisabled ? 0 : undefined}
+                  aria-label={actionDisabled ? actionHint : undefined}
                 >
-                  {busy ? (
-                    <Square className="size-3 fill-current" />
-                  ) : (
-                    <ArrowUp className="size-4" />
-                  )}
-                </InputGroupButton>
-              </span>
-            </TooltipTrigger>
+                  <InputGroupButton
+                    type={busy ? 'button' : 'submit'}
+                    size="icon-sm"
+                    variant={busy ? 'secondary' : 'default'}
+                    aria-label={busy ? 'Stop response' : 'Send message'}
+                    disabled={actionDisabled}
+                    onClick={busy ? onStop : undefined}
+                    className="rounded-lg"
+                  >
+                    {busy ? (
+                      <Square className="size-3 fill-current" />
+                    ) : (
+                      <ArrowUp className="size-4" />
+                    )}
+                  </InputGroupButton>
+                </span>
+              }
+            />
             <TooltipContent side="top" sideOffset={6}>
               {actionHint}
             </TooltipContent>

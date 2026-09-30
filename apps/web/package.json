@@ -15,6 +15,7 @@
     "check": "prettier --check .",
     "check-types": "tsr generate && tsc --noEmit",
     "test": "node --test --test-force-exit tests/*.test.mjs",
+    "test:ui": "node --test tests/*.browser.mjs",
     "generate:email-logo": "node scripts/generate-email-logo.mjs"
   },
   "dependencies": {
@@ -37,7 +38,6 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-markdown": "catalog:",
-    "sonner": "^2.0.8",
     "tailwindcss": "^4.1.18",
     "tldraw": "^5.4.2",
     "zod": "catalog:"
@@ -55,6 +55,7 @@
     "fontkit": "catalog:",
     "prettier": "^3.8.1",
     "typescript": "catalog:",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "playwright": "^1.63.0"
   }
 }

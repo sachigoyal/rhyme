@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { cn } from 'cn'
-import { ScrollArea as ScrollAreaPrimitive } from 'radix-ui'
+import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area'
 
 type ScrollAreaProps = React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   viewportClassName?: string
@@ -15,15 +15,11 @@ function ScrollArea({
   children,
   viewportClassName,
   viewportProps,
-  type = 'hover',
-  scrollHideDelay = 400,
   ...props
 }: ScrollAreaProps) {
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      type={type}
-      scrollHideDelay={scrollHideDelay}
       className={cn('relative min-h-0 min-w-0 overflow-hidden', className)}
       {...props}
     >
@@ -48,22 +44,23 @@ function ScrollBar({
   className,
   orientation = 'vertical',
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+}: ScrollAreaPrimitive.Scrollbar.Props) {
   return (
-    <ScrollAreaPrimitive.ScrollAreaScrollbar
+    <ScrollAreaPrimitive.Scrollbar
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
+      data-orientation={orientation}
       className={cn(
-        'group/scrollbar z-10 flex touch-none select-none p-px data-[orientation=horizontal]:h-2 data-[orientation=horizontal]:flex-col data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2',
+        'group/scrollbar z-10 flex touch-none select-none p-px opacity-0 transition-opacity duration-150 pointer-events-none data-hovering:opacity-100 data-hovering:pointer-events-auto data-scrolling:opacity-100 data-scrolling:pointer-events-auto data-scrolling:duration-0 data-[orientation=horizontal]:h-2 data-[orientation=horizontal]:flex-col data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2',
         className,
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb
+      <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
         className="relative flex-1 rounded-full bg-muted-foreground/30 transition-colors group-hover/scrollbar:bg-muted-foreground/50 group-active/scrollbar:bg-muted-foreground/60"
       />
-    </ScrollAreaPrimitive.ScrollAreaScrollbar>
+    </ScrollAreaPrimitive.Scrollbar>
   )
 }
 

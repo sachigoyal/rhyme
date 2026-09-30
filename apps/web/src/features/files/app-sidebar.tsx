@@ -113,41 +113,50 @@ export function AppSidebar({
               {views.map(({ view: target, label, icon: Icon }) => (
                 <SidebarMenuItem key={target}>
                   <SidebarMenuButton
-                    asChild
                     isActive={
                       section === 'files' && view === target && !folderId
                     }
-                  >
-                    <Link to="/files" search={{ view: target }}>
-                      <Icon />
-                      {label}
-                    </Link>
-                  </SidebarMenuButton>
+                    render={
+                      <Link to="/files" search={{ view: target }}>
+                        <Icon />
+                        {label}
+                      </Link>
+                    }
+                  />
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={section === 'chats'}>
-                  <Link to="/chats">
-                    <MessageSquare />
-                    <span>Conversations</span>
-                  </Link>
-                </SidebarMenuButton>
+                <SidebarMenuButton
+                  isActive={section === 'chats'}
+                  render={
+                    <Link to="/chats">
+                      <MessageSquare />
+                      <span>Conversations</span>
+                    </Link>
+                  }
+                />
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={section === 'activity'}>
-                  <Link to="/activity">
-                    <Activity />
-                    <span>Agent activity</span>
-                  </Link>
-                </SidebarMenuButton>
+                <SidebarMenuButton
+                  isActive={section === 'activity'}
+                  render={
+                    <Link to="/activity">
+                      <Activity />
+                      <span>Agent activity</span>
+                    </Link>
+                  }
+                />
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={section === 'settings'}>
-                  <Link to="/settings">
-                    <Settings />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
+                <SidebarMenuButton
+                  isActive={section === 'settings'}
+                  render={
+                    <Link to="/settings">
+                      <Settings />
+                      <span>Settings</span>
+                    </Link>
+                  }
+                />
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -193,13 +202,13 @@ export function AppSidebar({
                   <SidebarMenuItem key={chat.id}>
                     <ConversationHoverCard chat={chat}>
                       <SidebarMenuButton
-                        asChild
                         isActive={section === 'chats' && chat.id === chatId}
-                      >
-                        <Link to="/chats" search={{ chat: chat.id }}>
-                          <span className="truncate">{chat.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
+                        render={
+                          <Link to="/chats" search={{ chat: chat.id }}>
+                            <span className="truncate">{chat.title}</span>
+                          </Link>
+                        }
+                      />
                     </ConversationHoverCard>
                     <ConversationActions
                       chat={chat}
@@ -281,40 +290,42 @@ function FolderItem({
         </SidebarMenuButton>
       ) : (
         <SidebarMenuButton
-          asChild
           isActive={active}
           style={{ paddingLeft: `${0.5 + folder.depth * 0.875}rem` }}
-        >
-          <Link to="/files" search={{ view: 'mine', folder: folder.id }}>
-            <Folder />
-            <span className="truncate">{folder.name}</span>
-          </Link>
-        </SidebarMenuButton>
+          render={
+            <Link to="/files" search={{ view: 'mine', folder: folder.id }}>
+              <Folder />
+              <span className="truncate">{folder.name}</span>
+            </Link>
+          }
+        />
       )}
 
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuAction
-            showOnHover
-            disabled={folder.id.startsWith('pending:')}
-            aria-label={`Options for ${folder.name}`}
-          >
-            <MoreHorizontal />
-          </SidebarMenuAction>
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            <SidebarMenuAction
+              showOnHover
+              disabled={folder.id.startsWith('pending:')}
+              aria-label={`Options for ${folder.name}`}
+            >
+              <MoreHorizontal />
+            </SidebarMenuAction>
+          }
+        />
         <DropdownMenuContent side="right" align="start">
-          <DropdownMenuItem onSelect={() => setDialog('subfolder')}>
+          <DropdownMenuItem onClick={() => setDialog('subfolder')}>
             <FolderPlus />
             New subfolder
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setDialog('rename')}>
+          <DropdownMenuItem onClick={() => setDialog('rename')}>
             <Pencil />
             Rename
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onSelect={() => setDialog('delete')}
+            onClick={() => setDialog('delete')}
           >
             <Trash2 />
             Delete

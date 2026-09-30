@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@rhyme/ui/components/dropdown-menu'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ConversationHoverCard } from '@/features/chats/conversation-hover-card'
 import { ConversationActions } from '@/features/chats/conversation-actions'
@@ -314,19 +314,21 @@ export function AgentPanel({
                   {active?.title ?? 'New conversation'}
                 </span>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label="Conversation options"
-                    >
-                      <MoreHorizontal className="size-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        aria-label="Conversation options"
+                      >
+                        <MoreHorizontal className="size-3.5" />
+                      </Button>
+                    }
+                  />
                   <DropdownMenuContent align="end" className="w-auto min-w-28">
                     <DropdownMenuItem
                       disabled={busy}
-                      onSelect={() => {
+                      onClick={() => {
                         setTitle(active?.title ?? 'New conversation')
                         setRenaming(true)
                       }}
@@ -337,7 +339,7 @@ export function AgentPanel({
                     <DropdownMenuItem
                       variant="destructive"
                       disabled={busy}
-                      onSelect={() => setDeletingId(activeId)}
+                      onClick={() => setDeletingId(activeId)}
                     >
                       <Trash2 />
                       Delete

@@ -6,7 +6,7 @@ import { errorCode } from '@rhyme/trpc-client'
 import { RefreshNotice } from '@/components/refresh-notice'
 import { RecoveryState } from '@/components/recovery-state'
 import { useChat } from '@rhyme/hooks/queries'
-import { Button } from '@rhyme/ui/components/button'
+import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import { ScrollArea } from '@rhyme/ui/components/scroll-area'
 import {
   Popover,
@@ -67,9 +67,14 @@ export default function ConversationDetail({
                 }
           }
         >
-          <Button asChild variant={unavailable ? 'default' : 'outline'}>
-            <Link to="/chats">View conversations</Link>
-          </Button>
+          <Link
+            to="/chats"
+            className={buttonVariants({
+              variant: unavailable ? 'default' : 'outline',
+            })}
+          >
+            View conversations
+          </Link>
         </RecoveryState>
       </section>
     )
@@ -78,21 +83,23 @@ export default function ConversationDetail({
     <section className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ConversationHeader title={chat.title}>
         <Popover open={contextOpen} onOpenChange={setContextOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Conversation context and actions"
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </PopoverTrigger>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Conversation context and actions"
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            }
+          />
           <PopoverContent
             align="end"
             className="w-80 max-w-[calc(100vw-2rem)] border p-0 shadow-none ring-0"
           >
             <ScrollArea
-              viewportClassName="h-auto max-h-[min(80svh,var(--radix-popover-content-available-height))] [&>div]:block!"
+              viewportClassName="h-auto max-h-[min(80svh,var(--available-height))] [&>div]:block!"
               viewportProps={{ 'aria-label': 'Conversation context' }}
             >
               <div className="flex flex-col gap-3 p-3">
@@ -102,15 +109,18 @@ export default function ConversationDetail({
                     Updated {timeAgo(chat.updatedAt)}
                   </p>
                 </div>
-                <Button asChild variant="outline" size="sm" className="w-full">
-                  <Link
-                    to="/files/$fileId"
-                    params={{ fileId: chat.fileId }}
-                    search={{ chat: chat.id }}
-                  >
-                    Open canvas <ArrowUpRight className="size-3.5" />
-                  </Link>
-                </Button>
+                <Link
+                  to="/files/$fileId"
+                  params={{ fileId: chat.fileId }}
+                  search={{ chat: chat.id }}
+                  className={buttonVariants({
+                    variant: 'outline',
+                    size: 'sm',
+                    className: 'w-full',
+                  })}
+                >
+                  Open canvas <ArrowUpRight className="size-3.5" />
+                </Link>
                 <dl className="space-y-1.5 text-xs">
                   <Stat label="Messages" value={chat.messageCount} />
                   <Stat label="Agent runs" value={chat.runCount ?? 0} />

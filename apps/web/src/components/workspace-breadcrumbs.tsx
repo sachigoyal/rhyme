@@ -24,11 +24,13 @@ export function WorkspaceBreadcrumbs({ items }: { items: WorkspaceCrumb[] }) {
             items.length > 1 ? 'hidden shrink-0 sm:inline-flex' : 'shrink-0'
           }
         >
-          <BreadcrumbLink asChild>
-            <Link to="/files" search={{ view: 'mine' }}>
-              Workspace
-            </Link>
-          </BreadcrumbLink>
+          <BreadcrumbLink
+            render={
+              <Link to="/files" search={{ view: 'mine' }}>
+                Workspace
+              </Link>
+            }
+          />
         </BreadcrumbItem>
         {items.map((item, index) => (
           <Fragment key={index}>
@@ -47,7 +49,7 @@ export function WorkspaceBreadcrumbs({ items }: { items: WorkspaceCrumb[] }) {
               }
             >
               {item.link ? (
-                <BreadcrumbLink asChild>{item.link}</BreadcrumbLink>
+                <BreadcrumbLink render={item.link} />
               ) : (
                 <BreadcrumbPage className="truncate" title={item.label}>
                   {item.label}

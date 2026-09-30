@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@rhyme/ui/components/alert-dialog'
 import { Badge } from '@rhyme/ui/components/badge'
-import { Button } from '@rhyme/ui/components/button'
+import { buttonVariants } from '@rhyme/ui/components/button'
 import {
   ResizableHandle,
   ResizablePanel,
@@ -92,19 +92,14 @@ export function EditorSession({
         >
           <Logo />
         </Link>
-        <Button
-          asChild
-          variant="ghost"
-          size="icon-sm"
+        <Link
+          to="/files"
+          search={{ view: file.role === 'owner' ? 'mine' : 'shared' }}
           aria-label="Open workspace"
+          className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
         >
-          <Link
-            to="/files"
-            search={{ view: file.role === 'owner' ? 'mine' : 'shared' }}
-          >
-            <LayoutGrid className="size-4" />
-          </Link>
-        </Button>
+          <LayoutGrid className="size-4" />
+        </Link>
         <FileTitle id={file.id} name={file.name} editable={canEdit} />
         {!canEdit && <Badge variant="secondary">View only</Badge>}
 
@@ -196,7 +191,12 @@ export function EditorSession({
               <AlertDialogCancel onClick={onReload}>
                 Load latest version
               </AlertDialogCancel>
-              <AlertDialogAction onClick={() => void sync.keepLocal()}>
+              <AlertDialogAction
+                onClick={() => {
+                  void sync.keepLocal()
+                  setResolving(false)
+                }}
+              >
                 Overwrite latest version
               </AlertDialogAction>
             </AlertDialogFooter>

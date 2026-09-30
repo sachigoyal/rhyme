@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import { useRenameFile } from '@rhyme/hooks/mutations'
 import { Input } from '@rhyme/ui/components/input'
 

@@ -25,21 +25,23 @@ export function AgentModelSelector({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <InputGroupButton
-          size="sm"
-          disabled={disabled}
-          aria-label="Choose model"
-          className="h-8 min-w-0 gap-1.5 rounded-lg px-2.5 text-sm font-normal text-muted-foreground"
-        >
-          <span className="truncate">{currentModel?.label ?? 'Model'}</span>
-          {saving ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <ChevronDown className="size-3.5" />
-          )}
-        </InputGroupButton>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <InputGroupButton
+            size="sm"
+            disabled={disabled}
+            aria-label="Choose model"
+            className="h-8 min-w-0 gap-1.5 rounded-lg px-2.5 text-sm font-normal text-muted-foreground"
+          >
+            <span className="truncate">{currentModel?.label ?? 'Model'}</span>
+            {saving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <ChevronDown className="size-3.5" />
+            )}
+          </InputGroupButton>
+        }
+      />
       <DropdownMenuContent
         side="top"
         align="start"

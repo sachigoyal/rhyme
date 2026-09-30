@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowUpRight, MessageSquare } from 'lucide-react'
 import { useChats } from '@rhyme/hooks/queries'
-import { Button } from '@rhyme/ui/components/button'
+import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import { RefreshNotice } from '@/components/refresh-notice'
 import { SearchInput } from '@/components/search-input'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
@@ -127,12 +127,16 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
           <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
             View messages and canvas changes, or continue a conversation.
           </p>
-          <Button asChild variant="outline" className="mt-3">
-            <Link to="/">
-              Open canvas
-              <ArrowUpRight />
-            </Link>
-          </Button>
+          <Link
+            to="/"
+            className={buttonVariants({
+              variant: 'outline',
+              className: 'mt-3',
+            })}
+          >
+            Open canvas
+            <ArrowUpRight />
+          </Link>
         </div>
       )}
     </div>

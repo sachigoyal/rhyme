@@ -98,6 +98,10 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     description="Open the dashboard or your last edited canvas. If the canvas is unavailable, the dashboard opens."
                   >
                     <Select
+                      items={[
+                        { value: 'dashboard', label: 'Dashboard' },
+                        { value: 'last-edited', label: 'Last edited canvas' },
+                      ]}
                       value={preferences.homeDestination}
                       onValueChange={(value) =>
                         save({
@@ -128,6 +132,11 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     description="Light, dark, or system appearance."
                   >
                     <Select
+                      items={[
+                        { value: 'light', label: 'Light' },
+                        { value: 'dark', label: 'Dark' },
+                        { value: 'system', label: 'System' },
+                      ]}
                       value={preferences.theme}
                       onValueChange={(value) =>
                         save({ theme: value as Preferences['theme'] })

@@ -41,32 +41,34 @@ export function ConversationActions({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          {variant === 'sidebar' ? (
-            <SidebarMenuAction showOnHover {...triggerProps} />
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="mr-1 shrink-0 opacity-0 transition-opacity group-hover/conversation:opacity-100 group-focus-within/conversation:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100"
-              {...triggerProps}
-            />
-          )}
-        </DropdownMenuTrigger>
+        <DropdownMenuTrigger
+          render={
+            variant === 'sidebar' ? (
+              <SidebarMenuAction showOnHover {...triggerProps} />
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="mr-1 shrink-0 opacity-0 transition-opacity group-hover/conversation:opacity-100 group-focus-within/conversation:opacity-100 data-popup-open:opacity-100 [@media(hover:none)]:opacity-100"
+                {...triggerProps}
+              />
+            )
+          }
+        />
         <DropdownMenuContent
           align="start"
           side={variant === 'sidebar' ? 'right' : 'bottom'}
           className="w-auto min-w-28 border shadow-none ring-0"
         >
           <DropdownMenuItem
-            onSelect={() => setDialog('rename')}
+            onClick={() => setDialog('rename')}
             disabled={locked}
           >
             <Pencil className="size-3.5" /> Rename
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onSelect={() => setDialog('delete')}
+            onClick={() => setDialog('delete')}
             disabled={locked}
           >
             <Trash2 className="size-3.5" /> Delete

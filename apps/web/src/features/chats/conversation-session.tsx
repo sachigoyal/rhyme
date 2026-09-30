@@ -1,14 +1,14 @@
 import { Suspense, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { toast } from '@rhyme/ui/components/toast'
 import type { Editor } from 'tldraw'
 import { useFile } from '@rhyme/hooks/queries'
 import { useCreateChat } from '@rhyme/hooks/mutations'
 import { RecoveryState } from '@/components/recovery-state'
 import { errorCode, useTRPC } from '@rhyme/trpc-client'
 import type { ChatDetail, FileSummary } from '@rhyme/trpc-client'
-import { Button } from '@rhyme/ui/components/button'
+import { buttonVariants } from '@rhyme/ui/components/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,11 +97,13 @@ function ConversationDocument({
             }
             onRetry={unavailable ? undefined : async () => onReload()}
           >
-            <Button asChild variant="outline">
-              <Link to="/files" search={{ view: 'mine' }}>
-                View canvases
-              </Link>
-            </Button>
+            <Link
+              to="/files"
+              search={{ view: 'mine' }}
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              View canvases
+            </Link>
           </RecoveryState>
         </div>
       </div>
@@ -223,7 +225,12 @@ function LiveConversation({
             <AlertDialogCancel onClick={onReload}>
               Load latest version
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => void sync.keepLocal()}>
+            <AlertDialogAction
+              onClick={() => {
+                void sync.keepLocal()
+                setResolving(false)
+              }}
+            >
               Overwrite latest version
             </AlertDialogAction>
           </AlertDialogFooter>
