@@ -15,7 +15,6 @@ export function ConversationSkeleton() {
         <Skeleton className="size-7 shrink-0" />
         <Skeleton className="h-3 w-24" />
         <Skeleton className="hidden h-3 w-36 sm:block" />
-        <Skeleton className="ml-auto size-7 shrink-0" />
       </div>
       <ChatSkeleton />
     </section>

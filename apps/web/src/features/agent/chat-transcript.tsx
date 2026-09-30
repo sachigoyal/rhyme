@@ -1,6 +1,5 @@
 import type { UIMessage } from 'ai'
-import { MessageSquare, Shapes } from 'lucide-react'
-import { Marker, MarkerContent, MarkerIcon } from '@rhyme/ui/components/marker'
+import { MessageSquare } from 'lucide-react'
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -9,71 +8,14 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from '@rhyme/ui/components/message-scroller'
-import { env } from '@/lib/env'
 import { AgentMessage } from './agent-message'
-
-type ChatChange = {
-  id: string
-  summary: string
-  toolName: string
-  createdAt: string | Date
-  previewUrl: string | null
-}
-
-export function ChatChangePreviews({ changes }: { changes: ChatChange[] }) {
-  if (!changes.length) return null
-
-  return (
-    <div className="space-y-3">
-      <Marker className="text-xs">
-        <MarkerIcon>
-          <Shapes className="size-3.5" />
-        </MarkerIcon>
-        <MarkerContent>Canvas changes</MarkerContent>
-      </Marker>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {changes.map((change) => (
-          <figure key={change.id} className="overflow-hidden rounded-xl border">
-            {change.previewUrl ? (
-              <img
-                src={
-                  change.previewUrl.startsWith('/')
-                    ? `${env.apiUrl}${change.previewUrl}`
-                    : change.previewUrl
-                }
-                alt={change.summary}
-                loading="lazy"
-                className="aspect-[4/3] w-full bg-white object-contain"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] items-center justify-center bg-muted/30">
-                <Shapes className="size-6 text-muted-foreground" />
-              </div>
-            )}
-            <figcaption className="border-t p-3">
-              <p className="text-xs font-medium">{change.summary}</p>
-              <p className="text-muted-foreground mt-1 text-[10px]">
-                {new Date(change.createdAt).toLocaleTimeString(undefined, {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })}
-              </p>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export function ChatTranscript({
   messages,
-  changes = [],
   compact = false,
   scrollable = true,
 }: {
   messages: UIMessage[]
-  changes?: ChatChange[]
   compact?: boolean
   scrollable?: boolean
 }) {
@@ -90,7 +32,6 @@ export function ChatTranscript({
             <p className="text-sm">No messages</p>
           </div>
         )}
-        {changes.length > 0 && <ChatChangePreviews changes={changes} />}
       </div>
     )
 
@@ -117,11 +58,6 @@ export function ChatTranscript({
                   <MessageSquare className="size-7 text-muted-foreground" />
                   <p className="text-sm">No messages</p>
                 </div>
-              </MessageScrollerItem>
-            )}
-            {changes.length > 0 && (
-              <MessageScrollerItem messageId="changes">
-                <ChatChangePreviews changes={changes} />
               </MessageScrollerItem>
             )}
           </MessageScrollerContent>

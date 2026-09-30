@@ -125,7 +125,7 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
             Select a conversation
           </h2>
           <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-            View messages and canvas changes, or continue a conversation.
+            View messages or continue a conversation.
           </p>
           <Link
             to="/"
