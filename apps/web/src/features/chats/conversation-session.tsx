@@ -1,7 +1,6 @@
 import { Suspense, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { toast } from 'sonner'
 import type { Editor } from 'tldraw'
 import { useFile } from '@rhyme/hooks/queries'
@@ -21,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@rhyme/ui/components/alert-dialog'
 import { AgentChat, AgentChatBoundary } from '@/features/agent/agent-chat'
-import { MessagesSkeleton } from '@/features/agent/agent-activity'
+import { ChatSkeleton, ComposerSkeleton } from '@/features/agent/chat-skeleton'
 import { ChatTranscript } from '@/features/agent/chat-transcript'
 import { Canvas } from '@/features/editor/canvas'
 import { documentCache } from '@/features/editor/document-cache'
@@ -111,13 +110,7 @@ function ConversationDocument({
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <ChatTranscript messages={detail.messages} />
-        <div
-          className="mx-auto w-full max-w-3xl p-5"
-          role="status"
-          aria-label="Loading canvas"
-        >
-          <Skeleton className="h-24" />
-        </div>
+        <ComposerSkeleton layout="workspace" />
       </div>
     )
   if (file.data.role === 'viewer')
@@ -201,7 +194,7 @@ function LiveConversation({
           onNew={() => void start()}
           onFailure={() => onBusy(false)}
         >
-          <Suspense fallback={<MessagesSkeleton />}>
+          <Suspense fallback={<ChatSkeleton />}>
             <AgentChat
               fileId={file.id}
               conversationId={conversationId}
@@ -215,9 +208,7 @@ function LiveConversation({
           </Suspense>
         </AgentChatBoundary>
       ) : (
-        <div className="flex flex-1 items-center justify-center">
-          <Skeleton className="mx-5 h-24 w-full max-w-3xl" />
-        </div>
+        <ChatSkeleton />
       )}
       <AlertDialog open={resolving} onOpenChange={setResolving}>
         <AlertDialogContent>

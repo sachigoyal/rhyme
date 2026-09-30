@@ -10,7 +10,7 @@ import { cn } from '@rhyme/ui/lib/utils'
 import { ConversationHoverCard } from './conversation-hover-card'
 import { ConversationActions } from './conversation-actions'
 
-import { ConversationSkeleton } from './conversation-header'
+import { ConversationSkeleton } from './conversation-skeleton'
 
 const ConversationDetail = lazy(() => import('./conversation-detail'))
 

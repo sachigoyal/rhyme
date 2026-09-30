@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { isReasoningUIPart, isTextUIPart, isToolUIPart } from 'ai'
 import type { UIMessage } from 'ai'
 import { Brain, ChevronRight, Sparkles } from 'lucide-react'
-import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { Marker, MarkerContent, MarkerIcon } from '@rhyme/ui/components/marker'
 import { cn } from '@rhyme/ui/lib/utils'
 import {
@@ -154,23 +153,5 @@ export function StreamingCaret() {
       aria-hidden
       className="bg-foreground/60 ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-[2px]"
     />
-  )
-}
-
-export function MessagesSkeleton() {
-  return (
-    <div className="flex flex-col gap-4 p-4" aria-label="Loading conversation">
-      <Skeleton className="h-9 w-2/3 self-end rounded-2xl rounded-br-md" />
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-4/5" />
-      </div>
-      <Skeleton className="h-9 w-1/2 self-end rounded-2xl rounded-br-md" />
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-full" />
-        <Skeleton className="h-3 w-3/5" />
-      </div>
-    </div>
   )
 }

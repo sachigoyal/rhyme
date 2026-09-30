@@ -15,7 +15,8 @@ import {
 import { ChatChangePreviews } from '@/features/agent/chat-transcript'
 import { timeAgo } from '@/lib/format'
 import { ConversationSession } from './conversation-session'
-import { ConversationHeader, ConversationSkeleton } from './conversation-header'
+import { ConversationHeader } from './conversation-header'
+import { ConversationSkeleton } from './conversation-skeleton'
 
 export default function ConversationDetail({
   id,

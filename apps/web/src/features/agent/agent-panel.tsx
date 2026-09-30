@@ -32,7 +32,7 @@ import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ConversationHoverCard } from '@/features/chats/conversation-hover-card'
 import { ConversationActions } from '@/features/chats/conversation-actions'
-import { MessagesSkeleton } from './agent-activity'
+import { ChatSkeleton, MessagesSkeleton } from './chat-skeleton'
 import { AgentFace } from './agent-face'
 import { agentStatusLabels } from './agent-status'
 import type { AgentStatus } from './agent-status'
@@ -342,7 +342,7 @@ export function AgentPanel({
           </div>
         )}
         {chats.isPending && !activeId ? (
-          <MessagesSkeleton />
+          <ChatSkeleton layout="panel" />
         ) : activeId ? (
           <AgentChatBoundary
             key={activeId}
@@ -352,7 +352,7 @@ export function AgentPanel({
               setBusy(false)
             }}
           >
-            <Suspense fallback={<MessagesSkeleton />}>
+            <Suspense fallback={<ChatSkeleton layout="panel" />}>
               <AgentChat
                 fileId={fileId}
                 conversationId={activeId}

@@ -13,7 +13,13 @@ export function GuestCanvasSkeleton() {
   )
 }
 
-export function AppSkeleton() {
+export function AppSkeleton({
+  children,
+  hideHeader = false,
+}: {
+  children?: React.ReactNode
+  hideHeader?: boolean
+}) {
   return (
     <main
       className="bg-background flex h-svh"
@@ -30,19 +36,29 @@ export function AppSkeleton() {
           <Skeleton key={i} className="h-5 w-3/4" />
         ))}
       </aside>
-      <div className="min-w-0 flex-1" aria-hidden>
-        <div className="flex h-12 items-center border-b px-3">
-          <Skeleton className="h-4 w-36" />
-        </div>
-        <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-8 max-w-sm" />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
-            ))}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {!hideHeader && (
+          <div
+            className="flex h-12 shrink-0 items-center border-b px-3"
+            aria-hidden="true"
+          >
+            <Skeleton className="h-4 w-36" />
           </div>
-        </div>
+        )}
+        {children ?? (
+          <div
+            className="space-y-4 px-4 py-4 sm:px-6 sm:py-5"
+            aria-hidden="true"
+          >
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-8 max-w-sm" />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   )

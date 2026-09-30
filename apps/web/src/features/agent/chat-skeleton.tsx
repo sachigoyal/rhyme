@@ -1,0 +1,75 @@
+import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { cn } from '@rhyme/ui/lib/utils'
+import { chatComposerLayouts, chatMessageLayouts } from './chat-layout'
+import type { ChatLayout } from './chat-layout'
+
+export function MessagesSkeleton({
+  layout = 'panel',
+}: {
+  layout?: ChatLayout
+}) {
+  return (
+    <div
+      role="status"
+      aria-label="Loading messages"
+      className={cn('flex flex-col', chatMessageLayouts[layout])}
+    >
+      <div aria-hidden="true" className="flex flex-col gap-5">
+        <Skeleton className="h-10 w-3/4 max-w-sm self-end rounded-xl rounded-br-md" />
+        <div className="space-y-2.5">
+          <Skeleton className="mb-4 h-3 w-24" />
+          <Skeleton className="h-3 w-5/6 max-w-lg" />
+          <Skeleton className="h-3 w-3/4 max-w-md" />
+          <Skeleton className="h-3 w-1/2 max-w-xs" />
+        </div>
+        <Skeleton className="h-9 w-1/2 max-w-48 self-end rounded-xl rounded-br-md" />
+        <div className="space-y-2.5">
+          <Skeleton className="h-3 w-4/5 max-w-lg" />
+          <Skeleton className="h-3 w-2/3 max-w-sm" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ComposerSkeleton({
+  layout = 'panel',
+}: {
+  layout?: ChatLayout
+}) {
+  return (
+    <div
+      role="status"
+      aria-label="Loading message composer"
+      className={chatComposerLayouts[layout]}
+    >
+      <div className="p-3" aria-hidden="true">
+        <div className="rounded-xl border p-2">
+          <div className="min-h-14 px-1 py-2">
+            <Skeleton className="mt-1.5 h-3 w-36 max-w-full" />
+          </div>
+          <div className="flex h-9 items-end gap-2 pt-1">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="size-5 rounded-md" />
+            <Skeleton className="ml-auto size-8 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ChatSkeleton({
+  layout = 'workspace',
+}: {
+  layout?: ChatLayout
+}) {
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <MessagesSkeleton layout={layout} />
+      </div>
+      <ComposerSkeleton layout={layout} />
+    </div>
+  )
+}

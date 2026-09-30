@@ -18,6 +18,7 @@ import type { AgentStatus } from './agent-status'
 import { AgentMessage } from './agent-message'
 import { AgentComposer, AgentEmptyState } from './agent-composer'
 import { useCanvasAgent } from './use-canvas-agent'
+import { chatComposerLayouts, chatMessageLayouts } from './chat-layout'
 
 export class AgentChatBoundary extends Component<{
   children: ReactNode
@@ -180,9 +181,7 @@ export function AgentChat({
           <MessageScrollerViewport>
             <MessageScrollerContent
               className={
-                chat.messages.length
-                  ? `gap-4 px-3 py-4 ${layout === 'workspace' ? 'mx-auto w-full max-w-3xl sm:px-5 sm:py-5' : ''}`
-                  : 'gap-0'
+                chat.messages.length ? chatMessageLayouts[layout] : 'gap-0'
               }
             >
               {chat.messages.length === 0 ? (
@@ -263,13 +262,7 @@ export function AgentChat({
           </Button>
         </div>
       )}
-      <div
-        className={
-          layout === 'workspace'
-            ? 'mx-auto w-full max-w-3xl shrink-0 px-1 pb-3 sm:px-3 sm:pb-3'
-            : 'shrink-0'
-        }
-      >
+      <div className={chatComposerLayouts[layout]}>
         <AgentComposer
           draft={draft}
           onDraft={setDraft}
