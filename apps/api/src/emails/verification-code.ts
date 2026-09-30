@@ -96,8 +96,8 @@ export function verificationCodeEmail({
               </td></tr>
               <tr><td style="padding-top:24px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr><td align="center" bgcolor="#fce8f0" style="padding:18px 12px;background-color:#fce8f0;border:1px solid #f3c5d8;border-radius:8px;">
-                    <p aria-label="Verification code" style="margin:0;padding-left:6px;color:#982d58;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-size:32px;line-height:44px;font-weight:600;letter-spacing:6px;">${code}</p>
+                  <tr><td align="center" bgcolor="#eeeaf4" style="padding:18px 12px;background-color:#eeeaf4;border:1px solid #e7e1ef;border-radius:8px;">
+                    <p aria-label="Verification code" style="margin:0;padding-left:6px;color:#514569;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-size:32px;line-height:44px;font-weight:600;letter-spacing:6px;">${code}</p>
                   </td></tr>
                 </table>
                 <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#737373;">${expiry} Do not share this code.</p>

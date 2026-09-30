@@ -45,7 +45,7 @@ test('the brand is embedded as a PNG and code emails remain readable without ima
   assert.ok(email.html.includes('alt="Rhyme"'))
   assert.ok(!email.html.includes('<svg'))
   assert.ok(email.html.includes('background-color:#ffffff'))
-  assert.ok(email.html.includes('#fce8f0'))
+  assert.ok(email.html.includes('#eeeaf4'))
   assert.deepEqual(email.headers, {
     'Auto-Submitted': 'auto-generated',
     'Content-Language': 'en',
