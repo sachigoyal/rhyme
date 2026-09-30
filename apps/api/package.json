@@ -1,0 +1,37 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./router": "./src/router.ts",
+    "./canvas-schema": "./src/agents/canvas-schema.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "db:migrate": "wrangler d1 migrations apply rhyme --local",
+    "db:migrate:remote": "wrangler d1 migrations apply rhyme --remote",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cloudflare/ai-chat": "catalog:",
+    "@hono/trpc-server": "^0.4.2",
+    "@rhyme/db": "workspace:*",
+    "@trpc/server": "catalog:",
+    "agents": "catalog:",
+    "ai": "catalog:",
+    "better-auth": "catalog:",
+    "drizzle-orm": "catalog:",
+    "hono": "^4.13.11",
+    "superjson": "catalog:",
+    "workers-ai-provider": "4.0.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "catalog:",
+    "wrangler": "^4.143.0"
+  }
+}

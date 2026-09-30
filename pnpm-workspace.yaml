@@ -1,6 +1,27 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - apps/*
+  - packages/*
+
+catalog:
+  '@ai-sdk/react': 4.0.125
+  '@cloudflare/ai-chat': 0.12.0
+  agents: 0.24.0
+  ai: 7.0.122
+  '@cloudflare/workers-types': ^5.20260929.1
+  '@tanstack/react-query': ^5.104.0
+  '@trpc/client': ^11.19.0
+  '@trpc/server': ^11.19.0
+  '@trpc/tanstack-react-query': ^11.19.0
+  '@types/react': ^19.2.0
+  '@types/react-dom': ^19.2.0
+  better-auth: ^1.7.6
+  drizzle-orm: ^0.45.3
+  react: ^19.2.0
+  react-dom: ^19.2.0
+  superjson: ^2.2.2
+  typescript: ^6.0.3
+  zod: ^4.6.5
+
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.11.5'
   - '@turbo/darwin-arm64@2.11.5'
@@ -9,7 +30,19 @@ minimumReleaseAgeExclude:
   - '@turbo/windows-64@2.11.5'
   - '@turbo/windows-arm64@2.11.5'
   - turbo@2.11.5
+  - '@cloudflare/workers-types@5.20260929.1'
+  - hono@4.13.11
+  - wrangler@4.143.0
+  - '@ai-sdk/gateway@4.0.100'
+  - '@ai-sdk/provider-utils@5.0.51'
+  - ai@7.0.122
+  - '@ai-sdk/mcp@2.0.62'
+  - '@ai-sdk/react@4.0.125'
+
 allowBuilds:
   esbuild: true
   lightningcss: true
+  sharp: true
+  workerd: true
   unrs-resolver: false
+  core-js-pure: false

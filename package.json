@@ -1,20 +1,23 @@
 {
-  "name": "excalidraw",
+  "name": "rhyme",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
+    "build": "turbo run build",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "format": "prettier --write .",
+    "db:generate": "pnpm --filter @rhyme/db db:generate",
+    "db:migrate": "pnpm --filter api db:migrate"
   },
   "devDependencies": {
     "prettier": "3.9.6",
     "turbo": "^2.11.5",
-    "typescript": "7.0.2"
+    "typescript": "catalog:"
   },
   "packageManager": "pnpm@11.25.0",
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   }
 }

@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rhyme-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "API_URL": "http://localhost:8787",
+    "WEB_URL": "http://localhost:3000",
+    "EMAIL_FROM": "auth@rhyme.localhost",
+    "AI_MODEL": "@cf/moonshotai/kimi-k2.6",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rhyme",
+      "database_id": "31195662-02ca-463e-9243-3c0e510c0d39",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "STORAGE", "bucket_name": "rhyme" }],
+  "send_email": [{ "name": "EMAIL" }],
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "CanvasAgent", "class_name": "CanvasAgent" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["CanvasAgent"] }],
+}

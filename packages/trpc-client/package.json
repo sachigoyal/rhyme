@@ -1,0 +1,29 @@
+{
+  "name": "@rhyme/trpc-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@trpc/client": "catalog:",
+    "@trpc/tanstack-react-query": "catalog:",
+    "superjson": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@trpc/server": "catalog:",
+    "@types/react": "catalog:",
+    "api": "workspace:*",
+    "react": "catalog:",
+    "typescript": "catalog:"
+  }
+}

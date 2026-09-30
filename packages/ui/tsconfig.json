@@ -1,0 +1,9 @@
+{
+  "extends": "@repo/typescript-config/react.json",
+  "compilerOptions": {
+    "paths": {
+      "@rhyme/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

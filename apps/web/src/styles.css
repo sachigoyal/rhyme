@@ -1,17 +1,36 @@
+@import '@rhyme/ui/globals.css';
+@import 'tldraw/tldraw.css';
 
-@import "tailwindcss";
-
-* {
-  box-sizing: border-box;
+.tl-container {
+  font-family: var(--font-sans);
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+@keyframes text-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }
 
-body {
-  margin: 0;
+.text-shimmer {
+  background: linear-gradient(
+      90deg,
+      var(--muted-foreground) 40%,
+      var(--foreground) 50%,
+      var(--muted-foreground) 60%
+    )
+    0 0 / 300% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 2s linear infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer {
+    animation: none;
+    background: none;
+    color: var(--muted-foreground);
+  }
+}

@@ -11,9 +11,6 @@
         ".env*"
       ],
       "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "!.next/dev/**",
         "dist/**",
         ".output/**"
       ]
