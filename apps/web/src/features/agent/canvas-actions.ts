@@ -26,7 +26,7 @@ const defined = <T extends Record<string, unknown>>(object: T) =>
 export function parseToolInput<TName extends keyof typeof canvasToolInputs>(
   name: TName,
   input: unknown,
-): z.output<(typeof canvasToolInputs)[TName]> {
+) {
   const parsed = canvasToolInputs[name].safeParse(input)
   if (!parsed.success) throw new Error(z.prettifyError(parsed.error))
   return parsed.data as z.output<(typeof canvasToolInputs)[TName]>

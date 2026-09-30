@@ -8,6 +8,27 @@
       "when": 1790691121245,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790750925884,
+      "tag": "0001_luxuriant_luke_cage",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790752843743,
+      "tag": "0002_chunky_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790753830750,
+      "tag": "0003_adorable_harpoon",
+      "breakpoints": true
     }
   ]
 }

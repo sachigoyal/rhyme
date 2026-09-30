@@ -18,7 +18,7 @@ const SCREENSHOT_SIZE = 1024
 export const toAgentId = (id: TLShapeId) => id.replace(/^shape:/, '')
 export const toShapeId = (id: string) => createShapeId(id)
 
-const roundBounds = ({ x, y, w, h }: Bounds): Bounds => ({
+const roundBounds = ({ x, y, w, h }: Bounds) => ({
   x: Math.round(x),
   y: Math.round(y),
   w: Math.round(w),
@@ -96,7 +96,10 @@ const toDataUrl = (blob: Blob) =>
     reader.readAsDataURL(blob)
   })
 
-async function captureViewport(editor: Editor) {
+export async function captureCanvasPreview(
+  editor: Editor,
+  size = SCREENSHOT_SIZE,
+) {
   const bounds = editor.getViewportPageBounds()
   const ids = [...editor.getCurrentPageShapeIds()].filter((id) => {
     const shapeBounds = editor.getShapePageBounds(id)
@@ -107,13 +110,13 @@ async function captureViewport(editor: Editor) {
   try {
     const { blob } = await editor.toImage(ids, {
       format: 'jpeg',
-      quality: 0.8,
+      quality: size < SCREENSHOT_SIZE ? 0.65 : 0.8,
       bounds,
       padding: 0,
       background: true,
       darkMode: false,
       pixelRatio: 1,
-      scale: Math.min(2, SCREENSHOT_SIZE / Math.max(bounds.w, bounds.h)),
+      scale: Math.min(2, size / Math.max(bounds.w, bounds.h)),
     })
     return await toDataUrl(blob)
   } catch (error) {
@@ -124,9 +127,10 @@ async function captureViewport(editor: Editor) {
 
 export async function buildCanvasContext(
   editor: Editor,
-): Promise<CanvasContext> {
+  includeScreenshot = true,
+) {
   return {
     ...describeCanvas(editor),
-    screenshot: await captureViewport(editor),
-  }
+    screenshot: includeScreenshot ? await captureCanvasPreview(editor) : null,
+  } satisfies CanvasContext
 }

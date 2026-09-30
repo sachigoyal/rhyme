@@ -48,7 +48,7 @@ export function FileCard({ file, folders }: FileCardProps) {
   const preview = <FilePreview file={file} />
 
   return (
-    <div className="group bg-card hover:border-foreground/20 relative flex flex-col overflow-hidden rounded-xl border transition-colors">
+    <div className="group bg-card hover:border-foreground/20 relative flex flex-col overflow-hidden rounded-lg border transition-colors">
       {trashed ? (
         preview
       ) : (
@@ -94,7 +94,30 @@ function FilePreview({ file }: { file: FileSummary }) {
           className="size-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.02] dark:invert dark:hue-rotate-180"
         />
       ) : (
-        <div className="bg-[radial-gradient(var(--border)_1px,transparent_1px)] size-full [background-size:16px_16px]" />
+        <div className="grid size-full place-items-center text-muted-foreground/30">
+          <svg
+            width="36"
+            height="36"
+            viewBox="0 0 36 36"
+            fill="none"
+            aria-hidden
+          >
+            <rect
+              x="5"
+              y="5"
+              width="26"
+              height="26"
+              rx="4"
+              stroke="currentColor"
+            />
+            <path
+              d="M12 23l5-8 4 5 3-3"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
       )}
     </div>
   )

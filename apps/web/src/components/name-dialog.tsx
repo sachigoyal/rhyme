@@ -43,6 +43,7 @@ function NameForm({
 }: Omit<NameDialogProps, 'open' | 'onOpenChange'> & { onDone: () => void }) {
   const [name, setName] = useState(initialName)
   const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const trimmed = name.trim()
 
   return (
@@ -52,9 +53,16 @@ function NameForm({
         event.preventDefault()
         if (!trimmed || trimmed === initialName) return onDone()
         setPending(true)
+        setError(null)
         try {
           await onSubmit(trimmed)
           onDone()
+        } catch (failure) {
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : 'Could not save the name. Please try again.',
+          )
         } finally {
           setPending(false)
         }
@@ -72,6 +80,11 @@ function NameForm({
         onChange={(event) => setName(event.target.value)}
         onFocus={(event) => event.target.select()}
       />
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      )}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel

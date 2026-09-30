@@ -1,88 +1,168 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useAgentChat } from '@cloudflare/ai-chat/react'
 import { useAgent } from 'agents/react'
+import { AGENT_MODELS, DEFAULT_AGENT_CONFIG } from 'api/agent-config'
+import type { AgentConfig, AgentState } from 'api/agent-config'
 import type { Editor } from 'tldraw'
+import { toast } from 'sonner'
+import { useRecordChatChange } from '@rhyme/hooks/mutations'
 import { env } from '@/lib/env'
-import { deleteShapes, parseToolInput, runCanvasTool } from './canvas-actions'
-import { buildCanvasContext } from './canvas-context'
+import { buildCanvasContext, captureCanvasPreview } from './canvas-context'
+import { createCanvasToolRunner } from './canvas-tool-runner'
+import { getCanvasAgentOptions } from './agent-connection'
 
-const errorText = (error: unknown) =>
-  error instanceof Error ? error.message : String(error)
+export function useCanvasAgent(
+  fileId: string,
+  conversationId: string,
+  editor: Editor,
+) {
+  const [runner] = useState(() => createCanvasToolRunner(editor))
+  const [requestPending, setRequestPending] = useState(false)
+  const requestInFlight = useRef(false)
+  const [configSaving, setConfigSaving] = useState(false)
+  const configInFlight = useRef(false)
+  const recordChange = useRecordChatChange()
+  const agent = useAgent<AgentState>(
+    getCanvasAgentOptions(fileId, conversationId, env.apiUrl),
+  )
+  const config = agent.state?.config ?? DEFAULT_AGENT_CONFIG
+  const configRef = useRef(config)
+  configRef.current = config
 
-export function useCanvasAgent(fileId: string, editor: Editor) {
-  const turnMarked = useRef(false)
-
-  const agent = useAgent({
-    agent: 'CanvasAgent',
-    basePath: `files/${fileId}/agent/chat`,
-    host: env.apiUrl,
-    protocol: env.apiUrl.startsWith('https:') ? 'wss' : 'ws',
-  })
-
-  // One stopping point per turn, so a single undo reverts everything the agent drew.
-  const markTurn = () => {
-    if (turnMarked.current) return
-    editor.markHistoryStoppingPoint('agent turn')
-    turnMarked.current = true
+  const savePreview = (toolCallId: string, preview: string | null) => {
+    if (preview)
+      recordChange.mutate(
+        { id: conversationId, toolCallId, preview },
+        {
+          onError: (error) =>
+            console.warn('Canvas change preview could not be saved', error),
+        },
+      )
   }
 
   const chat = useAgentChat({
     agent,
     credentials: 'include',
-    body: async () => ({ canvas: await buildCanvasContext(editor) }),
-    onToolCall: ({ toolCall, addToolOutput }) => {
-      if (toolCall.toolName === 'delete_shapes') return
-      try {
-        if (toolCall.toolName !== 'read_canvas') markTurn()
-        addToolOutput({
-          toolCallId: toolCall.toolCallId,
-          output: runCanvasTool(editor, toolCall.toolName, toolCall.input),
-        })
-      } catch (error) {
-        addToolOutput({
-          toolCallId: toolCall.toolCallId,
-          state: 'output-error',
-          errorText: errorText(error),
-        })
+    body: async () => {
+      const turnConfig = configRef.current
+      const model = AGENT_MODELS.find((item) => item.id === turnConfig.model)
+      return {
+        config: turnConfig,
+        canvas: await buildCanvasContext(editor, model?.vision ?? false),
       }
+    },
+    onToolCall: async ({ toolCall, addToolOutput }) => {
+      if (toolCall.toolName === 'delete_shapes') return
+      const execution = runner.run(
+        toolCall.toolCallId,
+        toolCall.toolName,
+        toolCall.input,
+      )
+      const preview = execution.applied
+        ? await captureCanvasPreview(editor, 480)
+        : null
+      await addToolOutput({
+        toolCallId: toolCall.toolCallId,
+        ...execution.result,
+      })
+      savePreview(toolCall.toolCallId, preview)
     },
   })
 
-  const send = (text: string) => {
-    turnMarked.current = false
-    void chat.sendMessage({ text })
+  const busy =
+    requestPending ||
+    agent.state?.status === 'running' ||
+    chat.status === 'submitted' ||
+    chat.status === 'streaming' ||
+    chat.isServerStreaming ||
+    chat.isRecovering ||
+    chat.isToolContinuation
+
+  const startRequest = (request: () => Promise<void>) => {
+    if (
+      requestInFlight.current ||
+      configInFlight.current ||
+      busy ||
+      !agent.identified
+    )
+      return false
+    requestInFlight.current = true
+    setRequestPending(true)
+    runner.beginTurn()
+    void request()
+      .catch((error: unknown) =>
+        console.warn('Assistant request could not complete', error),
+      )
+      .finally(() => {
+        requestInFlight.current = false
+        setRequestPending(false)
+      })
+    return true
   }
 
-  const resolveDeletion = (
+  const send = (text: string, messageId?: string) =>
+    startRequest(() => chat.sendMessage({ text, messageId }))
+
+  const regenerate = (messageId?: string) =>
+    startRequest(() => chat.regenerate({ messageId }))
+
+  const configure = async (nextConfig: AgentConfig) => {
+    if (
+      requestInFlight.current ||
+      configInFlight.current ||
+      busy ||
+      !agent.identified
+    )
+      return false
+    configInFlight.current = true
+    setConfigSaving(true)
+    try {
+      configRef.current = await agent.call<AgentConfig>('configure', [
+        nextConfig,
+      ])
+      return true
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Model settings could not be saved',
+      )
+      return false
+    } finally {
+      configInFlight.current = false
+      setConfigSaving(false)
+    }
+  }
+
+  const resolveDeletion = async (
     toolCallId: string,
     input: unknown,
     approved: boolean,
   ) => {
     if (!approved) {
-      chat.addToolOutput({
+      await chat.addToolOutput({
         toolCallId,
-        state: 'output-error',
-        errorText: 'The user declined this deletion.',
+        ...runner.reject(toolCallId, 'The user declined this deletion.'),
       })
       return
     }
-    try {
-      markTurn()
-      const output = deleteShapes(
-        editor,
-        parseToolInput('delete_shapes', input),
-      )
-      chat.addToolOutput({ toolCallId, output })
-    } catch (error) {
-      chat.addToolOutput({
-        toolCallId,
-        state: 'output-error',
-        errorText: errorText(error),
-      })
-    }
+    const execution = runner.run(toolCallId, 'delete_shapes', input)
+    const preview = execution.applied
+      ? await captureCanvasPreview(editor, 480)
+      : null
+    await chat.addToolOutput({ toolCallId, ...execution.result })
+    savePreview(toolCallId, preview)
   }
 
-  return { ...chat, connected: agent.identified, send, resolveDeletion }
+  return {
+    ...chat,
+    busy,
+    config,
+    configure,
+    configSaving,
+    connected: agent.identified,
+    send,
+    regenerate,
+    resolveDeletion,
+  }
 }
-
-export type CanvasAgentChat = ReturnType<typeof useCanvasAgent>

@@ -70,5 +70,15 @@ export function useDestroyFile() {
 
 export function useSaveFileDocument() {
   const trpc = useTRPC()
-  return useMutation(trpc.files.saveDocument.mutationOptions())
+  const cache = useFilesCache()
+  return useMutation(
+    trpc.files.saveDocument.mutationOptions({
+      onSuccess: async (saved, { id }) => {
+        await cache.updateLists((files) =>
+          files.map((file) => (file.id === id ? { ...file, ...saved } : file)),
+        )
+        await cache.invalidateLists()
+      },
+    }),
+  )
 }

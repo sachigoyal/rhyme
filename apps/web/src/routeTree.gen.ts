@@ -11,7 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as AppActivityRouteImport } from './routes/_app/activity'
+import { Route as AppChatsRouteImport } from './routes/_app/chats'
+import { Route as AuthCompleteRouteImport } from './routes/auth.complete'
 import { Route as AppFilesIndexRouteImport } from './routes/_app/files/index'
 import { Route as AppFilesFileIdRouteImport } from './routes/_app/files/$fileId'
 
@@ -24,9 +28,29 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppActivityRoute = AppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppChatsRoute = AppChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
+  getParentRoute: () => AppRoute,
+} as any)
+const AuthCompleteRoute = AuthCompleteRouteImport.update({
+  id: '/auth/complete',
+  path: '/auth/complete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppFilesIndexRoute = AppFilesIndexRouteImport.update({
@@ -42,13 +66,21 @@ const AppFilesFileIdRoute = AppFilesFileIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
   '/sign-in': typeof SignInRoute
+  '/activity': typeof AppActivityRoute
+  '/chats': typeof AppChatsRoute
+  '/auth/complete': typeof AuthCompleteRoute
   '/files/$fileId': typeof AppFilesFileIdRoute
   '/files/': typeof AppFilesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
   '/sign-in': typeof SignInRoute
+  '/activity': typeof AppActivityRoute
+  '/chats': typeof AppChatsRoute
+  '/auth/complete': typeof AuthCompleteRoute
   '/files/$fileId': typeof AppFilesFileIdRoute
   '/files': typeof AppFilesIndexRoute
 }
@@ -56,20 +88,44 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
   '/sign-in': typeof SignInRoute
+  '/_app/activity': typeof AppActivityRoute
+  '/_app/chats': typeof AppChatsRoute
+  '/auth/complete': typeof AuthCompleteRoute
   '/_app/files/$fileId': typeof AppFilesFileIdRoute
   '/_app/files/': typeof AppFilesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/files/$fileId' | '/files/'
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/sign-in'
+    | '/activity'
+    | '/chats'
+    | '/auth/complete'
+    | '/files/$fileId'
+    | '/files/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/files/$fileId' | '/files'
+  to:
+    | '/'
+    | '/onboarding'
+    | '/sign-in'
+    | '/activity'
+    | '/chats'
+    | '/auth/complete'
+    | '/files/$fileId'
+    | '/files'
   id:
     | '__root__'
     | '/'
     | '/_app'
+    | '/onboarding'
     | '/sign-in'
+    | '/_app/activity'
+    | '/_app/chats'
+    | '/auth/complete'
     | '/_app/files/$fileId'
     | '/_app/files/'
   fileRoutesById: FileRoutesById
@@ -77,7 +133,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
   SignInRoute: typeof SignInRoute
+  AuthCompleteRoute: typeof AuthCompleteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -96,11 +154,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/activity': {
+      id: '/_app/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof AppActivityRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/chats': {
+      id: '/_app/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof AppChatsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/auth/complete': {
+      id: '/auth/complete'
+      path: '/auth/complete'
+      fullPath: '/auth/complete'
+      preLoaderRoute: typeof AuthCompleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/files/': {
@@ -121,11 +207,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppActivityRoute: typeof AppActivityRoute
+  AppChatsRoute: typeof AppChatsRoute
   AppFilesFileIdRoute: typeof AppFilesFileIdRoute
   AppFilesIndexRoute: typeof AppFilesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppActivityRoute: AppActivityRoute,
+  AppChatsRoute: AppChatsRoute,
   AppFilesFileIdRoute: AppFilesFileIdRoute,
   AppFilesIndexRoute: AppFilesIndexRoute,
 }
@@ -135,7 +225,9 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
   SignInRoute: SignInRoute,
+  AuthCompleteRoute: AuthCompleteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

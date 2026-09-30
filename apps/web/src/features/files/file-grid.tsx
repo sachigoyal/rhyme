@@ -1,4 +1,4 @@
-import { FilePlus2, Trash2, Users } from 'lucide-react'
+import { FilePlus2, Search, Trash2, Users } from 'lucide-react'
 import { useFiles } from '@rhyme/hooks/queries'
 import type { FileView } from '@rhyme/trpc-client'
 import { Button } from '@rhyme/ui/components/button'
@@ -11,11 +11,19 @@ interface FileGridProps {
   view: FileView
   folderId?: string
   folders: FolderNode[]
+  search?: string
+  sort?: 'recent' | 'name'
 }
 
 const GRID = 'grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4'
 
-export function FileGrid({ view, folderId, folders }: FileGridProps) {
+export function FileGrid({
+  view,
+  folderId,
+  folders,
+  search = '',
+  sort = 'recent',
+}: FileGridProps) {
   const {
     data: files,
     isPending,
@@ -48,9 +56,27 @@ export function FileGrid({ view, folderId, folders }: FileGridProps) {
 
   if (files.length === 0) return <EmptyView view={view} folderId={folderId} />
 
+  const visible = files
+    .filter((file) =>
+      file.name.toLowerCase().includes(search.trim().toLowerCase()),
+    )
+    .toSorted((a, b) =>
+      sort === 'name'
+        ? a.name.localeCompare(b.name)
+        : b.updatedAt.getTime() - a.updatedAt.getTime(),
+    )
+  if (!visible.length)
+    return (
+      <EmptyState
+        icon={Search}
+        title="No matching canvases"
+        body="Try a different name or clear your search."
+      />
+    )
+
   return (
     <div className={GRID}>
-      {files.map((file) => (
+      {visible.map((file) => (
         <FileCard key={file.id} file={file} folders={folders} />
       ))}
     </div>
@@ -85,7 +111,7 @@ function EmptyView({ view, folderId }: { view: FileView; folderId?: string }) {
       body="Sketch an idea, map a system or plan a flow."
     >
       <Button onClick={() => create(folderId)} disabled={isPending}>
-        New file
+        New canvas
       </Button>
     </EmptyState>
   )

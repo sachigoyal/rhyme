@@ -1,65 +1,41 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { ArrowRight, Cloud, PenTool, Share2 } from 'lucide-react'
+import { createFileRoute } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@rhyme/ui/components/button'
-import { Logo } from '@/components/logo'
+import { GuestCanvas } from '@/features/auth/guest-canvas'
+import { useOpenRecentCanvas } from '@/features/auth/use-open-recent-canvas'
+import { sessionQuery } from '@/lib/auth'
 
-export const Route = createFileRoute('/')({ component: Landing })
+export const Route = createFileRoute('/')({
+  ssr: false,
+  beforeLoad: async ({ context }) => ({
+    session: await context.queryClient.ensureQueryData(sessionQuery),
+  }),
+  component: Home,
+})
 
-const features = [
-  {
-    icon: PenTool,
-    title: 'Draw anything',
-    body: 'Sketches, flowcharts, wireframes and diagrams on one infinite canvas.',
-  },
-  {
-    icon: Cloud,
-    title: 'Saved everywhere',
-    body: 'Every stroke is kept on your device and synced to your account.',
-  },
-  {
-    icon: Share2,
-    title: 'Share with anyone',
-    body: 'Invite people to view or edit a file with a single email.',
-  },
-]
+function Home() {
+  const { session } = Route.useRouteContext()
+  return session ? <OpenRecentCanvas /> : <GuestCanvas />
+}
 
-function Landing() {
+function OpenRecentCanvas() {
+  const error = useOpenRecentCanvas()
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-        <Logo />
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/sign-in">Sign in</Link>
-        </Button>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-        <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Where ideas take shape.
-        </h1>
-        <p className="text-muted-foreground mt-6 max-w-xl text-lg text-balance">
-          Rhyme is a calm, infinite whiteboard for sketching and diagramming.
-          Your drawings live in your account, not just your browser.
-        </p>
-        <Button asChild size="lg" className="mt-10">
-          <Link to="/files">
-            Start drawing
-            <ArrowRight />
-          </Link>
-        </Button>
-
-        <div className="mt-24 grid w-full gap-4 text-left sm:grid-cols-3">
-          {features.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-card rounded-xl border p-6">
-              <Icon className="text-muted-foreground size-5" />
-              <h2 className="mt-4 font-medium">{title}</h2>
-              <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-                {body}
-              </p>
-            </div>
-          ))}
+    <main className="grid h-svh place-items-center p-6">
+      {error ? (
+        <div className="max-w-sm space-y-4 text-center">
+          <h1 className="font-medium">Couldn’t open your canvas</h1>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try again
+          </Button>
         </div>
-      </main>
-    </div>
+      ) : (
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          <Loader2 className="size-4 animate-spin" />
+          Opening your canvas…
+        </div>
+      )}
+    </main>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
+import { z } from 'zod'
 import { toast } from 'sonner'
 import { useFile } from '@rhyme/hooks/queries'
 import { errorCode, useTRPC } from '@rhyme/trpc-client'
@@ -11,6 +12,7 @@ import { EditorSession } from '@/features/editor/editor-session'
 import { useInitialDocument } from '@/features/editor/use-initial-document'
 
 export const Route = createFileRoute('/_app/files/$fileId')({
+  validateSearch: z.object({ chat: z.string().optional() }),
   component: EditorPage,
 })
 
@@ -45,6 +47,7 @@ function EditorLoader({
   onReload: () => void
 }) {
   const { user } = Route.useRouteContext()
+  const { chat } = Route.useSearch()
   const file = useFile(fileId)
   const { initial, failed } = useInitialDocument(fileId)
 
@@ -96,6 +99,7 @@ function EditorLoader({
       initial={initial}
       user={user}
       onReload={onReload}
+      chatId={chat}
     />
   )
 }

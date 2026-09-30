@@ -54,3 +54,8 @@ export function isApiError(
 export function errorCode(error: unknown) {
   return isApiError(error) ? error.data?.code : undefined
 }
+
+export type ChatsListInput = Exclude<RouterInputs['chats']['list'], void>
+export type ChatSummary = RouterOutputs['chats']['list'][number]
+export type ChatDetail = RouterOutputs['chats']['get']
+export type AgentAnalytics = RouterOutputs['chats']['analytics']

@@ -3,6 +3,7 @@ import { isReasoningUIPart, isTextUIPart, isToolUIPart } from 'ai'
 import type { UIMessage } from 'ai'
 import { Brain, ChevronRight, Sparkles } from 'lucide-react'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
+import { Marker, MarkerContent, MarkerIcon } from '@rhyme/ui/components/marker'
 import { cn } from '@rhyme/ui/lib/utils'
 
 export function Shimmer({
@@ -12,7 +13,11 @@ export function Shimmer({
   children: React.ReactNode
   className?: string
 }) {
-  return <span className={cn('text-shimmer', className)}>{children}</span>
+  return (
+    <span className={cn('motion-safe:animate-pulse', className)}>
+      {children}
+    </span>
+  )
 }
 
 function useElapsedSeconds(running: boolean) {
@@ -32,7 +37,6 @@ function useElapsedSeconds(running: boolean) {
   return Math.max(0, Math.round((now - start) / 1000))
 }
 
-// Reasoning mounts while it streams, so the elapsed time is only meaningful for live turns.
 export function ThinkingBlock({
   text,
   streaming,
@@ -41,9 +45,8 @@ export function ThinkingBlock({
   streaming: boolean
 }) {
   const [wasLive] = useState(streaming)
-  const [open, setOpen] = useState<boolean | null>(null)
+  const [open, setOpen] = useState(false)
   const seconds = useElapsedSeconds(streaming)
-  const expanded = open ?? streaming
   const body = text.trim()
 
   const label = streaming
@@ -57,9 +60,9 @@ export function ThinkingBlock({
       <button
         type="button"
         className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors disabled:pointer-events-none"
-        aria-expanded={expanded}
+        aria-expanded={open}
         disabled={!body}
-        onClick={() => setOpen(!expanded)}
+        onClick={() => setOpen(!open)}
       >
         <Brain className="size-3.5" />
         {streaming ? <Shimmer>{label}</Shimmer> : label}
@@ -68,20 +71,15 @@ export function ThinkingBlock({
         )}
         {body && (
           <ChevronRight
-            className={cn(
-              'size-3 transition-transform',
-              expanded && 'rotate-90',
-            )}
+            className={cn('size-2.5 transition-transform', open && 'rotate-90')}
           />
         )}
       </button>
-      {expanded && body && (
+      {open && body && (
         <div
           className={cn(
             'text-muted-foreground mt-1.5 ml-1.5 border-l pl-3 leading-relaxed whitespace-pre-wrap',
-            // While streaming, show a short live tail anchored to the newest line.
-            streaming &&
-              'flex max-h-24 flex-col-reverse overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_40%)]',
+            'max-h-48 overflow-y-auto',
           )}
         >
           <p>{body}</p>
@@ -96,7 +94,6 @@ type Part = UIMessage['parts'][number]
 const lastVisiblePart = (message: UIMessage) =>
   [...message.parts].reverse().find((part) => part.type !== 'step-start')
 
-// What to show below the transcript when nothing on screen is visibly streaming.
 export function pendingActivity(messages: UIMessage[], busy: boolean) {
   if (!busy) return null
   const last = messages.at(-1)
@@ -118,16 +115,20 @@ export function pendingActivity(messages: UIMessage[], busy: boolean) {
 export function ActivityIndicator({ label }: { label: string }) {
   const seconds = useElapsedSeconds(true)
   return (
-    <div
+    <Marker
       role="status"
       className="text-muted-foreground flex items-center gap-2 text-xs"
     >
-      <Sparkles className="size-3.5 animate-pulse" />
-      <Shimmer>{label}</Shimmer>
+      <MarkerIcon>
+        <Sparkles className="size-3.5 animate-pulse" />
+      </MarkerIcon>
+      <MarkerContent>
+        <Shimmer>{label}</Shimmer>
+      </MarkerContent>
       {seconds >= 3 && (
         <span className="tabular-nums opacity-60">{seconds}s</span>
       )}
-    </div>
+    </Marker>
   )
 }
 

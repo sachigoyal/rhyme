@@ -1,9 +1,22 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Loader2, Plus } from 'lucide-react'
+import { ArrowUpDown, Loader2, Plus, Search } from 'lucide-react'
 import { z } from 'zod'
 import { useFolders } from '@rhyme/hooks/queries'
 import { Button } from '@rhyme/ui/components/button'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@rhyme/ui/components/input-group'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@rhyme/ui/components/dropdown-menu'
+import { displayName } from '@/lib/auth'
 import { Separator } from '@rhyme/ui/components/separator'
 import {
   SidebarInset,
@@ -23,7 +36,11 @@ const searchSchema = z.object({
   folder: z.string().optional(),
 })
 
-const titles = { mine: 'All files', shared: 'Shared with me', trash: 'Trash' }
+const titles = {
+  mine: 'Your canvases',
+  shared: 'Shared with me',
+  trash: 'Trash',
+}
 
 export const Route = createFileRoute('/_app/files/')({
   validateSearch: searchSchema,
@@ -34,6 +51,8 @@ export const Route = createFileRoute('/_app/files/')({
 function FilesPage() {
   const { view, folder: folderId } = Route.useSearch()
   const { user } = Route.useRouteContext()
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState<'recent' | 'name'>('recent')
   const { data: folders } = useFolders()
   const tree = useMemo(
     () => flattenFolderTree(buildFolderTree(folders ?? [])),
@@ -54,20 +73,82 @@ function FilesPage() {
             className="mr-1 data-[orientation=vertical]:h-4"
           />
           <h1 className="truncate text-sm font-medium">{title}</h1>
+          <span className="text-muted-foreground ml-auto hidden text-xs sm:block">
+            A little space for your next big idea.
+          </span>
           {view === 'mine' && (
             <Button
               size="sm"
-              className="ml-auto"
+              className="ml-2 shadow-none"
               onClick={() => create(folderId)}
               disabled={isPending}
             >
               {isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-              New file
+              New canvas
             </Button>
           )}
         </header>
-        <div className="flex-1 p-4 sm:p-6">
-          <FileGrid view={view} folderId={folderId} folders={tree} />
+        <div className="mx-auto w-full max-w-7xl flex-1 px-5 py-8 sm:px-10 sm:py-10">
+          <div className="mb-8">
+            <p className="text-muted-foreground mb-2 text-sm">
+              {view === 'mine'
+                ? `Workspace / ${displayName(user)}`
+                : 'Workspace'}
+            </p>
+            <h2 className="text-3xl font-semibold tracking-tight">{title}</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
+              {view === 'trash'
+                ? 'Restore a canvas or make room for something new.'
+                : view === 'shared'
+                  ? 'A shared space for thinking together.'
+                  : 'Everything you’re thinking about, all in one place.'}
+            </p>
+          </div>
+          <div className="mb-6 flex items-center gap-3">
+            <InputGroup className="max-w-sm">
+              <InputGroupInput
+                aria-label="Search canvases"
+                placeholder="Search canvases…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+            </InputGroup>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto shadow-none"
+                >
+                  <ArrowUpDown />
+                  {sort === 'recent' ? 'Last edited' : 'Name'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup
+                  value={sort}
+                  onValueChange={(value) => setSort(value as 'recent' | 'name')}
+                >
+                  <DropdownMenuRadioItem value="recent">
+                    Last edited
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="name">
+                    Name
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <FileGrid
+            view={view}
+            folderId={folderId}
+            folders={tree}
+            search={search}
+            sort={sort}
+          />
         </div>
       </SidebarInset>
     </SidebarProvider>

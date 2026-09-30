@@ -12,9 +12,16 @@ interface CanvasProps {
   initial: InitialDocument
   sync: DocumentSync | null
   onReady?: (editor: Editor | null) => void
+  headless?: boolean
 }
 
-export function Canvas({ fileId, initial, sync, onReady }: CanvasProps) {
+export function Canvas({
+  fileId,
+  initial,
+  sync,
+  onReady,
+  headless,
+}: CanvasProps) {
   const [editor, setEditor] = useState<Editor | null>(null)
   const { resolvedTheme } = useTheme()
   const assets = useMemo(() => createAssetStore(fileId), [fileId])
@@ -30,6 +37,7 @@ export function Canvas({ fileId, initial, sync, onReady }: CanvasProps) {
     setEditor(mounted)
     onReady?.(mounted)
     mounted.updateInstanceState({ isReadonly: !sync })
+    if (headless) mounted.zoomToFit()
     if (!sync) return () => onReady?.(null)
 
     const detach = sync.attach(mounted)
@@ -50,6 +58,8 @@ export function Canvas({ fileId, initial, sync, onReady }: CanvasProps) {
       snapshot={(initial.document ?? undefined) as TLStoreSnapshot | undefined}
       assets={assets}
       onMount={onMount}
+      hideUi={headless}
+      autoFocus={!headless}
     />
   )
 }

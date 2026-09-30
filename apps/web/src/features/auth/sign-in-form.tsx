@@ -1,15 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, Mail } from 'lucide-react'
 import { Button } from '@rhyme/ui/components/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@rhyme/ui/components/card'
 import { Input } from '@rhyme/ui/components/input'
 import {
   InputOTP,
@@ -33,129 +26,208 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
+  const [resendIn, setResendIn] = useState(0)
   const queryClient = useQueryClient()
   const router = useRouter()
-
   const sendCode = useMutation({
     mutationFn: () =>
       unwrap(
-        authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' }),
+        authClient.emailOtp.sendVerificationOtp({
+          email: email.trim(),
+          type: 'sign-in',
+        }),
       ),
-    onSuccess: () => setStep('code'),
+    onSuccess: () => {
+      setStep('code')
+      setResendIn(30)
+    },
   })
-
   const verify = useMutation({
     mutationFn: (otp: string) =>
-      unwrap(authClient.signIn.emailOtp({ email, otp })),
+      unwrap(authClient.signIn.emailOtp({ email: email.trim(), otp })),
     onSuccess: async () => {
       await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
-      await router.navigate({ href: redirectTo })
+      await router.navigate({
+        to: '/auth/complete',
+        search: { redirect: redirectTo },
+      })
     },
     onError: () => setCode(''),
   })
 
+  useEffect(() => {
+    if (!resendIn) return
+    const timer = window.setTimeout(
+      () => setResendIn((remaining) => remaining - 1),
+      1000,
+    )
+    return () => window.clearTimeout(timer)
+  }, [resendIn])
+
   if (step === 'email') {
     return (
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Welcome to Rhyme</CardTitle>
-          <CardDescription>
-            Sign in or create an account with your email.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault()
-              sendCode.mutate()
-            }}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                required
-                autoFocus
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <ErrorText error={sendCode.error} />
-            <Button
-              type="submit"
-              className="w-full"
+      <div>
+        <p className="text-muted-foreground mb-3 text-xs uppercase tracking-widest">
+          Your ideas belong here
+        </p>
+        <h1 className="text-3xl font-medium tracking-tight">
+          Welcome to Rhyme.
+        </h1>
+        <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+          Sign in or create your account.
+          <br />
+          Your next idea already has a home.
+        </p>
+        <form
+          className="mt-9 space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            sendCode.mutate()
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+              autoFocus
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="h-11 px-3"
               disabled={sendCode.isPending}
-            >
-              {sendCode.isPending && <Loader2 className="animate-spin" />}
-              Continue with email
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            />
+          </div>
+          <ErrorText error={sendCode.error} />
+          <Button
+            type="submit"
+            className="h-11 w-full justify-between px-4"
+            disabled={sendCode.isPending}
+          >
+            Continue with email{' '}
+            {sendCode.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowRight className="size-4" />
+            )}
+          </Button>
+          <p className="text-muted-foreground text-center text-xs">
+            We’ll send a sign-in code. No password to remember.
+          </p>
+        </form>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-xl">Check your inbox</CardTitle>
-        <CardDescription>
-          We sent a {CODE_LENGTH}-digit code to{' '}
-          <span className="text-foreground font-medium">{email}</span>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-5">
+    <div>
+      <span className="bg-muted mb-6 grid size-10 place-items-center rounded-xl border">
+        <Mail className="size-4" />
+      </span>
+      <h1 className="text-3xl font-medium tracking-tight">Check your inbox.</h1>
+      <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+        Enter the {CODE_LENGTH}-digit code we sent to
+        <br />
+        <span className="text-foreground font-medium">{email.trim()}</span>.
+      </p>
+      <form
+        className="mt-8 space-y-6"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (code.length === CODE_LENGTH && !verify.isPending)
+            verify.mutate(code)
+        }}
+      >
+        <Label htmlFor="sign-in-code" className="sr-only">
+          Verification code
+        </Label>
         <InputOTP
+          id="sign-in-code"
           maxLength={CODE_LENGTH}
           value={code}
           onChange={setCode}
-          onComplete={(otp) => verify.mutate(otp)}
+          onComplete={(otp) => {
+            if (!verify.isPending) verify.mutate(otp)
+          }}
           disabled={verify.isPending}
           autoFocus
+          autoComplete="one-time-code"
+          containerClassName="justify-between"
         >
-          <InputOTPGroup>
+          <InputOTPGroup className="w-full justify-between gap-2">
             {Array.from({ length: CODE_LENGTH }, (_, index) => (
               <InputOTPSlot
                 key={index}
                 index={index}
-                className="size-11 text-lg"
+                className="h-12 flex-1 rounded-lg border text-lg first:rounded-lg last:rounded-lg"
               />
             ))}
           </InputOTPGroup>
         </InputOTP>
-        <ErrorText error={verify.error} />
-        <div className="flex w-full items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setStep('email')
-              setCode('')
-              verify.reset()
-            }}
-          >
-            <ArrowLeft />
-            Change email
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={sendCode.isPending}
-            onClick={() => sendCode.mutate()}
-          >
-            {sendCode.isPending ? 'Sending…' : 'Resend code'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        <ErrorText error={verify.error ?? sendCode.error} />
+        <Button
+          type="submit"
+          className="h-11 w-full"
+          disabled={code.length !== CODE_LENGTH || verify.isPending}
+        >
+          {verify.isPending ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Opening your workspace…
+            </>
+          ) : (
+            <>
+              Continue <ArrowRight className="size-4" />
+            </>
+          )}
+        </Button>
+      </form>
+      <div className="mt-5 flex items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={verify.isPending}
+          onClick={() => {
+            setStep('email')
+            setCode('')
+            verify.reset()
+            sendCode.reset()
+          }}
+        >
+          <ArrowLeft className="size-3.5" />
+          Change email
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={sendCode.isPending || verify.isPending || resendIn > 0}
+          onClick={() => {
+            setCode('')
+            verify.reset()
+            sendCode.mutate()
+          }}
+        >
+          {sendCode.isPending
+            ? 'Sending…'
+            : resendIn > 0
+              ? `Resend in ${resendIn}s`
+              : 'Resend code'}
+        </Button>
+      </div>
+      <p className="text-muted-foreground mt-5 text-xs">
+        The code expires in 10 minutes. Check spam if it is missing.
+      </p>
+    </div>
   )
 }
 
 function ErrorText({ error }: { error: Error | null }) {
   if (!error) return null
-  return <p className="text-destructive text-center text-sm">{error.message}</p>
+  return (
+    <p role="alert" className="text-destructive text-sm">
+      {error.message}
+    </p>
+  )
 }

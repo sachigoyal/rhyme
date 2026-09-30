@@ -4,33 +4,41 @@
 .tl-container {
   font-family: var(--font-sans);
 }
-
-@keyframes text-shimmer {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: 0 0;
-  }
+.tl-theme__light,
+.tl-theme__dark {
+  --tl-shadow-1: none;
+  --tl-shadow-2: none;
 }
 
-.text-shimmer {
-  background: linear-gradient(
-      90deg,
-      var(--muted-foreground) 40%,
-      var(--foreground) 50%,
-      var(--muted-foreground) 60%
-    )
-    0 0 / 300% 100%;
-  background-clip: text;
-  color: transparent;
-  animation: text-shimmer 2s linear infinite;
+@keyframes agent-blink {
+  0%,
+  44%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+  46% {
+    transform: scaleY(0.15);
+  }
 }
-
+@keyframes agent-work {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.agent-eyes {
+  animation: agent-blink 6s ease-in-out infinite;
+}
+.agent-working {
+  animation: agent-work 1.3s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  .text-shimmer {
+  .agent-eyes,
+  .agent-working {
     animation: none;
-    background: none;
-    color: var(--muted-foreground);
   }
 }

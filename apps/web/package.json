@@ -10,7 +10,8 @@
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
-    "check-types": "tsr generate && tsc --noEmit"
+    "check-types": "tsr generate && tsc --noEmit",
+    "test": "node --test --test-force-exit tests/*.test.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "catalog:",
@@ -33,7 +34,9 @@
     "sonner": "^2.0.8",
     "tailwindcss": "^4.1.18",
     "tldraw": "^5.4.2",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@shadcn/react": "catalog:",
+    "react-markdown": "catalog:"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

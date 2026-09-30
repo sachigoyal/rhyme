@@ -1,0 +1,1 @@
+ALTER TABLE `chats` ADD `title_source` text DEFAULT 'pending' NOT NULL;

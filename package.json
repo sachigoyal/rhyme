@@ -9,7 +9,8 @@
     "check-types": "turbo run check-types",
     "format": "prettier --write .",
     "db:generate": "pnpm --filter @rhyme/db db:generate",
-    "db:migrate": "pnpm --filter api db:migrate"
+    "db:migrate": "pnpm --filter api db:migrate",
+    "test": "pnpm --filter api test && pnpm --filter web test"
   },
   "devDependencies": {
     "prettier": "3.9.6",

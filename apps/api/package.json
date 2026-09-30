@@ -5,14 +5,17 @@
   "type": "module",
   "exports": {
     "./router": "./src/router.ts",
-    "./canvas-schema": "./src/agents/canvas-schema.ts"
+    "./canvas-schema": "./src/agents/canvas-schema.ts",
+    "./agent-config": "./src/agents/agent-config.ts",
+    "./profile-schema": "./src/profile-schema.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "db:migrate": "wrangler d1 migrations apply rhyme --local",
     "db:migrate:remote": "wrangler d1 migrations apply rhyme --remote",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "@cloudflare/ai-chat": "catalog:",

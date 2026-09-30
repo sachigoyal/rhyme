@@ -1,159 +1,34 @@
-# Turborepo starter
+# Rhyme
 
-This Turborepo starter is maintained by the Turborepo core team.
+A canvas-first workspace for sketches, diagrams, and ideas, with an AI assistant that can edit the live whiteboard.
 
-## Using this example
+## Local development
 
-Run the following command:
+Requires Node.js 22+ and pnpm 11.25.0. Install with `pnpm install --frozen-lockfile`.
 
-```sh
-npx create-turbo@latest
-```
+Copy `apps/api/.dev.vars.example` to `apps/api/.dev.vars` and set a random `BETTER_AUTH_SECRET` of at least 32 characters. Copy `apps/web/.env.example` to `apps/web/.env`. These local files are ignored by Git.
 
-## What's inside?
+Run `pnpm --filter api exec wrangler login` using the Cloudflare account for the project, then `pnpm db:migrate` and `pnpm dev`. Open [localhost:3000](http://localhost:3000). The API runs at [localhost:8787](http://localhost:8787).
 
-This Turborepo includes the following packages/apps:
+D1, R2, email, and Durable Objects are simulated locally. Sign-in codes appear in the Wrangler console. Workers AI uses the authenticated Cloudflare account even during local development. The model is configured with `AI_MODEL` in `apps/api/wrangler.jsonc`.
 
-### Apps and Packages
+A tldraw production license is configured with `VITE_TLDRAW_LICENSE_KEY`. Local development works without one.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Product flows
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+- `/` opens a temporary guest canvas or the signed-in user's most recently edited canvas. Guests can draw freely; account creation carries the drawing into a saved canvas.
+- `/sign-in` uses email verification codes for signup and returning users.
+- `/onboarding` collects a name, optional work context, and an explicit choice about optional analytics. Responses are saved to the user's profile.
+- `/files` organizes owned, shared, and trashed canvases and folders, with search and sorting.
+- `/chats` shows private conversations with generated titles. Open a conversation to chat without a visible canvas; edits use the normal canvas save flow. The context popover contains canvas links, run statistics, and saved change previews.
+- `/activity` summarizes agent runs, token usage, tools, errors, and response duration.
 
-### Utilities
+Each conversation has its own Durable Object, scoped to its canvas and user. D1 indexes conversations, runs, and changes; Durable Object SQLite stores messages; R2 stores canvas documents, assets, and immutable change previews. History remains subject to current canvas permissions. Client tools apply changes through tldraw's normal undo and save system.
 
-This Turborepo has some additional tools already setup for you:
+The composer offers a model selector saved per conversation. Selecting a model uses its default generation settings and applies to the next response. Each turn retains its configuration across tool continuations. Text-only models receive canvas shape context without images; run analytics record the selected model.
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+## Validation
 
-### Build
+Run `pnpm test`, `pnpm check-types`, `pnpm lint`, and `pnpm build`. Tests cover canvas-tool replay safety, input validation, shape IDs, nested coordinate moves, change summaries, and conversation-title generation safeguards. For schema changes, run `pnpm db:generate` followed by `pnpm db:migrate` to apply local D1 migrations. `pnpm --filter api exec wrangler deploy --dry-run` checks Worker packaging without deploying.
 
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo build
-pnpm exec turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+See [AGENTS.md](AGENTS.md) for the repository layout and conventions.

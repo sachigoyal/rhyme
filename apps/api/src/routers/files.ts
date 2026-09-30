@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { schema } from '@rhyme/db'
 import type { Database, File, FileRole } from '@rhyme/db'
 import { isFolderOwner } from '../services/access'
+import { deleteFileChatStorage } from '../services/chats'
 import { deletePrefix, objectKeys, readJson, writeJson } from '../lib/storage'
 import { fileProcedure, protectedProcedure, router } from '../trpc/init'
 
@@ -178,8 +179,34 @@ export const filesRouter = router({
   }),
 
   destroy: fileProcedure('owner').mutation(async ({ ctx }) => {
+    const [conversations, importedUsers, collaborators] = await Promise.all([
+      ctx.db
+        .select({ id: schema.chats.id, userId: schema.chats.userId })
+        .from(schema.chats)
+        .where(eq(schema.chats.fileId, ctx.file.id)),
+      ctx.db
+        .select({ userId: schema.legacyChatImports.userId })
+        .from(schema.legacyChatImports)
+        .where(eq(schema.legacyChatImports.fileId, ctx.file.id)),
+      ctx.db
+        .select({ userId: fileCollaborators.userId })
+        .from(fileCollaborators)
+        .where(eq(fileCollaborators.fileId, ctx.file.id)),
+    ])
+    const legacyUsers = [
+      ctx.file.ownerId,
+      ...conversations.map((chat) => chat.userId),
+      ...importedUsers.map((user) => user.userId),
+      ...collaborators.map((user) => user.userId),
+    ]
+    if (ctx.file.lastEditedById) legacyUsers.push(ctx.file.lastEditedById)
     await ctx.db.delete(files).where(eq(files.id, ctx.file.id))
-    ctx.waitUntil(deletePrefix(ctx.env.STORAGE, objectKeys.file(ctx.file.id)))
+    ctx.waitUntil(
+      Promise.all([
+        deletePrefix(ctx.env.STORAGE, objectKeys.file(ctx.file.id)),
+        deleteFileChatStorage(ctx.env, ctx.file.id, conversations, legacyUsers),
+      ]),
+    )
   }),
 
   document: fileProcedure('viewer').query(async ({ ctx }) => {

@@ -1,9 +1,7 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
+import { LayoutGrid } from 'lucide-react'
 import type { Editor } from 'tldraw'
-import { useSaveFileDocument } from '@rhyme/hooks/mutations'
-import { useTRPCClient } from '@rhyme/trpc-client'
 import type { FileSummary } from '@rhyme/trpc-client'
 import {
   AlertDialog,
@@ -24,10 +22,14 @@ import {
   usePanelRef,
 } from '@rhyme/ui/components/resizable'
 import { UserAvatar, UserMenu } from '@/components/user-menu'
+import { AgentLauncher } from '@/features/agent/agent-launcher'
+import type { AgentStatus } from '@/features/agent/agent-launcher'
+import { Logo } from '@/components/logo'
+import { Separator } from '@rhyme/ui/components/separator'
 import { AgentPanel } from '@/features/agent/agent-panel'
 import type { SessionUser } from '@/lib/auth'
 import { Canvas } from './canvas'
-import { DocumentSync } from './document-sync'
+import { useDocumentSync } from './use-document-sync'
 import { FileTitle } from './file-title'
 import { SaveStatus } from './save-status'
 import { ShareDialog } from './share-dialog'
@@ -38,6 +40,7 @@ interface EditorSessionProps {
   initial: InitialDocument
   user: SessionUser
   onReload: () => void
+  chatId?: string
 }
 
 export function EditorSession({
@@ -45,31 +48,16 @@ export function EditorSession({
   initial,
   user,
   onReload,
+  chatId,
 }: EditorSessionProps) {
   const canEdit = file.role !== 'viewer'
   const [resolving, setResolving] = useState(false)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [agentOpen, setAgentOpen] = useState(false)
-  const [agentStarted, setAgentStarted] = useState(false)
-  const [agentBusy, setAgentBusy] = useState(false)
+  const [agentOpen, setAgentOpen] = useState(Boolean(chatId))
+  const [agentStarted, setAgentStarted] = useState(Boolean(chatId))
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle')
   const agentPanel = usePanelRef()
-  const trpcClient = useTRPCClient()
-  const { mutateAsync: save } = useSaveFileDocument()
-  const saveRef = useRef(save)
-  saveRef.current = save
-
-  const [sync] = useState(() =>
-    canEdit
-      ? new DocumentSync({
-          fileId: file.id,
-          version: initial.version,
-          dirty: initial.dirty,
-          save: (input) => saveRef.current(input),
-          fetchVersion: async () =>
-            (await trpcClient.files.get.query({ id: file.id })).version,
-        })
-      : null,
-  )
+  const sync = useDocumentSync(file.id, initial, canEdit)
 
   // The chat stays mounted once opened so a reply in flight keeps drawing while the panel is closed.
   const setAgentVisible = (visible: boolean) => {
@@ -86,18 +74,29 @@ export function EditorSession({
 
   return (
     <div className="flex h-svh flex-col">
-      <header className="bg-background flex h-12 shrink-0 items-center gap-1 border-b px-2">
+      <header className="bg-background flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-4">
+        <Link
+          to="/"
+          className="mr-1 hidden shrink-0 sm:block"
+          aria-label="Open your most recent canvas"
+        >
+          <Logo />
+        </Link>
+        <Separator
+          orientation="vertical"
+          className="mx-1 hidden data-[orientation=vertical]:h-5 sm:block"
+        />
         <Button
           asChild
           variant="ghost"
           size="icon-sm"
-          aria-label="Back to files"
+          aria-label="Open workspace"
         >
           <Link
             to="/files"
             search={{ view: file.role === 'owner' ? 'mine' : 'shared' }}
           >
-            <ArrowLeft />
+            <LayoutGrid className="size-4" />
           </Link>
         </Button>
         <FileTitle id={file.id} name={file.name} editable={canEdit} />
@@ -106,18 +105,6 @@ export function EditorSession({
         <div className="ml-auto flex items-center gap-2">
           {sync && (
             <SaveStatus sync={sync} onResolve={() => setResolving(true)} />
-          )}
-          {canEdit && (
-            <Button
-              size="sm"
-              variant={agentOpen ? 'secondary' : 'ghost'}
-              aria-pressed={agentOpen}
-              disabled={!editor}
-              onClick={() => setAgentVisible(!agentOpen)}
-            >
-              {agentBusy ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              Assistant
-            </Button>
           )}
           {file.role === 'owner' && (
             <ShareDialog fileId={file.id} fileName={file.name} />
@@ -135,7 +122,7 @@ export function EditorSession({
 
       <main className="relative min-h-0 flex-1">
         <ResizablePanelGroup orientation="horizontal">
-          <ResizablePanel id="canvas" minSize={320}>
+          <ResizablePanel id="canvas" minSize={0}>
             <div className="relative h-full">
               <Canvas
                 fileId={file.id}
@@ -153,23 +140,38 @@ export function EditorSession({
                 panelRef={agentPanel}
                 collapsible
                 collapsedSize={0}
-                defaultSize={0}
+                defaultSize={chatId ? 380 : 0}
                 minSize={300}
-                maxSize={640}
+                maxSize={520}
                 onResize={(size) => setAgentOpen(size.inPixels > 0)}
               >
                 {agentStarted && editor && (
-                  <AgentPanel
-                    fileId={file.id}
-                    editor={editor}
-                    onClose={() => setAgentVisible(false)}
-                    onBusyChange={setAgentBusy}
-                  />
+                  <div
+                    className={agentOpen ? 'h-full' : 'hidden'}
+                    inert={!agentOpen}
+                  >
+                    <AgentPanel
+                      fileId={file.id}
+                      editor={editor}
+                      onClose={() => setAgentVisible(false)}
+                      onStateChange={setAgentStatus}
+                      initialChatId={chatId}
+                    />
+                  </div>
                 )}
               </ResizablePanel>
             </>
           )}
         </ResizablePanelGroup>
+        {canEdit && editor && !agentOpen && (
+          <div className="absolute bottom-20 right-4 z-350 sm:bottom-5 sm:right-5">
+            <AgentLauncher
+              status={agentStatus}
+              open={agentOpen}
+              onClick={() => setAgentVisible(!agentOpen)}
+            />
+          </div>
+        )}
       </main>
 
       {sync && (
