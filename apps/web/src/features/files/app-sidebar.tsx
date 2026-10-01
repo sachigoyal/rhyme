@@ -91,19 +91,26 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarHeader className="gap-3 px-3 py-3">
-        <Link to="/" aria-label="Home">
+      <SidebarHeader className="gap-0 p-0">
+        <Link
+          to="/"
+          aria-label="Home"
+          className="flex h-12 shrink-0 items-center justify-center border-b px-3"
+        >
           <Logo />
         </Link>
-        <Button
-          variant="default"
-          className="w-full justify-start gap-2"
-          disabled={creatingCanvas}
-          onClick={() => create()}
-        >
-          <Plus className="size-4" />
-          New canvas
-        </Button>
+        <div className="p-3">
+          <Button
+            size="lg"
+            variant="default"
+            className="w-full justify-start gap-2"
+            disabled={creatingCanvas}
+            onClick={() => create()}
+          >
+            <Plus className="size-4" />
+            New canvas
+          </Button>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="px-1">

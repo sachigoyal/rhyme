@@ -15,7 +15,11 @@ export function useChats(input: ChatsListInput = {}) {
     trpc.chats.list.queryOptions(input, {
       staleTime: 5000,
       refetchInterval: (query) =>
-        query.state.data?.some((chat) => chat.titleSource === 'generating')
+        query.state.data?.some(
+          (chat) =>
+            chat.titleSource === 'generating' ||
+            (chat.titleSource === 'pending' && chat.messageCount > 0),
+        )
           ? 2000
           : false,
     }),

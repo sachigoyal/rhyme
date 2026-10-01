@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { DEFAULT_AGENT_CONFIG } from 'api/agent-config'
+import { AgentComposer } from './agent-composer'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { cn } from '@rhyme/ui/lib/utils'
 import { chatComposerLayouts, chatMessageLayouts } from './chat-layout'
@@ -32,44 +35,45 @@ export function MessagesSkeleton({
   )
 }
 
-export function ComposerSkeleton({
+export function LoadingComposer({
   layout = 'panel',
+  draft: controlledDraft,
+  onDraft,
 }: {
   layout?: ChatLayout
+  draft?: string
+  onDraft?: (text: string) => void
 }) {
+  const [draft, setDraft] = useState('')
   return (
-    <div
-      role="status"
-      aria-label="Loading message composer"
-      className={chatComposerLayouts[layout]}
-    >
-      <div className="p-3" aria-hidden="true">
-        <div className="rounded-xl border p-2">
-          <div className="min-h-14 px-1 py-2">
-            <Skeleton className="mt-1.5 h-3 w-36 max-w-full" />
-          </div>
-          <div className="flex h-9 items-end gap-2 pt-1">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="size-5 rounded-md" />
-            <Skeleton className="ml-auto size-8 rounded-lg" />
-          </div>
-        </div>
-      </div>
+    <div className={chatComposerLayouts[layout]}>
+      <AgentComposer
+        draft={controlledDraft ?? draft}
+        onDraft={onDraft ?? setDraft}
+        onSubmit={() => {}}
+        connected={false}
+        config={DEFAULT_AGENT_CONFIG}
+        onConfigure={async () => false}
+      />
     </div>
   )
 }
 
 export function ChatSkeleton({
   layout = 'workspace',
+  draft,
+  onDraft,
 }: {
   layout?: ChatLayout
+  draft?: string
+  onDraft?: (text: string) => void
 }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-hidden">
         <MessagesSkeleton layout={layout} />
       </div>
-      <ComposerSkeleton layout={layout} />
+      <LoadingComposer layout={layout} draft={draft} onDraft={onDraft} />
     </div>
   )
 }

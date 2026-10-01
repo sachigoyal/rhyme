@@ -1,3 +1,4 @@
+import type { UIMessage } from 'ai'
 import { Component, useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
@@ -25,6 +26,7 @@ export class AgentChatBoundary extends Component<{
   children: ReactNode
   onNew: () => void
   onFailure: () => void
+  onRetry?: () => void
 }> {
   state = { failed: false }
 
@@ -44,14 +46,16 @@ export class AgentChatBoundary extends Component<{
           <AlertTriangle className="size-5 text-muted-foreground" />
           <h3 className="text-sm font-medium">Unable to open conversation</h3>
           <p className="text-muted-foreground text-xs leading-5">
-            Start a new conversation or select one from history.
+            {this.props.onRetry
+              ? 'Try loading this conversation again.'
+              : 'Start a new conversation or select one from history.'}
           </p>
           <Button
             variant="outline"
             className="mt-1 w-fit"
-            onClick={this.props.onNew}
+            onClick={this.props.onRetry ?? this.props.onNew}
           >
-            New conversation
+            {this.props.onRetry ? 'Try again' : 'New conversation'}
           </Button>
         </div>
       )
@@ -65,6 +69,9 @@ export function AgentChat({
   editor,
   initialPrompt,
   initialConfig,
+  initialMessages,
+  draft: controlledDraft,
+  onDraft,
   onStatus,
   onBusy,
   onComplete,
@@ -75,13 +82,18 @@ export function AgentChat({
   editor: Editor
   initialPrompt: string
   initialConfig?: AgentConfig
+  initialMessages?: UIMessage[]
+  draft?: string
+  onDraft?: (text: string) => void
   onStatus: (status: AgentStatus) => void
   onBusy: (busy: boolean) => void
   onComplete: () => void
   layout?: 'panel' | 'workspace'
 }) {
-  const chat = useCanvasAgent(fileId, conversationId, editor)
-  const [draft, setDraft] = useState('')
+  const chat = useCanvasAgent(fileId, conversationId, editor, initialMessages)
+  const [localDraft, setLocalDraft] = useState('')
+  const draft = controlledDraft ?? localDraft
+  const setDraft = onDraft ?? setLocalDraft
   const initialSent = useRef(false)
   const wasBusy = useRef(false)
   const [completed, setCompleted] = useState(false)

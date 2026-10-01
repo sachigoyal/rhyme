@@ -1,5 +1,8 @@
+import type { UIMessage } from 'ai'
 import { useAIConnections } from '@rhyme/hooks/queries'
-import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useTRPC } from '@rhyme/trpc-client'
+import { useEffect, useRef, useState } from 'react'
 import { useAgentChat } from '@cloudflare/ai-chat/react'
 import { useAgent } from 'agents/react'
 import { AGENT_MODELS, DEFAULT_AGENT_CONFIG } from 'api/agent-config'
@@ -16,6 +19,7 @@ export function useCanvasAgent(
   fileId: string,
   conversationId: string,
   editor: Editor,
+  initialMessages?: UIMessage[],
 ) {
   const [runner] = useState(() => createCanvasToolRunner(editor))
   const [requestPending, setRequestPending] = useState(false)
@@ -25,6 +29,8 @@ export function useCanvasAgent(
   const configInFlight = useRef(false)
   const recordChange = useRecordChatChange()
   const connections = useAIConnections()
+  const queryClient = useQueryClient()
+  const trpc = useTRPC()
   const agent = useAgent<AgentState>(
     getCanvasAgentOptions(fileId, conversationId, env.apiUrl),
   )
@@ -45,6 +51,9 @@ export function useCanvasAgent(
 
   const chat = useAgentChat({
     agent,
+    ...(initialMessages
+      ? { messages: initialMessages, getInitialMessages: null }
+      : {}),
     credentials: 'include',
     body: async () => {
       const turnConfig = configRef.current
@@ -78,6 +87,17 @@ export function useCanvasAgent(
       }
     },
   })
+
+  const firstUserId = chat.messages.find(
+    (message) => message.role === 'user',
+  )?.id
+  useEffect(() => {
+    if (!firstUserId) return
+    const timer = setTimeout(() => {
+      void queryClient.invalidateQueries(trpc.chats.list.queryFilter())
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [firstUserId, queryClient, trpc])
 
   const busy =
     requestPending ||

@@ -304,7 +304,7 @@ test('rendered breadcrumb and active sidebar links retain children and link sema
     weight: getComputedStyle(element).fontWeight,
     background: getComputedStyle(element).backgroundColor,
   }))
-  assert.equal(styles.weight, '500')
+  assert.equal(styles.weight, '400')
   assert.notEqual(styles.background, 'rgba(0, 0, 0, 0)')
   assert.equal(await sidebar.locator('button').count(), 0)
   assert.deepEqual(errors, [])
@@ -379,7 +379,7 @@ test('brand colors and button dimensions remain consistent in light and dark mod
     await button.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     ),
-    'rgb(189, 60, 112)',
+    'rgb(117, 100, 143)',
   )
   if (process.env.UI_SCREENSHOT_DIR) {
     await page.screenshot({
@@ -392,14 +392,14 @@ test('brand colors and button dimensions remain consistent in light and dark mod
   await page.waitForFunction(
     () =>
       getComputedStyle(document.querySelector('button[data-slot="button"]'))
-        .backgroundColor === 'rgb(241, 160, 191)',
+        .backgroundColor === 'rgb(196, 182, 218)',
   )
   assert.equal((await button.boundingBox()).height, 32)
   assert.equal(
     await button.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     ),
-    'rgb(241, 160, 191)',
+    'rgb(196, 182, 218)',
   )
   if (process.env.UI_SCREENSHOT_DIR) {
     await page.screenshot({

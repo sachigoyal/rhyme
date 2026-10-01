@@ -1,10 +1,8 @@
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { toast } from '@rhyme/ui/components/toast'
+import { Link } from '@tanstack/react-router'
 import type { Editor } from 'tldraw'
 import { useFile } from '@rhyme/hooks/queries'
-import { useCreateChat } from '@rhyme/hooks/mutations'
 import { RecoveryState } from '@/components/recovery-state'
 import { errorCode, useTRPC } from '@rhyme/trpc-client'
 import type { ChatDetail, FileSummary } from '@rhyme/trpc-client'
@@ -20,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@rhyme/ui/components/alert-dialog'
 import { AgentChat, AgentChatBoundary } from '@/features/agent/agent-chat'
-import { ChatSkeleton, ComposerSkeleton } from '@/features/agent/chat-skeleton'
+import { LoadingComposer } from '@/features/agent/chat-skeleton'
 import { ChatTranscript } from '@/features/agent/chat-transcript'
 import { Canvas } from '@/features/editor/canvas'
 import { documentCache } from '@/features/editor/document-cache'
@@ -31,10 +29,14 @@ import type { InitialDocument } from '@/features/editor/use-initial-document'
 
 export function ConversationSession({
   detail,
+  draft,
+  onDraft,
   onBusy,
   onComplete,
 }: {
   detail: ChatDetail
+  draft: string
+  onDraft: (text: string) => void
   onBusy: (busy: boolean) => void
   onComplete: () => void
 }) {
@@ -53,6 +55,8 @@ export function ConversationSession({
     <ConversationDocument
       key={revision}
       detail={detail}
+      draft={draft}
+      onDraft={onDraft}
       onBusy={onBusy}
       onComplete={onComplete}
       onReload={() => void reload()}
@@ -62,11 +66,15 @@ export function ConversationSession({
 
 function ConversationDocument({
   detail,
+  draft,
+  onDraft,
   onBusy,
   onComplete,
   onReload,
 }: {
   detail: ChatDetail
+  draft: string
+  onDraft: (text: string) => void
   onBusy: (busy: boolean) => void
   onComplete: () => void
   onReload: () => void
@@ -112,7 +120,7 @@ function ConversationDocument({
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <ChatTranscript messages={detail.messages} />
-        <ComposerSkeleton layout="workspace" />
+        <LoadingComposer layout="workspace" draft={draft} onDraft={onDraft} />
       </div>
     )
   if (file.data.role === 'viewer')
@@ -128,6 +136,9 @@ function ConversationDocument({
   return (
     <LiveConversation
       file={file.data}
+      detail={detail}
+      draft={draft}
+      onDraft={onDraft}
       initial={initial}
       conversationId={detail.chat.id}
       onBusy={onBusy}
@@ -139,6 +150,9 @@ function ConversationDocument({
 
 function LiveConversation({
   file,
+  detail,
+  draft,
+  onDraft,
   initial,
   conversationId,
   onBusy,
@@ -146,6 +160,9 @@ function LiveConversation({
   onReload,
 }: {
   file: FileSummary
+  detail: ChatDetail
+  draft: string
+  onDraft: (text: string) => void
   initial: InitialDocument
   conversationId: string
   onBusy: (busy: boolean) => void
@@ -156,20 +173,6 @@ function LiveConversation({
   const syncStatus = useSyncStatus(sync)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [resolving, setResolving] = useState(false)
-  const createChat = useCreateChat()
-  const navigate = useNavigate()
-  const start = async () => {
-    try {
-      const chat = await createChat.mutateAsync({ fileId: file.id })
-      await navigate({ to: '/chats', search: { chat: chat.id } })
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Could not start a conversation',
-      )
-    }
-  }
 
   return (
     <>
@@ -193,24 +196,29 @@ function LiveConversation({
       )}
       {editor ? (
         <AgentChatBoundary
-          onNew={() => void start()}
+          onNew={onReload}
+          onRetry={onReload}
           onFailure={() => onBusy(false)}
         >
-          <Suspense fallback={<ChatSkeleton />}>
-            <AgentChat
-              fileId={file.id}
-              conversationId={conversationId}
-              editor={editor}
-              initialPrompt=""
-              layout="workspace"
-              onStatus={() => {}}
-              onBusy={onBusy}
-              onComplete={onComplete}
-            />
-          </Suspense>
+          <AgentChat
+            fileId={file.id}
+            conversationId={conversationId}
+            editor={editor}
+            initialPrompt=""
+            initialMessages={detail.messages}
+            draft={draft}
+            onDraft={onDraft}
+            layout="workspace"
+            onStatus={() => {}}
+            onBusy={onBusy}
+            onComplete={onComplete}
+          />
         </AgentChatBoundary>
       ) : (
-        <ChatSkeleton />
+        <>
+          <ChatTranscript messages={detail.messages} />
+          <LoadingComposer layout="workspace" draft={draft} onDraft={onDraft} />
+        </>
       )}
       <AlertDialog open={resolving} onOpenChange={setResolving}>
         <AlertDialogContent>

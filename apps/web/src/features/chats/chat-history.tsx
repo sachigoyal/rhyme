@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ArrowUpRight, MessageSquare } from 'lucide-react'
 import { useChats } from '@rhyme/hooks/queries'
@@ -11,9 +11,7 @@ import { cn } from '@rhyme/ui/lib/utils'
 import { ConversationHoverCard } from './conversation-hover-card'
 import { ConversationActions } from './conversation-actions'
 
-import { ConversationSkeleton } from './conversation-skeleton'
-
-const ConversationDetail = lazy(() => import('./conversation-detail'))
+import ConversationDetail from './conversation-detail'
 
 export function ChatHistory({ chatId }: { chatId?: string }) {
   const [search, setSearch] = useState('')
@@ -74,7 +72,7 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
               <div
                 key={chat.id}
                 className={cn(
-                  'group/conversation hover:bg-muted/60 mb-0.5 flex h-11 items-center rounded-md transition-colors',
+                  'group/conversation hover:bg-muted/60 has-[[aria-haspopup=menu][aria-expanded=true]]:bg-muted mb-0.5 flex h-11 items-center rounded-md transition-colors',
                   chatId === chat.id && 'bg-muted',
                 )}
               >
@@ -109,13 +107,11 @@ export function ChatHistory({ chatId }: { chatId?: string }) {
         </ScrollArea>
       </section>
       {chatId ? (
-        <Suspense fallback={<ConversationSkeleton />}>
-          <ConversationDetail
-            key={chatId}
-            id={chatId}
-            onComplete={() => void chats.refetch()}
-          />
-        </Suspense>
+        <ConversationDetail
+          key={chatId}
+          id={chatId}
+          onComplete={() => void chats.refetch()}
+        />
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-20 text-center">
           <div className="mb-2 grid size-12 place-items-center rounded-xl border">

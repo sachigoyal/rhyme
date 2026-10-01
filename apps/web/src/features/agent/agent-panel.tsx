@@ -63,6 +63,7 @@ export function AgentPanel({
   const renameChat = useRenameChat()
   const [activeId, setActiveId] = useState<string | null>(initialChatId ?? null)
   const [initialPrompt, setInitialPrompt] = useState('')
+  const [draft, setDraft] = useState('')
   const [initialConfig, setInitialConfig] = useState<AgentConfig>()
   const [history, setHistory] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -86,6 +87,7 @@ export function AgentPanel({
     requestedChat.current = initialChatId
     initialized.current = true
     setActiveId(initialChatId)
+    setDraft('')
     setInitialPrompt('')
     setInitialConfig(undefined)
     setHistory(false)
@@ -102,9 +104,22 @@ export function AgentPanel({
 
   const start = async (prompt = '', config?: AgentConfig) => {
     if (busy || createChat.isPending) return
+    if (!prompt.trim()) {
+      initialized.current = true
+      setActiveId(null)
+      setDraft('')
+      setInitialPrompt('')
+      setInitialConfig(undefined)
+      setHistory(false)
+      setRenaming(false)
+      setStatus('idle')
+      return
+    }
+    initialized.current = true
     setStatus('connecting')
     try {
       const chat = await createChat.mutateAsync({ fileId })
+      setDraft('')
       setInitialPrompt(prompt)
       setInitialConfig(config)
       setActiveId(chat.id)
@@ -123,6 +138,7 @@ export function AgentPanel({
     await deleteChat.mutateAsync({ id })
     if (activeId === id) {
       setActiveId(null)
+      setDraft('')
       setInitialPrompt('')
       setInitialConfig(undefined)
       setStatus('idle')
@@ -226,7 +242,7 @@ export function AgentPanel({
                 {chats.data.map((chat) => (
                   <div
                     key={chat.id}
-                    className={`group/conversation flex h-9 items-center rounded-lg ${chat.id === activeId ? 'bg-muted' : 'hover:bg-muted/60'}`}
+                    className={`group/conversation flex h-9 items-center rounded-lg ${chat.id === activeId ? 'bg-muted' : 'hover:bg-muted/60 has-[[aria-haspopup=menu][aria-expanded=true]]:bg-muted'}`}
                   >
                     <ConversationHoverCard chat={chat} side="left">
                       <button
@@ -236,6 +252,7 @@ export function AgentPanel({
                         onClick={() => {
                           setStatus('connecting')
                           setActiveId(chat.id)
+                          setDraft('')
                           setInitialPrompt('')
                           setInitialConfig(undefined)
                           setHistory(false)
@@ -251,6 +268,7 @@ export function AgentPanel({
                       onDeleted={() => {
                         if (activeId !== chat.id) return
                         setActiveId(null)
+                        setDraft('')
                         setInitialPrompt('')
                         setInitialConfig(undefined)
                         setStatus('idle')
@@ -351,7 +369,7 @@ export function AgentPanel({
           </div>
         )}
         {chats.isPending && !activeId ? (
-          <ChatSkeleton layout="panel" />
+          <ChatSkeleton layout="panel" draft={draft} onDraft={setDraft} />
         ) : activeId ? (
           <AgentChatBoundary
             key={activeId}
@@ -361,13 +379,19 @@ export function AgentPanel({
               setBusy(false)
             }}
           >
-            <Suspense fallback={<ChatSkeleton layout="panel" />}>
+            <Suspense
+              fallback={
+                <ChatSkeleton layout="panel" draft={draft} onDraft={setDraft} />
+              }
+            >
               <AgentChat
                 fileId={fileId}
                 conversationId={activeId}
                 editor={editor}
                 initialPrompt={initialPrompt}
                 initialConfig={initialConfig}
+                draft={draft}
+                onDraft={setDraft}
                 onStatus={setStatus}
                 onBusy={setBusy}
                 onComplete={() => void chats.refetch()}
@@ -377,6 +401,8 @@ export function AgentPanel({
         ) : (
           <EmptyChat
             pending={createChat.isPending}
+            draft={draft}
+            onDraft={setDraft}
             onSubmit={(prompt, config) => void start(prompt, config)}
           />
         )}
@@ -399,12 +425,15 @@ export function AgentPanel({
 
 function EmptyChat({
   pending,
+  draft,
+  onDraft,
   onSubmit,
 }: {
   pending: boolean
+  draft: string
+  onDraft: (text: string) => void
   onSubmit: (text: string, config: AgentConfig) => void
 }) {
-  const [draft, setDraft] = useState('')
   const [config, setConfig] = useState(DEFAULT_AGENT_CONFIG)
   const submit = (text = draft) => {
     if (text.trim() && !pending) onSubmit(text.trim(), config)
@@ -424,7 +453,7 @@ function EmptyChat({
       </ScrollArea>
       <AgentComposer
         draft={draft}
-        onDraft={setDraft}
+        onDraft={onDraft}
         onSubmit={() => submit()}
         connected={!pending}
         config={config}

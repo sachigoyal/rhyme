@@ -1,15 +1,7 @@
 import { useId, useLayoutEffect, useRef } from 'react'
-import { ArrowUp, Lightbulb, Square } from 'lucide-react'
+import { ArrowUp, Square } from 'lucide-react'
 import type { AgentConfig } from 'api/agent-config'
 import { Button } from '@rhyme/ui/components/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@rhyme/ui/components/dropdown-menu'
 import {
   InputGroup,
   InputGroupAddon,
@@ -181,48 +173,6 @@ export function AgentComposer({
               disabled={busy || !connected || configSaving}
               saving={configSaving}
             />
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <DropdownMenuTrigger
-                      render={
-                        <InputGroupButton
-                          size="icon-sm"
-                          aria-label="Example prompts"
-                          className="rounded-lg"
-                        >
-                          <Lightbulb className="size-4" />
-                        </InputGroupButton>
-                      }
-                    />
-                  }
-                />
-                <TooltipContent side="top" sideOffset={6}>
-                  Example prompts
-                </TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent
-                side="top"
-                align="start"
-                className="w-56 shadow-none"
-                finalFocus={textareaRef}
-              >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-                    Choose a prompt to edit
-                  </DropdownMenuLabel>
-                  {SUGGESTIONS.map((suggestion) => (
-                    <DropdownMenuItem
-                      key={suggestion.label}
-                      onClick={() => onDraft(suggestion.prompt)}
-                    >
-                      {suggestion.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
             {(busy || !connected) && (
               <span
                 role="status"

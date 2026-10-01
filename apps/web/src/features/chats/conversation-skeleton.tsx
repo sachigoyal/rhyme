@@ -1,7 +1,13 @@
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { ChatSkeleton } from '@/features/agent/chat-skeleton'
 
-export function ConversationSkeleton() {
+export function ConversationSkeleton({
+  draft,
+  onDraft,
+}: {
+  draft?: string
+  onDraft?: (text: string) => void
+}) {
   return (
     <section
       className="flex min-h-0 min-w-0 flex-1 flex-col"
@@ -16,7 +22,7 @@ export function ConversationSkeleton() {
         <Skeleton className="h-3 w-24" />
         <Skeleton className="hidden h-3 w-36 sm:block" />
       </div>
-      <ChatSkeleton />
+      <ChatSkeleton draft={draft} onDraft={onDraft} />
     </section>
   )
 }

@@ -68,7 +68,11 @@ export function UserMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={children} />
-      <DropdownMenuContent align="end" collisionPadding={8} className="w-56">
+      <DropdownMenuContent
+        align="end"
+        collisionPadding={8}
+        className="w-(--anchor-width)"
+      >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
             <p className="truncate font-medium">{displayName(user)}</p>

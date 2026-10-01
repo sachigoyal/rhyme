@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { errorCode } from '@rhyme/trpc-client'
 import { RefreshNotice } from '@/components/refresh-notice'
@@ -15,8 +16,10 @@ export default function ConversationDetail({
   id: string
   onComplete: () => void
 }) {
+  const [draft, setDraft] = useState('')
   const detail = useChat(id)
-  if (detail.isPending) return <ConversationSkeleton />
+  if (detail.isPending)
+    return <ConversationSkeleton draft={draft} onDraft={setDraft} />
   const code = errorCode(detail.error)
   const unavailable =
     code === 'NOT_FOUND' || code === 'FORBIDDEN' || code === 'BAD_REQUEST'
@@ -77,6 +80,8 @@ export default function ConversationDetail({
       )}
       <ConversationSession
         detail={detail.data}
+        draft={draft}
+        onDraft={setDraft}
         onBusy={() => {}}
         onComplete={() => {
           void detail.refetch()
