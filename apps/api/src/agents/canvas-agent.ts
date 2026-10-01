@@ -21,6 +21,8 @@ import { providerError } from '../services/provider-errors'
 import type { Env } from '../env'
 import { canvasContext } from './canvas-schema'
 import type { CanvasContext } from './canvas-schema'
+import { resolveCanvasSnapshot } from './canvas-live-context'
+import type { LiveCanvas } from './canvas-live-context'
 import { canvasTools } from './canvas-tools'
 import {
   agentConfigSchema,
@@ -34,22 +36,23 @@ import {
   normalizeConversationTitle,
 } from './conversation-title'
 
-const SYSTEM_PROMPT = `You are Rhyme's canvas assistant. You work inside a tldraw whiteboard next to the user and can read and edit it with tools.
+const SYSTEM_PROMPT = `You are Rhyme's canvas assistant. You work in a live tldraw whiteboard and can inspect, create, arrange and edit it with tools.
 
-Coordinates are tldraw page coordinates: x grows to the right, y grows downward, units are roughly screen pixels at 100% zoom. Every shape has page bounds {x, y, w, h} where (x, y) is its top-left corner.
+SCENE CONTEXT
+The canvas snapshot contains current viewport, selected ids, shape labels and page bounds, hierarchy, styles, arrow relationships, page counts and offscreen clusters. Vision models also receive a current image. Snapshots refresh after tool execution. Coordinates are page units: right is +x, down is +y; bounds x/y are the top-left. Selected shapes usually resolve "this" or "these". Tool results give actual geometry and aliases; always use returned ids after collisions. Read with ids, region, text, selection or page pagination when you need details. Standard reads preserve full labels; full detail exposes typography and connector styling. Do not infer that omitted or offscreen content is absent.
 
-With each user message you receive the canvas as it was when they sent it: the visible viewport bounds, the selected shape ids, the shapes on screen, and a screenshot of the viewport. When the user says "this" or "these", they usually mean the selection.
+DRAWING AND RELATIONSHIPS
+Prefer create_diagram for connected scenes: provide semantic nodes and labelled edges rather than estimating every coordinate. Use flow for directed/branching graphs, grid for categorized boards and stack for sequences. Roles have coherent default shapes and colors: decision=diamond, start/end=oval, service=hexagon, external=cloud, data=trapezoid, person=ellipse, idea=note, annotation=text. Process rectangles are appropriate for steps, not every concept. Choose overrides to match the user's meaning, including stars/hearts/triangles where useful. Keep a consistent visual vocabulary: the same role gets the same style. Default fonts are sans and labels black; use labelColor for text inside shapes, color for their body/stroke. Prefer readable dark labels on semi fills; avoid white labels on unfilled shapes.
 
-Drawing guidelines:
-- Place new content inside the viewport, in empty space, unless asked otherwise. Leave at least 40 units between shapes.
-- Size geo shapes to fit their label: about 9 units of width per character at the default size, 60–80 units tall for one line, plus padding.
-- Notes are fixed 200×200 squares; text shapes auto-size unless you give them a width.
-- Connect shapes with arrows by id instead of free points, so arrows stay attached when shapes move.
-- Give shapes short ids you choose (e.g. "login", "db") when later shapes or later turns will refer to them.
-- Build diagrams in one create_shapes call where possible; use read_canvas afterwards if you need to check the result.
-- Only delete shapes when the user asks for it.
+LAYOUT AND EDITING
+Use deterministic arrange_shapes for grids, alignment, packing, spacing, or flow layout of existing connected nodes. A 64-unit gap is the default; increase it for dense or labelled relationships. Do not bunch nodes into one position or guess overlapping coordinates. create_diagram measures text, grows label containers and finds nearby empty space; its origin is a preference when avoidExisting is true. Use create_shapes for precise illustrations or free placement, not as a substitute for diagram layout. Preserve deliberate overlap in illustrations; do not rearrange the user's scene without a reason. Use shared ids+patch for bulk styles and dx/dy for relative moves. Locked shapes and locked ancestors are protected.
 
-Keep replies short and in plain text, without markdown. After editing, say in a sentence what you changed. Don't describe coordinates unless asked.`
+Bind connectors by node id using connect_shapes or diagram edges so links follow movement. Label relationships when useful, use elbow links for flowcharts, arcs/bend for curved relationships, dashed strokes for optional relations, and explicit arrowheads for direction. Diagram edges reference local nodes; use connect_shapes to link to existing content. Self connections need a separate feedback node. Do not promise obstacle-free connector routes; inspect dense areas visually.
+
+VERIFICATION
+Creation and layout return actual shapes and inspection results. Resolve unintended body overlaps and insufficient spacing with arrange_shapes, then inspect_scene on the affected region or ids. Bounding-box diagnostics can include intentional overlaps; contained text and parent-child pairs are excluded. Treat free endpoints as potentially intentional. Keep essential labels intact; split huge scenes into coherent sections if needed. When a tool reports ok:false or errors, read the error and repair the input; never claim it succeeded. If deletion was declined, keep the shapes and do not retry. Only request deletion when the user asks.
+
+Use a small number of substantial calls and inspect results rather than repeatedly reading the entire page. Keep replies short, in plain text. After editing, briefly describe the completed changes and any remaining issue.`
 
 function withCanvas(messages: ModelMessage[], canvas: CanvasContext) {
   const index = messages.map((message) => message.role).lastIndexOf('user')
@@ -71,7 +74,7 @@ function withCanvas(messages: ModelMessage[], canvas: CanvasContext) {
       ...content,
       {
         type: 'text',
-        text: `<canvas>\n${JSON.stringify(state)}\n</canvas>`,
+        text: `Current live canvas snapshot:\n<canvas>\n${JSON.stringify(state)}\n</canvas>`,
       },
       ...(data && mediaType
         ? [{ type: 'image' as const, image: data, mediaType }]
@@ -110,6 +113,23 @@ export class CanvasAgent extends AIChatAgent<Env, AgentState> {
       )
     this.setState({ ...this.state, config, error: undefined })
     return config
+  }
+
+  @callable()
+  async refreshCanvas(toolCallId: string, input: unknown) {
+    const { chatId, userId } = this.identity()
+    await getChatAccess(createDb(this.env.DB), chatId, userId, 'editor')
+    const canvas = canvasContext.parse(input)
+    const userMessage = [...this.messages]
+      .reverse()
+      .find((message) => message.role === 'user')
+    if (!userMessage || !toolCallId || toolCallId.length > 200)
+      throw new Error('Invalid canvas refresh')
+    await this.ctx.storage.put('liveCanvas', {
+      userMessageId: userMessage.id,
+      toolCallId,
+      canvas,
+    })
   }
 
   async onRequest(request: Request) {
@@ -458,7 +478,10 @@ export class CanvasAgent extends AIChatAgent<Env, AgentState> {
         maxSteps: _maxSteps,
         ...generationOptions
       } = await resolveAgentModel(db, this.env, userId, config)
-      const canvas = canvasContext.safeParse(options?.body?.canvas)
+      const live = await this.ctx.storage.get<LiveCanvas>('liveCanvas')
+      const canvas = canvasContext.safeParse(
+        resolveCanvasSnapshot(this.messages, options?.body?.canvas, live),
+      )
 
       const messages = pruneMessages({
         messages: await convertToModelMessages(this.messages, {

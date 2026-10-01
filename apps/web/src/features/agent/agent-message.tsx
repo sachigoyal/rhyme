@@ -46,7 +46,11 @@ function MessageActivity({
   if (live) return <div className="space-y-2">{children}</div>
 
   const failed = parts.filter(
-    (part) => isToolUIPart(part) && part.state === 'output-error',
+    (part) =>
+      isToolUIPart(part) &&
+      (part.state === 'output-error' ||
+        (part.state === 'output-available' &&
+          (part.output as { ok?: boolean } | undefined)?.ok === false)),
   ).length
 
   return (
@@ -84,19 +88,35 @@ function describeTool(name: string, part: ToolPart) {
   const done = part.state === 'output-available'
 
   switch (name) {
+    case 'inspect_scene':
+      return {
+        icon: ScanSearch,
+        text: done
+          ? `Checked scene · ${count(output?.issues)} issues reported`
+          : 'Checking scene…',
+      }
+    case 'arrange_shapes':
+      return {
+        icon: Shapes,
+        text: done
+          ? `Arranged ${plural(count(output?.updated), 'shape')}`
+          : 'Arranging shapes…',
+      }
     case 'read_canvas':
       return {
         icon: ScanSearch,
         text: done ? 'Read canvas' : 'Reading canvas…',
       }
+    case 'create_diagram':
+    case 'connect_shapes':
     case 'create_shapes': {
-      const created = count(output?.created)
+      const created = count(output?.connected ?? output?.created)
       const failed = count(output?.errors)
       return {
         icon: Shapes,
         text: done
           ? `Created ${plural(created, 'shape')}${failed ? `, ${failed} failed` : ''}`
-          : `Creating ${plural(count(input.shapes), 'shape')}…`,
+          : `Creating ${plural(count(input.shapes ?? input.nodes ?? input.connections), 'shape')}…`,
       }
     }
     case 'update_shapes':
@@ -104,7 +124,7 @@ function describeTool(name: string, part: ToolPart) {
         icon: PenLine,
         text: done
           ? `Updated ${plural(count(output?.updated), 'shape')}`
-          : `Updating ${plural(count(input.updates), 'shape')}…`,
+          : `Updating ${plural(count(input.updates) + count(input.ids), 'shape')}…`,
       }
     case 'delete_shapes':
       return {
@@ -128,7 +148,11 @@ function ToolRow({
   live: boolean
 }) {
   const { icon: Icon, text } = describeTool(name, part)
-  const failed = part.state === 'output-error'
+  const output =
+    part.state === 'output-available'
+      ? (part.output as Record<string, unknown> | undefined)
+      : undefined
+  const failed = part.state === 'output-error' || output?.ok === false
   const running = live && !failed && part.state !== 'output-available'
 
   return (
@@ -149,7 +173,11 @@ function ToolRow({
       </MarkerIcon>
       <MarkerContent className="min-w-0 break-words">
         {failed ? (
-          part.errorText
+          part.state === 'output-error' ? (
+            part.errorText
+          ) : (
+            String(output?.error ?? 'Canvas action failed')
+          )
         ) : running ? (
           <Shimmer>{text}</Shimmer>
         ) : part.state !== 'output-available' ? (

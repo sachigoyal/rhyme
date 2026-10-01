@@ -34,6 +34,7 @@
     "ai": "catalog:",
     "api": "workspace:*",
     "better-auth": "catalog:",
+    "elkjs": "catalog:",
     "idb-keyval": "^6.3.0",
     "lucide-react": "^1.48.0",
     "react": "catalog:",

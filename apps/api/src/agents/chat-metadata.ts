@@ -4,6 +4,17 @@ import type { UIMessage } from 'ai'
 const operations = {
   create_shapes: { action: 'Create', completed: 'Created', result: 'created' },
   update_shapes: { action: 'Update', completed: 'Updated', result: 'updated' },
+  create_diagram: { action: 'Create', completed: 'Created', result: 'created' },
+  connect_shapes: {
+    action: 'Connect',
+    completed: 'Connected',
+    result: 'connected',
+  },
+  arrange_shapes: {
+    action: 'Arrange',
+    completed: 'Arranged',
+    result: 'updated',
+  },
   delete_shapes: { action: 'Delete', completed: 'Deleted', result: 'deleted' },
 } as const
 
@@ -17,8 +28,10 @@ const shapeCount = (count: number) =>
 export function summarizeTool(toolName: string, input: unknown) {
   const operation = operationFor(toolName)
   if (!operation || !input || typeof input !== 'object') return null
-  const values = Object.values(input).find(Array.isArray)
-  return `Requested: ${operation.action.toLowerCase()} ${shapeCount(values?.length ?? 0)}`
+  const count = Object.values(input)
+    .filter(Array.isArray)
+    .reduce((total, values) => total + values.length, 0)
+  return `Requested: ${operation.action.toLowerCase()} ${shapeCount(count)}`
 }
 
 export function summarizeToolResult(
@@ -28,7 +41,12 @@ export function summarizeToolResult(
 ) {
   const operation = operationFor(toolName)
   if (!operation) return null
-  if (failed)
+  if (
+    failed ||
+    (output &&
+      typeof output === 'object' &&
+      Reflect.get(output, 'ok') === false)
+  )
     return {
       summary: `${operation.action} shapes was declined or failed`,
       applied: 0,

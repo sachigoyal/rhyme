@@ -106,6 +106,30 @@ function makeEditor() {
     run(fn) {
       fn()
     },
+    getShapeAndDescendantIds(ids) {
+      return new Set(ids)
+    },
+    getIsReadonly() {
+      return false
+    },
+    isShapeOrAncestorLocked(shapeOrId) {
+      const shape =
+        typeof shapeOrId === 'string' ? shapes.get(shapeOrId) : shapeOrId
+      return Boolean(shape?.isLocked)
+    },
+    getShapeParentTransform(shape) {
+      const offset = offsets.get(shape.id) ?? { x: 0, y: 0 }
+      return {
+        applyToPoint: (point) => ({
+          x: point.x + offset.x,
+          y: point.y + offset.y,
+        }),
+      }
+    },
+    getPointInParentSpace(shape, point) {
+      const offset = offsets.get(shape.id) ?? { x: 0, y: 0 }
+      return { x: point.x - offset.x, y: point.y - offset.y }
+    },
     getShape(id) {
       return shapes.get(id)
     },
@@ -125,7 +149,11 @@ function makeEditor() {
       return shape.type === type
     },
     createShape(shape) {
-      shapes.set(shape.id, { ...shape, props: { ...shape.props } })
+      shapes.set(shape.id, {
+        parentId: 'page:page',
+        ...shape,
+        props: { ...shape.props },
+      })
     },
     createBinding(binding) {
       bindings.push(binding)
@@ -169,11 +197,13 @@ function makeEditor() {
 
 const box = (id, x = 0) => ({ id, type: 'geo', x, y: 0, w: 100, h: 80 })
 
-test('replayed tool calls return their original result without drawing twice', () => {
+test('replayed tool calls return their original result without drawing twice', async () => {
   const editor = makeEditor()
   const runner = createCanvasToolRunner(editor)
-  const first = runner.run('call-1', 'create_shapes', { shapes: [box('idea')] })
-  const replay = runner.run('call-1', 'create_shapes', {
+  const first = await runner.run('call-1', 'create_shapes', {
+    shapes: [box('idea')],
+  })
+  const replay = await runner.run('call-1', 'create_shapes', {
     shapes: [box('idea')],
   })
   assert.equal(first.applied, true)
@@ -181,32 +211,35 @@ test('replayed tool calls return their original result without drawing twice', (
   assert.strictEqual(replay.result, first.result)
   assert.equal(editor.shapes.size, 1)
   assert.equal(editor.historyPoints, 1)
-  runner.run('call-2', 'update_shapes', {
+  await runner.run('call-2', 'update_shapes', {
     updates: [{ id: 'idea', color: 'blue' }],
   })
   assert.equal(editor.historyPoints, 1)
   runner.beginTurn()
-  runner.run('call-3', 'update_shapes', { updates: [{ id: 'idea', x: 120 }] })
+  await runner.run('call-3', 'update_shapes', {
+    updates: [{ id: 'idea', x: 120 }],
+  })
   assert.equal(editor.historyPoints, 2)
 })
 
-test('invalid external input cannot mutate the editor, including on replay', () => {
+test('invalid external input cannot mutate the editor, including on replay', async () => {
   const editor = makeEditor()
   const runner = createCanvasToolRunner(editor)
-  const result = runner.run('bad-input', 'create_shapes', {
+  const result = await runner.run('bad-input', 'create_shapes', {
     shapes: [box('idea', Infinity)],
   })
   assert.equal(result.result.state, 'output-error')
   assert.equal(editor.shapes.size, 0)
   assert.strictEqual(
-    runner.run('bad-input', 'create_shapes', { shapes: [box('idea')] }).result,
+    (await runner.run('bad-input', 'create_shapes', { shapes: [box('idea')] }))
+      .result,
     result.result,
   )
   assert.throws(() => runCanvasTool(editor, 'unknown_tool', {}), /Unknown tool/)
   assert.equal(editor.shapes.size, 0)
 })
 
-test('colliding model IDs preserve existing shapes and bind arrows to fresh aliases', () => {
+test('colliding model IDs preserve existing shapes and bind arrows to fresh aliases', async () => {
   const editor = makeEditor()
   runCanvasTool(editor, 'create_shapes', { shapes: [box('a', 900)] })
   const result = runCanvasTool(editor, 'create_shapes', {
@@ -232,7 +265,7 @@ test('colliding model IDs preserve existing shapes and bind arrows to fresh alia
   )
 })
 
-test('page-coordinate moves preserve the parent-relative positions of nested shapes', () => {
+test('page-coordinate moves preserve the parent-relative positions of nested shapes', async () => {
   const editor = makeEditor()
   editor.createShape({
     ...box('shape:nested'),
@@ -253,20 +286,21 @@ test('page-coordinate moves preserve the parent-relative positions of nested sha
   assert.equal(result.errors[0].id, 'missing')
 })
 
-test('declined deletions stay declined on replay and approved deletion reports missing IDs', () => {
+test('declined deletions stay declined on replay and approved deletion reports missing IDs', async () => {
   const editor = makeEditor()
   const runner = createCanvasToolRunner(editor)
-  runner.run('create', 'create_shapes', { shapes: [box('keep')] })
+  await runner.run('create', 'create_shapes', { shapes: [box('keep')] })
   const denied = runner.reject(
     'delete-denied',
     'The user declined this deletion.',
   )
   assert.strictEqual(
-    runner.run('delete-denied', 'delete_shapes', { ids: ['keep'] }).result,
+    (await runner.run('delete-denied', 'delete_shapes', { ids: ['keep'] }))
+      .result,
     denied,
   )
   assert.equal(editor.shapes.size, 1)
-  const result = runner.run('delete-approved', 'delete_shapes', {
+  const result = await runner.run('delete-approved', 'delete_shapes', {
     ids: ['keep', 'missing'],
   })
   assert.deepEqual(result.result.output, {
@@ -275,7 +309,24 @@ test('declined deletions stay declined on replay and approved deletion reports m
   })
   assert.equal(editor.shapes.size, 0)
   assert.equal(
-    runner.run('delete-approved', 'delete_shapes', { ids: ['keep'] }).applied,
+    (await runner.run('delete-approved', 'delete_shapes', { ids: ['keep'] }))
+      .applied,
     false,
+  )
+})
+
+test('recoverable failures are sent as tool results so the model can continue without retrying declined deletions', async () => {
+  const { continuingToolResult } = await server.ssrLoadModule(
+    '/src/features/agent/canvas-tool-runner.ts',
+  )
+  assert.deepEqual(
+    continuingToolResult({
+      state: 'output-error',
+      errorText: 'Deletion declined',
+    }),
+    {
+      state: 'output-available',
+      output: { ok: false, error: 'Deletion declined' },
+    },
   )
 })

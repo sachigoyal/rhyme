@@ -29,3 +29,18 @@ Popover dismissal, hover previews, and switch pointer/keyboard state are covered
 
 Set `UI_SCREENSHOT_DIR` to an existing directory to save desktop/light and
 mobile/dark screenshots from the brand-style test.
+
+## Canvas agent tools
+
+`canvas-agent.browser.mjs` runs the actual tldraw editor and ELK worker without
+API authentication. It verifies complex graph creation, grids, bulk styling,
+page pagination, preserved labels, rotated groups, locks, live connectors,
+rebinding, diagnostics, duplicate execution and undo. It runs with `test:ui`,
+or independently:
+
+```sh
+PLAYWRIGHT_CHANNEL=chrome pnpm --filter web exec node --test tests/canvas-agent.browser.mjs
+```
+
+Set `CANVAS_SCREENSHOT_DIR` to save a complex-scene screenshot. Tool schemas,
+context budgets and limitations are documented in `docs/canvas-agent-tools.md`.

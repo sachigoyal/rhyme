@@ -86,3 +86,29 @@ test('metadata uses first user prompt and latest visible text with bounded excer
   assert.equal(metadata.lastMessage, 'x'.repeat(240))
   assert.equal(metadata.messageCount, 2)
 })
+
+test('diagram, layout and rebound connection results appear in canvas history', () => {
+  assert.equal(
+    summarizeTool('create_diagram', { nodes: [{}, {}], edges: [{}] }),
+    'Requested: create 3 shapes',
+  )
+  assert.equal(
+    summarizeTool('update_shapes', {
+      ids: ['a', 'b'],
+      patch: { color: 'blue' },
+    }),
+    'Requested: update 2 shapes',
+  )
+  assert.deepEqual(
+    summarizeToolResult('arrange_shapes', { updated: ['a', 'b'] }),
+    { summary: 'Arranged 2 shapes', applied: 2 },
+  )
+  assert.deepEqual(summarizeToolResult('connect_shapes', { connected: [{}] }), {
+    summary: 'Connected 1 shape',
+    applied: 1,
+  })
+  assert.deepEqual(
+    summarizeToolResult('delete_shapes', { ok: false, error: 'Declined' }),
+    { summary: 'Delete shapes was declined or failed', applied: 0 },
+  )
+})

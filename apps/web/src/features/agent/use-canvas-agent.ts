@@ -12,7 +12,10 @@ import { toast } from '@rhyme/ui/components/toast'
 import { useRecordChatChange } from '@rhyme/hooks/mutations'
 import { env } from '@/lib/env'
 import { buildCanvasContext, captureCanvasPreview } from './canvas-context'
-import { createCanvasToolRunner } from './canvas-tool-runner'
+import {
+  createCanvasToolRunner,
+  continuingToolResult,
+} from './canvas-tool-runner'
 import { getCanvasAgentOptions } from './agent-connection'
 
 export function useCanvasAgent(
@@ -49,6 +52,33 @@ export function useCanvasAgent(
       )
   }
 
+  const saveChangePreview = (toolCallId: string, screenshot: string | null) => {
+    if (screenshot) savePreview(toolCallId, screenshot)
+    else
+      void captureCanvasPreview(editor, 480).then((preview) =>
+        savePreview(toolCallId, preview),
+      )
+  }
+
+  const currentVision = () => {
+    const settings = configRef.current
+    return settings.connectionId
+      ? (connections.data?.find((item) => item.id === settings.connectionId)
+          ?.vision ?? false)
+      : (AGENT_MODELS.find((item) => item.id === settings.model)?.vision ??
+          false)
+  }
+
+  const refresh = async (toolCallId: string) => {
+    const canvas = await buildCanvasContext(editor, currentVision())
+    try {
+      await agent.call('refreshCanvas', [toolCallId, canvas])
+    } catch (error) {
+      console.warn('Live canvas context could not be refreshed', error)
+    }
+    return canvas
+  }
+
   const chat = useAgentChat({
     agent,
     ...(initialMessages
@@ -69,19 +99,18 @@ export function useCanvasAgent(
       if (toolCall.toolName === 'delete_shapes') return
       setActiveTools((count) => count + 1)
       try {
-        const execution = runner.run(
+        const execution = await runner.run(
           toolCall.toolCallId,
           toolCall.toolName,
           toolCall.input,
         )
-        const preview = execution.applied
-          ? await captureCanvasPreview(editor, 480)
-          : null
+        const canvas = await refresh(toolCall.toolCallId)
         await addToolOutput({
           toolCallId: toolCall.toolCallId,
-          ...execution.result,
+          ...continuingToolResult(execution.result),
         })
-        savePreview(toolCall.toolCallId, preview)
+        if (execution.applied)
+          saveChangePreview(toolCall.toolCallId, canvas.screenshot)
       } finally {
         setActiveTools((count) => count - 1)
       }
@@ -173,18 +202,24 @@ export function useCanvasAgent(
     if (!approved) {
       await chat.addToolOutput({
         toolCallId,
-        ...runner.reject(toolCallId, 'The user declined this deletion.'),
+        ...continuingToolResult(
+          runner.reject(
+            toolCallId,
+            'The user declined this deletion. Keep these shapes and do not retry.',
+          ),
+        ),
       })
       return
     }
     setActiveTools((count) => count + 1)
     try {
-      const execution = runner.run(toolCallId, 'delete_shapes', input)
-      const preview = execution.applied
-        ? await captureCanvasPreview(editor, 480)
-        : null
-      await chat.addToolOutput({ toolCallId, ...execution.result })
-      savePreview(toolCallId, preview)
+      const execution = await runner.run(toolCallId, 'delete_shapes', input)
+      const canvas = await refresh(toolCallId)
+      await chat.addToolOutput({
+        toolCallId,
+        ...continuingToolResult(execution.result),
+      })
+      if (execution.applied) saveChangePreview(toolCallId, canvas.screenshot)
     } finally {
       setActiveTools((count) => count - 1)
     }

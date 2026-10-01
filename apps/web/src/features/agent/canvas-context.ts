@@ -11,7 +11,6 @@ import type {
   ReadCanvasInput,
 } from 'api/canvas-schema'
 
-const MAX_SHAPES = 300
 const SCREENSHOT_SIZE = 1024
 
 // The model sees ids without tldraw's `shape:` prefix.
@@ -25,7 +24,11 @@ const roundBounds = ({ x, y, w, h }: Bounds) => ({
   h: Math.round(h),
 })
 
-export function describeShape(editor: Editor, shape: TLShape) {
+export function describeShape(
+  editor: Editor,
+  shape: TLShape,
+  detail: 'standard' | 'full' = 'standard',
+) {
   const bounds = editor.getShapePageBounds(shape)
   if (!bounds) return null
 
@@ -34,6 +37,30 @@ export function describeShape(editor: Editor, shape: TLShape) {
     id: toAgentId(shape.id),
     type: shape.type,
     ...roundBounds(bounds),
+  }
+  if (shape.parentId.startsWith('shape:'))
+    described.parentId = toAgentId(shape.parentId as TLShapeId)
+  if (shape.rotation)
+    described.rotation = Math.round((shape.rotation * 180) / Math.PI)
+  if (shape.isLocked) described.locked = true
+  for (const field of [
+    'size',
+    'labelColor',
+    'font',
+    'dash',
+    'align',
+    'verticalAlign',
+    'kind',
+    'arrowheadStart',
+    'arrowheadEnd',
+  ] as const) {
+    if (detail === 'standard' && field !== 'size' && field !== 'labelColor')
+      continue
+    if (typeof props[field] === 'string') described[field] = props[field]
+  }
+  if (detail === 'full') {
+    for (const field of ['bend', 'labelPosition', 'elbowMidPoint'] as const)
+      if (typeof props[field] === 'number') described[field] = props[field]
   }
   if (typeof props.geo === 'string') described.geo = props.geo
   if (typeof props.color === 'string') described.color = props.color
@@ -51,40 +78,133 @@ export function describeShape(editor: Editor, shape: TLShape) {
     const { start, end } = getArrowBindings(editor, shape)
     if (start) described.from = toAgentId(start.toId)
     if (end) described.to = toAgentId(end.toId)
+    if (detail === 'full') {
+      if (start) described.fromAnchor = start.props.normalizedAnchor
+      else
+        described.fromPoint = editor
+          .getShapePageTransform(shape)
+          .applyToPoint(shape.props.start)
+      if (end) described.toAnchor = end.props.normalizedAnchor
+      else
+        described.toPoint = editor
+          .getShapePageTransform(shape)
+          .applyToPoint(shape.props.end)
+    }
   }
   return described
 }
 
+const collides = (a: Bounds, b: Bounds) =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+
+const combine = (items: Bounds[]) => {
+  if (!items.length) return null
+  const x = Math.min(...items.map((item) => item.x)),
+    y = Math.min(...items.map((item) => item.y))
+  return roundBounds({
+    x,
+    y,
+    w: Math.max(...items.map((item) => item.x + item.w)) - x,
+    h: Math.max(...items.map((item) => item.y + item.h)) - y,
+  })
+}
+
+function summarizeClusters(shapes: CanvasShape[]) {
+  let cell = 1024
+  let buckets: Map<string, CanvasShape[]>
+  do {
+    buckets = new Map()
+    for (const shape of shapes) {
+      const key = `${Math.floor(shape.x / cell)},${Math.floor(shape.y / cell)}`
+      const bucket = buckets.get(key) ?? []
+      bucket.push(shape)
+      buckets.set(key, bucket)
+    }
+    cell *= 2
+  } while (buckets.size > 32)
+  return [...buckets.values()].map((items) => ({
+    ...combine(items)!,
+    count: items.length,
+    labels: items
+      .filter((item) => item.text)
+      .slice(0, 3)
+      .map((item) => item.text!.slice(0, 100)),
+  }))
+}
+
 export function describeShapes(
   editor: Editor,
-  scope: ReadCanvasInput['scope'],
+  options: Partial<ReadCanvasInput> | ReadCanvasInput['scope'] = {},
 ) {
+  const input = typeof options === 'string' ? { scope: options } : options
   const viewport = editor.getViewportPageBounds()
-  const all = editor.getCurrentPageShapesSorted()
-  const inScope =
-    scope === 'page'
-      ? all
-      : all.filter((shape) => {
-          const bounds = editor.getShapePageBounds(shape)
-          return bounds && viewport.collides(bounds)
-        })
-
-  const shapes = inScope
-    .slice(0, MAX_SHAPES)
-    .map((shape) => describeShape(editor, shape))
-    .filter((shape) => shape !== null)
-
-  return { shapes, offscreen: all.length - shapes.length }
+  const selection = new Set(editor.getSelectedShapeIds().map(toAgentId))
+  const all = editor.getCurrentPageShapesSorted().flatMap((shape) => {
+    const described = describeShape(editor, shape, input.detail)
+    return described ? [described] : []
+  })
+  const wanted = input.ids && new Set(input.ids)
+  const scoped = all.filter((shape) =>
+    wanted
+      ? wanted.has(shape.id)
+      : input.scope === 'page'
+        ? true
+        : input.scope === 'selection'
+          ? selection.has(shape.id)
+          : collides(viewport, shape) || selection.has(shape.id),
+  )
+  const matched = scoped.filter(
+    (shape) =>
+      (!input.region || collides(input.region, shape)) &&
+      (!input.text ||
+        shape.text?.toLowerCase().includes(input.text.toLowerCase())) &&
+      (!input.types || input.types.includes(shape.type)),
+  )
+  const prioritized = matched
+    .filter((shape) => selection.has(shape.id))
+    .concat(matched.filter((shape) => !selection.has(shape.id)))
+  const offset = input.offset ?? 0,
+    limit = input.limit ?? 300
+  const shapes: CanvasShape[] = []
+  let chars = 0
+  for (const shape of prioritized.slice(offset, offset + limit)) {
+    const length = JSON.stringify(shape).length
+    if (shapes.length && chars + length > (input.maxChars ?? 160000)) break
+    shapes.push(shape)
+    chars += length
+  }
+  const offscreen = all.filter((shape) => !collides(viewport, shape))
+  const counts: Record<string, number> = {}
+  for (const shape of all) counts[shape.type] = (counts[shape.type] ?? 0) + 1
+  return {
+    shapes,
+    total: all.length,
+    matched: matched.length,
+    omitted: matched.length - shapes.length,
+    nextOffset:
+      offset + shapes.length < matched.length ? offset + shapes.length : null,
+    offscreen: offscreen.length,
+    pageBounds: combine(all),
+    counts,
+    clusters: summarizeClusters(offscreen),
+    ...(wanted
+      ? {
+          missing: input.ids!.filter(
+            (id) => !all.some((shape) => shape.id === id),
+          ),
+        }
+      : {}),
+  }
 }
 
 export function describeCanvas(
   editor: Editor,
-  scope: ReadCanvasInput['scope'] = 'viewport',
+  options: Partial<ReadCanvasInput> | ReadCanvasInput['scope'] = {},
 ) {
   return {
     viewport: roundBounds(editor.getViewportPageBounds()),
     selection: editor.getSelectedShapeIds().map(toAgentId),
-    ...describeShapes(editor, scope),
+    ...describeShapes(editor, options),
   }
 }
 
@@ -114,7 +234,7 @@ export async function captureCanvasPreview(
       bounds,
       padding: 0,
       background: true,
-      darkMode: false,
+      darkMode: editor.user.getIsDarkMode(),
       pixelRatio: 1,
       scale: Math.min(2, size / Math.max(bounds.w, bounds.h)),
     })
@@ -130,7 +250,7 @@ export async function buildCanvasContext(
   includeScreenshot = true,
 ) {
   return {
-    ...describeCanvas(editor),
+    ...describeCanvas(editor, { limit: 500, maxChars: 100000 }),
     screenshot: includeScreenshot ? await captureCanvasPreview(editor) : null,
   } satisfies CanvasContext
 }
