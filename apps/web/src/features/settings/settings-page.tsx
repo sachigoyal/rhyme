@@ -23,6 +23,7 @@ import type { ReactNode } from 'react'
 import { PageHeading } from '@/components/page-heading'
 import { WorkspacePage } from '@/components/workspace-page'
 import { WorkspaceShell } from '@/features/files/workspace-shell'
+import { ProfilePictureSettings } from './profile-picture-settings'
 import type { SessionUser } from '@/lib/auth'
 
 type Preferences = z.infer<typeof preferencesSchema>
@@ -186,6 +187,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                 </SettingsSection>
                 <AIConnectionsSettings />
                 <SettingsSection title="Account">
+                  <ProfilePictureSettings user={user} />
                   <form
                     onSubmit={(event) => {
                       event.preventDefault()

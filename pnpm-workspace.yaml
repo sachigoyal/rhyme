@@ -3,6 +3,8 @@ packages:
   - packages/*
 
 catalog:
+  tinycolor2: ^1.6.0
+  '@types/tinycolor2': ^1.4.6
   '@base-ui/react': ^1.8.0
   '@resvg/resvg-js': 2.6.2
   fontkit: 2.0.4

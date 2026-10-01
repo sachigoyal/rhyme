@@ -6,15 +6,14 @@ export function useCreateAndOpenFile() {
   const navigate = useNavigate()
   const createFile = useCreateFile()
 
-  const create = (folderId?: string) =>
-    createFile.mutate(
-      { folderId },
-      {
-        onSuccess: ({ id }) =>
-          navigate({ to: '/files/$fileId', params: { fileId: id } }),
-        onError: () => toast.error('Unable to create canvas'),
-      },
-    )
+  const create = async (folderId?: string) => {
+    try {
+      const { id } = await createFile.mutateAsync({ folderId })
+      await navigate({ to: '/files/$fileId', params: { fileId: id } })
+    } catch {
+      toast.error('Unable to create canvas')
+    }
+  }
 
   return { create, isPending: createFile.isPending }
 }

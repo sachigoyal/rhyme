@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@rhyme/trpc-client'
 import type { RouterOutputs } from '@rhyme/trpc-client'
 import { useOptimisticCache } from '../cache'
@@ -43,4 +43,31 @@ export function useCompleteProfile() {
         ]),
     }),
   )
+}
+
+export function useUpdateProfilePicture(apiUrl: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File | null) => {
+      const response = await fetch(new URL('/profile/picture', apiUrl), {
+        method: file ? 'PUT' : 'DELETE',
+        credentials: 'include',
+        headers: file ? { 'content-type': file.type } : undefined,
+        body: file ?? undefined,
+      })
+      if (!response.ok) throw new Error('Unable to save profile picture')
+      return (await response.json()) as { image: string | null }
+    },
+    onSuccess: async ({ image }) => {
+      queryClient.setQueryData(
+        ['session'],
+        (session: CachedSession | null | undefined) =>
+          session ? { ...session, user: { ...session.user, image } } : session,
+      )
+      await queryClient.invalidateQueries({
+        queryKey: ['session'],
+        exact: true,
+      })
+    },
+  })
 }

@@ -21,7 +21,7 @@
     "directory": "../web/dist/client",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/auth/*", "/trpc/*", "/files/*", "/assets/*"],
+    "run_worker_first": ["/auth/*", "/trpc/*", "/profile/*", "/files/*", "/assets/*"],
   },
   "d1_databases": [
     {

@@ -199,7 +199,10 @@ function useFileChange(
         cache.listInvalidation,
         cache.fileInvalidation(id),
         ...(affectsChats
-          ? [{ scope: 'chats', filter: trpc.chats.list.queryFilter() }]
+          ? [
+              { scope: 'chats', filter: trpc.chats.list.queryFilter() },
+              { scope: 'chats', filter: trpc.chats.activity.queryFilter() },
+            ]
           : []),
         ...(affectsAnalytics
           ? [{ scope: 'chats', filter: trpc.chats.analytics.queryFilter() }]

@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { generateAvatar } from '@/lib/avatar'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { LogOut, Monitor, Moon, Sun, Settings } from 'lucide-react'
@@ -6,7 +8,11 @@ import { useUpdateSettings } from '@rhyme/hooks/mutations'
 import { toast } from '@rhyme/ui/components/toast'
 import { useTheme } from '@rhyme/ui/components/theme'
 import type { Theme } from '@rhyme/ui/components/theme'
-import { Avatar, AvatarFallback } from '@rhyme/ui/components/avatar'
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@rhyme/ui/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,8 +43,30 @@ export function UserAvatar({
   user: SessionUser
   className?: string
 }) {
+  const [generated, setGenerated] = useState<{
+    seed: string
+    url: string
+  } | null>(null)
+  useEffect(() => {
+    let active = true
+    void generateAvatar(user.id)
+      .then((url) => {
+        if (active) setGenerated({ seed: user.id, url })
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [user.id])
   return (
     <Avatar className={className}>
+      <AvatarImage
+        src={
+          user.image ||
+          (generated?.seed === user.id ? generated.url : undefined)
+        }
+        alt={displayName(user)}
+      />
       <AvatarFallback className="text-xs font-medium uppercase">
         {displayName(user).slice(0, 2)}
       </AvatarFallback>
@@ -71,12 +99,12 @@ export function UserMenu({
       <DropdownMenuContent
         align="end"
         collisionPadding={8}
-        className="w-(--anchor-width)"
+        className="w-80 max-w-[calc(100vw-1rem)]"
       >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
-            <p className="truncate font-medium">{displayName(user)}</p>
-            <p className="text-muted-foreground truncate text-xs">
+            <p className="break-words font-medium">{displayName(user)}</p>
+            <p className="text-muted-foreground break-all text-xs">
               {user.email}
             </p>
           </DropdownMenuLabel>

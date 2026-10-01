@@ -6,7 +6,7 @@ import type { AppEnv } from '../env'
 import { objectKeys } from '../lib/storage'
 import { fileAccess, session } from '../middleware'
 
-const { assets, files } = schema
+const { assets, files, users } = schema
 
 const MAX_ASSET_BYTES = 25 * 1024 * 1024
 const MAX_THUMBNAIL_BYTES = 2 * 1024 * 1024
@@ -15,12 +15,110 @@ const ASSET_TYPES = /^(image|video)\//
 async function readBody(request: Request, maxBytes: number) {
   const declared = Number(request.headers.get('content-length') ?? 0)
   if (declared > maxBytes) throw new HTTPException(413)
-  const body = await request.arrayBuffer()
-  if (body.byteLength > maxBytes) throw new HTTPException(413)
-  return body
+  const reader = request.body?.getReader()
+  if (!reader) throw new HTTPException(400)
+  const chunks: Uint8Array[] = []
+  let size = 0
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > maxBytes) {
+      await reader.cancel()
+      throw new HTTPException(413)
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return bytes.buffer
 }
 
 export const storageRoutes = new Hono<AppEnv>()
+  .put('/profile/picture', session, async (c) => {
+    const user = c.var.session?.user
+    if (!user) throw new HTTPException(401)
+    const mimeType = c.req.header('content-type') ?? ''
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(mimeType))
+      throw new HTTPException(415)
+    const body = await readBody(c.req.raw, 2 * 1024 * 1024)
+    const bytes = new Uint8Array(body)
+    const png = [137, 80, 78, 71, 13, 10, 26, 10].every(
+      (n, i) => bytes[i] === n,
+    )
+    const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
+    const webp =
+      new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' &&
+      new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP'
+    if (
+      !(mimeType === 'image/png'
+        ? png
+        : mimeType === 'image/jpeg'
+          ? jpeg
+          : webp)
+    )
+      throw new HTTPException(415)
+    const id = crypto.randomUUID()
+    const key = `profiles/${user.id}/${id}`
+    const image = new URL(`/profile/pictures/${user.id}/${id}`, c.env.API_URL)
+      .href
+    await c.env.STORAGE.put(key, body, {
+      httpMetadata: { contentType: mimeType },
+    })
+    try {
+      await c.var.db.update(users).set({ image }).where(eq(users.id, user.id))
+    } catch (error) {
+      await c.env.STORAGE.delete(key)
+      throw error
+    }
+    if (
+      user.image?.startsWith(
+        new URL(`/profile/pictures/${user.id}/`, c.env.API_URL).href,
+      )
+    ) {
+      const oldId = new URL(user.image).pathname.split('/').pop()
+      c.executionCtx.waitUntil(
+        c.env.STORAGE.delete(`profiles/${user.id}/${oldId}`),
+      )
+    }
+    return c.json({ image })
+  })
+  .delete('/profile/picture', session, async (c) => {
+    const user = c.var.session?.user
+    if (!user) throw new HTTPException(401)
+    await c.var.db
+      .update(users)
+      .set({ image: null })
+      .where(eq(users.id, user.id))
+    if (
+      user.image?.startsWith(
+        new URL(`/profile/pictures/${user.id}/`, c.env.API_URL).href,
+      )
+    ) {
+      const oldId = new URL(user.image).pathname.split('/').pop()
+      c.executionCtx.waitUntil(
+        c.env.STORAGE.delete(`profiles/${user.id}/${oldId}`),
+      )
+    }
+    return c.json({ image: null })
+  })
+  .get('/profile/pictures/:userId/:id', async (c) => {
+    const object = await c.env.STORAGE.get(
+      `profiles/${c.req.param('userId')}/${c.req.param('id')}`,
+    )
+    if (!object) throw new HTTPException(404)
+    return new Response(object.body as ReadableStream, {
+      headers: {
+        'content-type': object.httpMetadata?.contentType ?? 'image/png',
+        'cache-control': 'public, max-age=31536000, immutable',
+        'x-content-type-options': 'nosniff',
+      },
+    })
+  })
   .post('/files/:fileId/assets', session, fileAccess('editor'), async (c) => {
     const mimeType = c.req.header('content-type') ?? ''
     if (!ASSET_TYPES.test(mimeType)) throw new HTTPException(415)

@@ -41,15 +41,38 @@ import type { FolderNode } from './folder-tree'
 interface FileCardProps {
   file: FileSummary
   folders: FolderNode[]
+  layout?: 'grid' | 'list'
+  selected?: boolean
+  onSelect?: () => void
+  selectionDisabled?: boolean
 }
 
-export function FileCard({ file, folders }: FileCardProps) {
+export function FileCard({
+  file,
+  folders,
+  layout = 'grid',
+  selected = false,
+  onSelect,
+  selectionDisabled,
+}: FileCardProps) {
   const pending = file.id.startsWith('pending:')
   const trashed = file.trashedAt !== null
-  const preview = <FilePreview file={file} />
+  const preview = <FilePreview file={file} compact={layout === 'list'} />
 
   return (
-    <div className="group bg-card hover:border-primary/40 focus-within:border-primary relative flex flex-col overflow-hidden rounded-lg border transition-colors">
+    <div
+      className={`group bg-card hover:border-primary/40 focus-within:border-primary relative flex overflow-hidden rounded-lg border transition-colors ${layout === 'list' ? 'flex-row items-center gap-3 p-3' : 'flex-col'} ${selected ? 'border-primary ring-1 ring-primary bg-primary/5' : ''}`}
+    >
+      {onSelect && file.role === 'owner' && !pending && (
+        <input
+          type="checkbox"
+          aria-label={`Select ${file.name}`}
+          checked={selected}
+          onChange={onSelect}
+          disabled={selectionDisabled}
+          className={`z-10 size-4 shrink-0 cursor-pointer accent-primary ${layout === 'grid' ? 'absolute left-3 top-3' : 'relative'}`}
+        />
+      )}
       {trashed || pending ? (
         preview
       ) : (
@@ -57,13 +80,15 @@ export function FileCard({ file, folders }: FileCardProps) {
           to="/files/$fileId"
           params={{ fileId: file.id }}
           aria-label={`Open ${file.name}`}
-          className="outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className={`shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${layout === 'list' ? 'w-20 rounded-md overflow-hidden' : ''}`}
         >
           {preview}
           <span className="absolute inset-0" aria-hidden />
         </Link>
       )}
-      <div className="flex items-center gap-2 border-t px-3 py-2.5">
+      <div
+        className={`flex min-w-0 flex-1 items-center gap-2 ${layout === 'grid' ? 'border-t px-3 py-2.5' : ''}`}
+      >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{file.name}</p>
           <p className="text-muted-foreground mt-0.5 truncate text-xs">
@@ -87,10 +112,18 @@ export function FileCard({ file, folders }: FileCardProps) {
   )
 }
 
-function FilePreview({ file }: { file: FileSummary }) {
+function FilePreview({
+  file,
+  compact,
+}: {
+  file: FileSummary
+  compact: boolean
+}) {
   const [failed, setFailed] = useState(false)
   return (
-    <div className="bg-background relative aspect-video overflow-hidden">
+    <div
+      className={`bg-background relative aspect-video overflow-hidden ${compact ? 'w-20 shrink-0 rounded-md' : ''}`}
+    >
       {file.hasThumbnail && !failed ? (
         <img
           src={thumbnailUrl(file.id, file.version)}

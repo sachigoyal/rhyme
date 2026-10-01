@@ -8,7 +8,7 @@ import {
   MousePointer2,
   RefreshCw,
 } from 'lucide-react'
-import { useAgentAnalytics, useChats } from '@rhyme/hooks/queries'
+import { useAgentAnalytics, useAgentActivity } from '@rhyme/hooks/queries'
 import { Button, buttonVariants } from '@rhyme/ui/components/button'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { WorkspaceShell } from '@/features/files/workspace-shell'
@@ -29,7 +29,7 @@ function ActivityPage() {
   const { user } = Route.useRouteContext()
   const [days, setDays] = useState<7 | 30 | 90>(30)
   const analytics = useAgentAnalytics(days)
-  const chats = useChats()
+  const chats = useAgentActivity()
   const data = analytics.data
   return (
     <WorkspaceShell user={user} section="activity" title="Agent activity">
@@ -137,31 +137,67 @@ function ActivityPage() {
             </Link>
           </div>
           <div className="overflow-hidden rounded-lg border">
+            {chats.isError && (
+              <div className="p-4 text-sm">
+                Unable to load recent activity.{' '}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void chats.refetch()}
+                >
+                  Try again
+                </Button>
+              </div>
+            )}
             {chats.isPending && <Skeleton className="h-48 rounded-none" />}
             {chats.data
               ?.filter((chat) => !chat.id.startsWith('pending:'))
               .slice(0, 8)
-              .map((chat) => (
-                <Link
-                  key={chat.id}
-                  to="/chats"
-                  search={{ chat: chat.id }}
-                  className="hover:bg-muted/40 flex items-center gap-3 border-b px-3 py-3 transition-colors last:border-0"
-                >
-                  <MessageSquare className="text-muted-foreground size-4 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{chat.title}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {chat.fileName} · {timeAgo(chat.updatedAt)}
-                    </p>
+              .map((chat) =>
+                chat.available ? (
+                  <Link
+                    key={chat.id}
+                    to="/chats"
+                    search={{ chat: chat.id }}
+                    className="hover:bg-muted/40 flex items-center gap-3 border-b px-3 py-3 transition-colors last:border-0"
+                  >
+                    <MessageSquare className="text-muted-foreground size-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {chat.title}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {chat.fileName} · {timeAgo(chat.updatedAt)}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground hidden text-xs tabular-nums sm:inline">
+                      {chat.toolCallCount} actions ·{' '}
+                      {chat.totalTokens.toLocaleString()} tokens
+                    </span>
+                    <ArrowUpRight className="text-muted-foreground size-4" />
+                  </Link>
+                ) : (
+                  <div
+                    key={chat.id}
+                    className="flex items-center gap-4 border-b px-4 py-4 last:border-b-0"
+                  >
+                    <MessageSquare className="text-muted-foreground size-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {chat.title}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {chat.fileName} · Canvas unavailable ·{' '}
+                        {timeAgo(chat.updatedAt)}
+                      </p>
+                    </div>
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {chat.toolCallCount} actions ·{' '}
+                      {chat.totalTokens.toLocaleString()} tokens
+                    </span>
                   </div>
-                  <span className="text-muted-foreground hidden text-xs tabular-nums sm:inline">
-                    {chat.toolCallCount} actions ·{' '}
-                    {chat.totalTokens.toLocaleString()} tokens
-                  </span>
-                  <ArrowUpRight className="text-muted-foreground size-4" />
-                </Link>
-              ))}
+                ),
+              )}
             {chats.data?.length === 0 && (
               <div className="px-6 py-16 text-center">
                 <Activity className="text-muted-foreground mx-auto mb-3 size-6" />
@@ -184,8 +220,8 @@ function ActivityPage() {
           </div>
         </section>
         <p className="text-muted-foreground mt-6 text-xs leading-relaxed">
-          Usage includes model responses and tool calls for canvases you can
-          access.
+          Usage includes your model responses and tool calls, including activity
+          from deleted canvases.
         </p>
       </WorkspacePage>
     </WorkspaceShell>

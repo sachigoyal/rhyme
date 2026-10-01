@@ -87,3 +87,8 @@ export function useAgentAnalytics(days: 7 | 30 | 90 = 30) {
   const trpc = useTRPC()
   return useQuery(trpc.chats.analytics.queryOptions({ days }))
 }
+
+export function useAgentActivity() {
+  const trpc = useTRPC()
+  return useQuery(trpc.chats.activity.queryOptions())
+}

@@ -40,6 +40,10 @@ function useChatsCache() {
       scope: 'chats',
       filter: trpc.chats.get.queryFilter({ id }),
     }),
+    activityInvalidation: {
+      scope: 'chats',
+      filter: trpc.chats.activity.queryFilter(),
+    },
     analyticsInvalidation: {
       scope: 'chats',
       filter: trpc.chats.analytics.queryFilter(),
@@ -100,6 +104,7 @@ export function useCreateChat() {
       onSettled: (_data, _error, _input, context) =>
         cache.settle(context?.transaction, [
           cache.listInvalidation,
+          cache.activityInvalidation,
           cache.analyticsInvalidation,
         ]),
     }),
@@ -138,6 +143,7 @@ export function useRenameChat() {
       onSettled: (_data, _error, { id }, transaction) =>
         cache.settle(transaction, [
           cache.listInvalidation,
+          cache.activityInvalidation,
           cache.detailInvalidation(id),
         ]),
     }),
@@ -161,6 +167,7 @@ export function useDeleteChat() {
       onSettled: (_data, _error, _input, transaction) =>
         cache.settle(transaction, [
           cache.listInvalidation,
+          cache.activityInvalidation,
           cache.analyticsInvalidation,
         ]),
     }),

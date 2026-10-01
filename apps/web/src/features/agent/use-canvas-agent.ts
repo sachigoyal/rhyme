@@ -124,6 +124,7 @@ export function useCanvasAgent(
     if (!firstUserId) return
     const timer = setTimeout(() => {
       void queryClient.invalidateQueries(trpc.chats.list.queryFilter())
+      void queryClient.invalidateQueries(trpc.chats.activity.queryFilter())
     }, 1000)
     return () => clearTimeout(timer)
   }, [firstUserId, queryClient, trpc])

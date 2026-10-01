@@ -14,9 +14,7 @@ export const chats = sqliteTable(
   'chats',
   {
     id: id(),
-    fileId: text()
-      .notNull()
-      .references(() => files.id, { onDelete: 'cascade' }),
+    fileId: text().notNull(),
     userId: text()
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

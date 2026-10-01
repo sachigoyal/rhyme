@@ -41,6 +41,7 @@
     "react-dom": "catalog:",
     "react-markdown": "catalog:",
     "tailwindcss": "^4.1.18",
+    "tinycolor2": "catalog:",
     "tldraw": "^5.4.2",
     "zod": "catalog:"
   },
@@ -49,6 +50,7 @@
     "@resvg/resvg-js": "catalog:",
     "@tanstack/eslint-config": "latest",
     "@tanstack/router-cli": "^1.132.0",
+    "@types/tinycolor2": "catalog:",
     "@types/node": "^22.10.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",

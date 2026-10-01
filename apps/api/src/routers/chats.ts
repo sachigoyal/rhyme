@@ -110,6 +110,41 @@ export const chatsRouter = router({
         durationMs: row.durationMs ?? 0,
       }))
     }),
+  activity: protectedProcedure.query(async ({ ctx }) => {
+    const totals = ctx.db
+      .select({ chatId: agentRuns.chatId, ...runTotals })
+      .from(agentRuns)
+      .groupBy(agentRuns.chatId)
+      .as('activity_totals')
+    return ctx.db
+      .select({
+        id: chats.id,
+        title: chats.title,
+        updatedAt: chats.updatedAt,
+        toolCallCount: chats.toolCallCount,
+        totalTokens: sql<number>`coalesce(${totals.totalTokens}, 0)`.mapWith(
+          Number,
+        ),
+        fileName: sql<string>`coalesce(${files.name}, 'Deleted canvas')`,
+        available:
+          sql<boolean>`case when ${files.id} is not null and ${files.trashedAt} is null and (${files.ownerId} = ${ctx.user.id} or ${fileCollaborators.userId} = ${ctx.user.id}) then 1 else 0 end`.mapWith(
+            Boolean,
+          ),
+      })
+      .from(chats)
+      .leftJoin(files, eq(files.id, chats.fileId))
+      .leftJoin(
+        fileCollaborators,
+        and(
+          eq(fileCollaborators.fileId, files.id),
+          eq(fileCollaborators.userId, ctx.user.id),
+        ),
+      )
+      .leftJoin(totals, eq(totals.chatId, chats.id))
+      .where(eq(chats.userId, ctx.user.id))
+      .orderBy(desc(chats.updatedAt))
+      .limit(8)
+  }),
   get: ownedChat.query(async ({ ctx }) => {
     const agent = await getCanvasAgent(ctx.env, ctx.chat)
     const [messages, changes, totals] = await Promise.all([
@@ -269,28 +304,14 @@ export const chatsRouter = router({
         })
         .from(agentRuns)
         .innerJoin(chats, eq(chats.id, agentRuns.chatId))
-        .innerJoin(files, eq(files.id, chats.fileId))
-        .leftJoin(
-          fileCollaborators,
-          and(
-            eq(fileCollaborators.fileId, files.id),
-            eq(fileCollaborators.userId, ctx.user.id),
-          ),
+        .where(
+          and(eq(chats.userId, ctx.user.id), gte(agentRuns.createdAt, since)),
         )
-        .where(and(visibleChats(ctx.user.id), gte(agentRuns.createdAt, since)))
         .get()
       const conversationCount = await ctx.db
         .select({ count: sql<number>`count(*)`.mapWith(Number) })
         .from(chats)
-        .innerJoin(files, eq(files.id, chats.fileId))
-        .leftJoin(
-          fileCollaborators,
-          and(
-            eq(fileCollaborators.fileId, files.id),
-            eq(fileCollaborators.userId, ctx.user.id),
-          ),
-        )
-        .where(visibleChats(ctx.user.id))
+        .where(eq(chats.userId, ctx.user.id))
         .get()
       return {
         ...rows!,

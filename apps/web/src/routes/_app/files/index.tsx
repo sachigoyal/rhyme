@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowUpDown, Loader2, Plus } from 'lucide-react'
+import { ArrowUpDown, Loader2, Plus, LayoutGrid, List } from 'lucide-react'
 import { z } from 'zod'
 import { useFolders } from '@rhyme/hooks/queries'
 import { Button, buttonVariants } from '@rhyme/ui/components/button'
@@ -28,6 +28,7 @@ import { useCreateAndOpenFile } from '@/features/files/use-create-file'
 const searchSchema = z.object({
   view: z.enum(['mine', 'shared', 'trash']).catch('mine').default('mine'),
   folder: z.string().optional(),
+  layout: z.enum(['grid', 'list']).catch('grid').default('grid'),
 })
 
 const titles = {
@@ -48,7 +49,8 @@ export const Route = createFileRoute('/_app/files/')({
 })
 
 function FilesPage() {
-  const { view, folder: folderId } = Route.useSearch()
+  const { view, folder: folderId, layout } = Route.useSearch()
+  const navigate = Route.useNavigate()
   const { user } = Route.useRouteContext()
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<'recent' | 'name'>('recent')
@@ -155,7 +157,7 @@ function FilesPage() {
                 : undefined
             }
           />
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
             <SearchInput
               label="Search canvases"
               value={search}
@@ -185,8 +187,37 @@ function FilesPage() {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <div
+              className="flex items-center gap-1 rounded-lg border p-1"
+              role="group"
+              aria-label="Canvas view"
+            >
+              {(
+                [
+                  { value: 'grid', label: 'Grid view', icon: LayoutGrid },
+                  { value: 'list', label: 'List view', icon: List },
+                ] as const
+              ).map(({ value, label, icon: Icon }) => (
+                <Button
+                  key={value}
+                  size="icon-sm"
+                  variant={layout === value ? 'secondary' : 'ghost'}
+                  aria-label={label}
+                  aria-pressed={layout === value}
+                  onClick={() =>
+                    void navigate({
+                      search: (previous) => ({ ...previous, layout: value }),
+                    })
+                  }
+                >
+                  <Icon />
+                </Button>
+              ))}
+            </div>
           </div>
           <FileGrid
+            key={`${view}:${folderId ?? ''}`}
+            layout={layout}
             view={view}
             folderId={folderId}
             folders={tree}
