@@ -1,12 +1,7 @@
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@rhyme/ui/components/sidebar'
 import type { SessionUser } from '@/lib/auth'
 import { AppSidebar } from './app-sidebar'
 import type { FileView } from '@rhyme/trpc-client'
-import { WorkspaceBreadcrumbs } from '@/components/workspace-breadcrumbs'
+import { WorkspaceFrame } from './workspace-frame'
 import type { WorkspaceCrumb } from '@/components/workspace-breadcrumbs'
 
 export function WorkspaceShell({
@@ -33,24 +28,22 @@ export function WorkspaceShell({
   children: React.ReactNode
 }) {
   return (
-    <SidebarProvider>
-      <AppSidebar
-        user={user}
-        section={section}
-        chatId={chatId}
-        view={view}
-        folderId={folderId}
-      />
-      <SidebarInset className="h-svh min-w-0 overflow-hidden">
-        {!hideHeader && (
-          <header className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <SidebarTrigger className="-ml-1" />
-            <WorkspaceBreadcrumbs items={breadcrumbs ?? [{ label: title }]} />
-            {actions}
-          </header>
-        )}
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <WorkspaceFrame
+      sidebar={
+        <AppSidebar
+          user={user}
+          section={section}
+          chatId={chatId}
+          view={view}
+          folderId={folderId}
+        />
+      }
+      title={title}
+      hideHeader={hideHeader}
+      actions={actions}
+      breadcrumbs={breadcrumbs}
+    >
+      {children}
+    </WorkspaceFrame>
   )
 }

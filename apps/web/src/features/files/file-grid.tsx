@@ -2,11 +2,11 @@ import { FilePlus2, Search, Trash2, Users } from 'lucide-react'
 import { useFiles } from '@rhyme/hooks/queries'
 import type { FileView } from '@rhyme/trpc-client'
 import { Button } from '@rhyme/ui/components/button'
-import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { RefreshNotice } from '@/components/refresh-notice'
 import { RecoveryState } from '@/components/recovery-state'
 import { EmptyState } from '@/components/empty-state'
 import { FileCard } from './file-card'
+import { FileGridSkeleton, fileGridClassName } from './file-grid-skeleton'
 import type { FolderNode } from './folder-tree'
 import { useCreateAndOpenFile } from './use-create-file'
 
@@ -17,9 +17,6 @@ interface FileGridProps {
   search?: string
   sort?: 'recent' | 'name'
 }
-
-const GRID =
-  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-3'
 
 export function FileGrid({
   view,
@@ -35,15 +32,7 @@ export function FileGrid({
     refetch,
   } = useFiles({ view, folderId })
 
-  if (isPending) {
-    return (
-      <div className={GRID}>
-        {Array.from({ length: 8 }, (_, index) => (
-          <Skeleton key={index} className="aspect-[16/13] rounded-lg" />
-        ))}
-      </div>
-    )
-  }
+  if (isPending) return <FileGridSkeleton />
 
   if (!files)
     return (
@@ -90,7 +79,7 @@ export function FileGrid({
   return (
     <>
       {notice}
-      <div className={GRID}>
+      <div className={fileGridClassName}>
         {visible.map((file) => (
           <FileCard key={file.id} file={file} folders={folders} />
         ))}

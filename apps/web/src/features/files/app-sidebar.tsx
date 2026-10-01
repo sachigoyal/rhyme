@@ -2,17 +2,11 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import {
   ChevronsUpDown,
-  Activity,
-  MessageSquare,
-  Plus,
   Folder,
   FolderPlus,
-  LayoutGrid,
   MoreHorizontal,
   Pencil,
   Trash2,
-  Users,
-  Settings,
 } from 'lucide-react'
 import {
   useCreateFolder,
@@ -36,17 +30,14 @@ import {
   SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from '@rhyme/ui/components/sidebar'
-import { Button } from '@rhyme/ui/components/button'
 import { useCreateAndOpenFile } from './use-create-file'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Logo } from '@/components/logo'
 import { NameDialog } from '@/components/name-dialog'
 import { UserAvatar, UserMenu } from '@/components/user-menu'
 import { displayName } from '@/lib/auth'
@@ -56,12 +47,8 @@ import type { SessionUser } from '@/lib/auth'
 import { buildFolderTree, flattenFolderTree } from './folder-tree'
 import type { FolderNode } from './folder-tree'
 
-const views: Array<{ view: FileView; label: string; icon: typeof LayoutGrid }> =
-  [
-    { view: 'mine', label: 'Canvases', icon: LayoutGrid },
-    { view: 'shared', label: 'Shared with me', icon: Users },
-    { view: 'trash', label: 'Trash', icon: Trash2 },
-  ]
+import { WorkspaceSidebarHeader } from './workspace-frame'
+import { WorkspaceNavigation } from './workspace-navigation'
 
 interface AppSidebarProps {
   user: SessionUser
@@ -91,83 +78,16 @@ export function AppSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarHeader className="gap-0 p-0">
-        <Link
-          to="/"
-          aria-label="Home"
-          className="flex h-12 shrink-0 items-center justify-center border-b px-3"
-        >
-          <Logo />
-        </Link>
-        <div className="p-3">
-          <Button
-            size="lg"
-            variant="default"
-            className="w-full justify-start gap-2"
-            disabled={creatingCanvas}
-            onClick={() => create()}
-          >
-            <Plus className="size-4" />
-            New canvas
-          </Button>
-        </div>
-      </SidebarHeader>
-
+      <WorkspaceSidebarHeader
+        pending={creatingCanvas}
+        onCreate={() => create()}
+      />
       <SidebarContent className="px-1">
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {views.map(({ view: target, label, icon: Icon }) => (
-                <SidebarMenuItem key={target}>
-                  <SidebarMenuButton
-                    isActive={
-                      section === 'files' && view === target && !folderId
-                    }
-                    render={
-                      <Link to="/files" search={{ view: target }}>
-                        <Icon />
-                        {label}
-                      </Link>
-                    }
-                  />
-                </SidebarMenuItem>
-              ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={section === 'chats'}
-                  render={
-                    <Link to="/chats">
-                      <MessageSquare />
-                      <span>Conversations</span>
-                    </Link>
-                  }
-                />
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={section === 'activity'}
-                  render={
-                    <Link to="/activity">
-                      <Activity />
-                      <span>Agent activity</span>
-                    </Link>
-                  }
-                />
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={section === 'settings'}
-                  render={
-                    <Link to="/settings">
-                      <Settings />
-                      <span>Settings</span>
-                    </Link>
-                  }
-                />
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <WorkspaceNavigation
+          section={section}
+          view={view}
+          folderId={folderId}
+        />
 
         <SidebarGroup>
           <SidebarGroupLabel>Folders</SidebarGroupLabel>

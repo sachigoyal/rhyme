@@ -11,11 +11,13 @@ export function SearchInput({
   onChange,
   label,
   className,
+  disabled = false,
 }: {
   value: string
-  onChange: (value: string) => void
+  onChange?: (value: string) => void
   label: string
   className?: string
+  disabled?: boolean
 }) {
   return (
     <InputGroup className={className}>
@@ -23,11 +25,12 @@ export function SearchInput({
         aria-label={label}
         placeholder={`${label}…`}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
+        onChange={(event) => onChange?.(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && value) {
             event.preventDefault()
-            onChange('')
+            onChange?.('')
           }
         }}
       />
@@ -39,7 +42,7 @@ export function SearchInput({
           <InputGroupButton
             aria-label="Clear search"
             size="icon-xs"
-            onClick={() => onChange('')}
+            onClick={() => onChange?.('')}
           >
             <X />
           </InputGroupButton>

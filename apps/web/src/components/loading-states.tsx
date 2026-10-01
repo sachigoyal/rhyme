@@ -1,54 +1,43 @@
+import { Plus } from 'lucide-react'
+import type { FileView } from '@rhyme/trpc-client'
+import { Button } from '@rhyme/ui/components/button'
+import { WorkspaceFrame } from '@/features/files/workspace-frame'
+import { WorkspaceSidebarSkeleton } from '@/features/files/workspace-sidebar-skeleton'
+import { FilesPageSkeleton } from '@/features/files/files-page-skeleton'
+import type { WorkspaceSection } from '@/features/files/workspace-navigation'
 import { Skeleton } from '@rhyme/ui/components/skeleton'
 import { Logo } from './logo'
 
 export function AppSkeleton({
   children,
   hideHeader = false,
+  title = 'Canvases',
+  section = 'files',
+  view = 'mine',
 }: {
   children?: React.ReactNode
   hideHeader?: boolean
+  title?: string
+  section?: WorkspaceSection
+  view?: FileView
 }) {
   return (
-    <main
-      className="bg-background flex h-svh"
-      role="status"
-      aria-label="Loading workspace"
+    <WorkspaceFrame
+      sidebar={<WorkspaceSidebarSkeleton section={section} view={view} />}
+      title={title}
+      hideHeader={hideHeader}
+      loading
+      actions={
+        section === 'files' && view === 'mine' ? (
+          <Button size="sm" disabled>
+            <Plus />
+            New canvas
+          </Button>
+        ) : undefined
+      }
     >
-      <aside
-        className="hidden w-64 shrink-0 space-y-4 border-r p-3 md:block"
-        aria-hidden
-      >
-        <Logo />
-        <Skeleton className="h-8" />
-        {Array.from({ length: 5 }, (_, i) => (
-          <Skeleton key={i} className="h-5 w-3/4" />
-        ))}
-      </aside>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {!hideHeader && (
-          <div
-            className="flex h-12 shrink-0 items-center border-b px-3"
-            aria-hidden="true"
-          >
-            <Skeleton className="h-4 w-36" />
-          </div>
-        )}
-        {children ?? (
-          <div
-            className="space-y-4 px-4 py-4 sm:px-6 sm:py-5"
-            aria-hidden="true"
-          >
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-8 max-w-sm" />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }, (_, i) => (
-                <Skeleton key={i} className="aspect-[4/3] rounded-lg" />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </main>
+      {children ?? <FilesPageSkeleton title={title} view={view} />}
+    </WorkspaceFrame>
   )
 }
 
