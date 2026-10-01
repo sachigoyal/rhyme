@@ -31,22 +31,57 @@
 }
 
 .brand-loading-mark {
-  animation: brand-loading-turn 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  overflow: visible;
+}
+
+.brand-loading-piece {
+  animation: brand-loading-gather 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  transform-box: fill-box;
   transform-origin: center;
 }
 
-@keyframes brand-loading-turn {
+.brand-loading-piece-0 {
+  --brand-drift-x: 1.5px;
+  --brand-drift-y: -2px;
+  --brand-tilt: 0deg;
+}
+
+.brand-loading-piece-1 {
+  --brand-drift-x: -2px;
+  --brand-drift-y: -0.75px;
+  --brand-tilt: -6deg;
+  animation-delay: 100ms;
+}
+
+.brand-loading-piece-2 {
+  --brand-drift-x: 1px;
+  --brand-drift-y: 2px;
+  --brand-tilt: 5deg;
+  animation-delay: 200ms;
+}
+
+@keyframes brand-loading-gather {
   0%,
-  10% {
-    transform: rotate(0deg);
-  }
-  80%,
+  8%,
+  52%,
   100% {
-    transform: rotate(360deg);
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  22% {
+    transform: translate(var(--brand-drift-x), var(--brand-drift-y))
+      rotate(var(--brand-tilt)) scale(0.96);
+  }
+  38% {
+    transform: translate(0, 0) rotate(0deg) scale(1.025);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brand-loading-piece {
+    animation: none !important;
+    transform: none;
+  }
+
   *,
   *::before,
   *::after {

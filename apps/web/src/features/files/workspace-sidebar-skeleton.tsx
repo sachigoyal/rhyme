@@ -26,7 +26,7 @@ export function WorkspaceSidebarSkeleton({
 }) {
   return (
     <Sidebar className="border-r" aria-hidden="true">
-      <WorkspaceSidebarHeader pending />
+      <WorkspaceSidebarHeader pending loading />
       <SidebarContent className="px-1">
         <WorkspaceNavigation section={section} view={view} loading />
         <SidebarGroup>

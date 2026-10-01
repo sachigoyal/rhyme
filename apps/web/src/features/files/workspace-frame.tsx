@@ -56,9 +56,11 @@ export function WorkspaceFrame({
 
 export function WorkspaceSidebarHeader({
   pending = false,
+  loading = false,
   onCreate,
 }: {
   pending?: boolean
+  loading?: boolean
   onCreate?: () => void
 }) {
   return (
@@ -68,7 +70,7 @@ export function WorkspaceSidebarHeader({
         aria-label="Home"
         className="flex h-12 shrink-0 items-center justify-center border-b px-3"
       >
-        <Logo />
+        <Logo loading={loading} />
       </Link>
       <div className="p-3">
         <Button

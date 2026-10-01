@@ -52,7 +52,7 @@ export function CanvasSkeleton({ title }: { title?: string }) {
         className="flex h-12 shrink-0 items-center gap-2 border-b px-3"
         aria-hidden
       >
-        <Logo />
+        <Logo loading />
         {title ? (
           <p className="truncate text-sm font-medium">{title}</p>
         ) : (
