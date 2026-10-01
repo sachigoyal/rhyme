@@ -4,6 +4,7 @@ import { ArrowUpDown, Loader2, Plus, LayoutGrid, List } from 'lucide-react'
 import { z } from 'zod'
 import { useFolders } from '@rhyme/hooks/queries'
 import { Button, buttonVariants } from '@rhyme/ui/components/button'
+import { Tabs, TabsList, TabsTrigger } from '@rhyme/ui/components/tabs'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,7 +163,7 @@ function FilesPage() {
               label="Search canvases"
               value={search}
               onChange={setSearch}
-              className="max-w-sm"
+              className="h-8 max-w-sm"
             />
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -187,33 +188,33 @@ function FilesPage() {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <div
-              className="flex items-center gap-1 rounded-lg border p-1"
-              role="group"
-              aria-label="Canvas view"
+            <Tabs
+              value={layout}
+              onValueChange={(value) => {
+                if (value === 'grid' || value === 'list')
+                  void navigate({
+                    search: (previous) => ({ ...previous, layout: value }),
+                  })
+              }}
+              className="shrink-0"
             >
-              {(
-                [
-                  { value: 'grid', label: 'Grid view', icon: LayoutGrid },
-                  { value: 'list', label: 'List view', icon: List },
-                ] as const
-              ).map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  size="icon-sm"
-                  variant={layout === value ? 'secondary' : 'ghost'}
-                  aria-label={label}
-                  aria-pressed={layout === value}
-                  onClick={() =>
-                    void navigate({
-                      search: (previous) => ({ ...previous, layout: value }),
-                    })
-                  }
+              <TabsList aria-label="Canvas view">
+                <TabsTrigger
+                  value="grid"
+                  aria-label="Grid view"
+                  className="w-7"
                 >
-                  <Icon />
-                </Button>
-              ))}
-            </div>
+                  <LayoutGrid className="size-3.5" />
+                </TabsTrigger>
+                <TabsTrigger
+                  value="list"
+                  aria-label="List view"
+                  className="w-7"
+                >
+                  <List className="size-3.5" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
           <FileGrid
             key={`${view}:${folderId ?? ''}`}

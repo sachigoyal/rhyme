@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import {
+  Check,
   FolderInput,
   MoreHorizontal,
   Pencil,
@@ -57,21 +58,32 @@ export function FileCard({
 }: FileCardProps) {
   const pending = file.id.startsWith('pending:')
   const trashed = file.trashedAt !== null
+  const canSelect = !!onSelect && file.role === 'owner' && !pending
   const preview = <FilePreview file={file} compact={layout === 'list'} />
 
   return (
     <div
-      className={`group bg-card hover:border-primary/40 focus-within:border-primary relative flex overflow-hidden rounded-lg border transition-colors ${layout === 'list' ? 'flex-row items-center gap-3 p-3' : 'flex-col'} ${selected ? 'border-primary ring-1 ring-primary bg-primary/5' : ''}`}
+      className={`group bg-card hover:border-primary/40 focus-within:border-primary relative flex overflow-hidden rounded-xl border border-border/70 transition-[border-color,box-shadow,background-color] duration-200 hover:shadow-sm ${layout === 'list' ? 'flex-row items-center gap-3 p-3' : 'flex-col'} ${selected ? 'border-primary/60 ring-1 ring-primary/20 bg-primary/5' : ''}`}
     >
-      {onSelect && file.role === 'owner' && !pending && (
-        <input
-          type="checkbox"
+      {canSelect && (
+        <button
+          type="button"
+          role="checkbox"
           aria-label={`Select ${file.name}`}
-          checked={selected}
-          onChange={onSelect}
+          aria-checked={selected}
+          onClick={onSelect}
           disabled={selectionDisabled}
-          className={`z-10 size-4 shrink-0 cursor-pointer accent-primary ${layout === 'grid' ? 'absolute left-3 top-3' : 'relative'}`}
-        />
+          className={`z-10 grid size-8 shrink-0 place-items-center rounded-lg outline-none transition-opacity duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait ${layout === 'grid' ? 'absolute left-2 top-2' : 'relative'} ${selected ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100'}`}
+        >
+          <span
+            className={`grid size-4.5 place-items-center rounded-md border shadow-xs transition-colors ${selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card/95 text-transparent backdrop-blur-sm hover:border-primary'}`}
+          >
+            <Check className="size-3" strokeWidth={3} />
+          </span>
+        </button>
+      )}
+      {layout === 'list' && !canSelect && (
+        <span aria-hidden className="size-8 shrink-0" />
       )}
       {trashed || pending ? (
         preview

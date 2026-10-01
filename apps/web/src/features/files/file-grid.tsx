@@ -5,6 +5,7 @@ import {
   DropdownMenuTrigger,
 } from '@rhyme/ui/components/dropdown-menu'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   useTrashFile,
   useRestoreFile,
@@ -13,7 +14,16 @@ import {
 } from '@rhyme/hooks/mutations'
 import { toast } from '@rhyme/ui/components/toast'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { FilePlus2, FolderInput, Search, Trash2, Users } from 'lucide-react'
+import {
+  FilePlus2,
+  FolderInput,
+  Loader2,
+  RotateCcw,
+  Search,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react'
 import { useFiles } from '@rhyme/hooks/queries'
 import type { FileView } from '@rhyme/trpc-client'
 import { Button } from '@rhyme/ui/components/button'
@@ -162,123 +172,118 @@ export function FileGrid({
   return (
     <>
       {notice}
-      {selectable.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              aria-label="Select all visible canvases"
-              className="size-4 accent-primary"
-              checked={selection.length === selectable.length}
-              ref={(element) => {
-                if (element)
-                  element.indeterminate =
-                    selection.length > 0 && selection.length < selectable.length
-              }}
-              disabled={busy}
-              onChange={() =>
-                setSelected(
-                  selection.length === selectable.length
-                    ? new Set()
-                    : new Set(selectable.map((file) => file.id)),
-                )
-              }
-            />
-            {selection.length ? `${selection.length} selected` : 'Select all'}
-          </label>
-          {selection.length > 0 && (
-            <>
+      {selection.length > 0 &&
+        createPortal(
+          <div className="fixed inset-x-0 bottom-[max(1.5rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4 pointer-events-none">
+            <div
+              role="region"
+              aria-label="Canvas selection actions"
+              aria-busy={busy}
+              className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-border/70 bg-card/95 p-2 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.2)] backdrop-blur-xl"
+            >
+              <div className="flex items-center gap-2 pl-2 pr-3 text-sm">
+                <span className="grid size-6 place-items-center rounded-md bg-primary/10 text-xs font-semibold tabular-nums text-primary">
+                  {selection.length}
+                </span>
+                <span className="text-muted-foreground">selected</span>
+                {busy && (
+                  <Loader2
+                    className="size-3.5 animate-spin text-muted-foreground"
+                    aria-label="Updating canvases"
+                  />
+                )}
+              </div>
+              <span aria-hidden className="h-5 w-px bg-border" />
+              {view === 'trash' ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => run('restore')}
+                  >
+                    <RotateCcw />
+                    Restore
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={busy}
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    <Trash2 />
+                    Delete permanently
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          aria-label="Move selected canvases to folder"
+                        >
+                          <FolderInput />
+                          Move to folder
+                        </Button>
+                      }
+                    />
+                    <DropdownMenuContent
+                      side="top"
+                      align="center"
+                      sideOffset={12}
+                      className="max-h-72 overflow-y-auto"
+                    >
+                      <DropdownMenuItem onClick={() => run('move', null)}>
+                        No folder
+                      </DropdownMenuItem>
+                      {folders
+                        .filter((folder) => !folder.id.startsWith('pending:'))
+                        .map((folder) => (
+                          <DropdownMenuItem
+                            key={folder.id}
+                            onClick={() => run('move', folder.id)}
+                            style={{
+                              paddingLeft: `${0.5 + folder.depth * 0.75}rem`,
+                            }}
+                          >
+                            {folder.name}
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={busy}
+                    onClick={() => run('trash')}
+                  >
+                    <Trash2 />
+                    Move to trash
+                  </Button>
+                </>
+              )}
+              <span aria-hidden className="h-5 w-px bg-border" />
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon-sm"
+                aria-label="Clear selection"
                 disabled={busy}
                 onClick={() => setSelected(new Set())}
               >
-                Clear
+                <X />
               </Button>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {view === 'trash' ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => run('restore')}
-                    >
-                      Restore
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => setConfirmDelete(true)}
-                    >
-                      Delete permanently
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={busy}
-                            aria-label="Move selected canvases to folder"
-                          >
-                            <FolderInput />
-                            Move to folder
-                          </Button>
-                        }
-                      />
-                      <DropdownMenuContent
-                        align="end"
-                        className="max-h-72 overflow-y-auto"
-                      >
-                        <DropdownMenuItem onClick={() => run('move', null)}>
-                          No folder
-                        </DropdownMenuItem>
-                        {folders
-                          .filter((folder) => !folder.id.startsWith('pending:'))
-                          .map((folder) => (
-                            <DropdownMenuItem
-                              key={folder.id}
-                              onClick={() => run('move', folder.id)}
-                              style={{
-                                paddingLeft: `${0.5 + folder.depth * 0.75}rem`,
-                              }}
-                            >
-                              {folder.name}
-                            </DropdownMenuItem>
-                          ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={busy}
-                      onClick={() => run('trash')}
-                    >
-                      <Trash2 />
-                      Move to trash
-                    </Button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-          {busy && (
-            <span role="status" className="text-muted-foreground text-xs">
-              Updating canvases…
-            </span>
-          )}
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body,
+        )}
       <div
-        className={
-          layout === 'list' ? 'flex flex-col gap-2' : fileGridClassName
-        }
+        className={`${selection.length ? 'pb-28 ' : ''}${layout === 'list' ? 'flex flex-col gap-2' : fileGridClassName}`}
       >
         {visible.map((file) => (
           <FileCard

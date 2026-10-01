@@ -99,7 +99,7 @@ export function UserMenu({
       <DropdownMenuContent
         align="end"
         collisionPadding={8}
-        className="w-80 max-w-[calc(100vw-1rem)]"
+        className="w-60 max-w-[calc(100vw-1rem)]"
       >
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
