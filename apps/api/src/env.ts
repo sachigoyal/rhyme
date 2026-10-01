@@ -17,6 +17,7 @@ export interface Env {
   API_URL: string
   WEB_URL: string
   EMAIL_FROM: string
+  BYOK_ENCRYPTION_KEY?: string
   BETTER_AUTH_SECRET: string
   AI_MODEL: string
 }

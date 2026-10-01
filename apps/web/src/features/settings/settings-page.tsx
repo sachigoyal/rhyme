@@ -1,3 +1,4 @@
+import { AIConnectionsSettings } from './ai-connections'
 import { useId, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { useProfile, useSettings } from '@rhyme/hooks/queries'
@@ -183,6 +184,7 @@ export function SettingsPage({ user }: { user: SessionUser }) {
                     onChange={(openAssistant) => save({ openAssistant })}
                   />
                 </SettingsSection>
+                <AIConnectionsSettings />
                 <SettingsSection title="Account">
                   <form
                     onSubmit={(event) => {

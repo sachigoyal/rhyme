@@ -1,3 +1,4 @@
+import { aiConnectionsRouter } from './routers/ai-connections'
 import { chatsRouter } from './routers/chats'
 import { collaboratorsRouter } from './routers/collaborators'
 import { filesRouter } from './routers/files'
@@ -7,6 +8,7 @@ import { settingsRouter } from './routers/settings'
 import { router } from './trpc/init'
 
 export const appRouter = router({
+  aiConnections: aiConnectionsRouter,
   chats: chatsRouter,
   files: filesRouter,
   folders: foldersRouter,

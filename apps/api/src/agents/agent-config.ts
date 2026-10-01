@@ -53,9 +53,11 @@ export const agentConfigSchema = z
   .object({
     model: z
       .string()
-      .refine((id) => AGENT_MODELS.some((model) => model.id === id), {
-        message: 'Choose an available model',
-      }),
+      .trim()
+      .min(1)
+      .max(160)
+      .regex(/^[a-zA-Z0-9._:/@-]+$/),
+    connectionId: z.uuid().optional(),
     temperature: z.number().min(0).max(2),
     maxOutputTokens: z.number().int().min(256).max(8192),
     maxSteps: z.number().int().min(1).max(12),
@@ -63,7 +65,14 @@ export const agentConfigSchema = z
   })
   .strict()
   .superRefine((config, ctx) => {
+    if (config.connectionId) return
     const model = AGENT_MODELS.find((model) => model.id === config.model)
+    if (!model)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['model'],
+        message: 'Choose an available model',
+      })
     if (
       model &&
       !model.reasoningOptions.some(
@@ -82,6 +91,7 @@ export type AgentConfig = z.infer<typeof agentConfigSchema>
 export type AgentState = {
   status: 'ready' | 'running' | 'error'
   config?: AgentConfig
+  error?: string
 }
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
@@ -92,7 +102,17 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   reasoning: 'high',
 }
 
-export function defaultAgentConfig(modelId: string) {
+export function defaultAgentConfig(
+  modelId: string,
+  connectionId?: string,
+): AgentConfig {
+  if (connectionId)
+    return {
+      ...DEFAULT_AGENT_CONFIG,
+      model: modelId,
+      connectionId,
+      reasoning: 'off',
+    }
   const model = AGENT_MODELS.find((model) => model.id === modelId)
   if (!model) return DEFAULT_AGENT_CONFIG
   return {

@@ -26,6 +26,10 @@ catalog:
   superjson: ^2.2.2
   typescript: ^6.0.3
   zod: ^4.6.5
+  '@ai-sdk/openai': 4.0.83
+  '@ai-sdk/anthropic': 4.0.70
+  '@ai-sdk/google': 4.0.87
+  '@ai-sdk/openai-compatible': 3.0.61
 
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.11.5'
@@ -39,10 +43,15 @@ minimumReleaseAgeExclude:
   - hono@4.13.11
   - wrangler@4.143.0
   - '@ai-sdk/gateway@4.0.100'
-  - '@ai-sdk/provider-utils@5.0.51'
+  - '@ai-sdk/provider-utils@5.0.51 || 5.0.53'
   - ai@7.0.122
   - '@ai-sdk/mcp@2.0.62'
   - '@ai-sdk/react@4.0.125'
+  - '@ai-sdk/anthropic@4.0.70'
+  - '@ai-sdk/google@4.0.87'
+  - '@ai-sdk/openai-compatible@3.0.61'
+  - '@ai-sdk/openai@4.0.83'
+  - '@ai-sdk/provider@4.0.21'
 
 allowBuilds:
   esbuild: true

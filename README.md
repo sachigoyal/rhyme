@@ -41,6 +41,18 @@ Each conversation has its own Durable Object, scoped to its canvas and user. D1 
 
 The composer offers a model selector saved per conversation. Selecting a model uses its default generation settings and applies to the next response. Each turn retains its configuration across tool continuations. Text-only models receive canvas shape context without images; run analytics record the selected model.
 
+## Bring your own AI
+
+In **Settings → AI connections**, add OpenAI, Anthropic, Google Gemini, or any public HTTPS provider implementing OpenAI-compatible Chat Completions (for example, OpenRouter, Groq, or a hosted inference endpoint). Enter a key and comma-separated model IDs, then choose **Test and save**. The first model is checked with a small tool-calling request billed by the provider; all configured models appear in the assistant's model menu. Use the exact IDs available to your provider account. OpenAI uses the Responses API, including GPT-6.1 Sol, GPT-6 Astra, and GPT-6 Luna. Other providers use their native APIs. Enable canvas images only when all models in that connection support image input.
+
+Connections belong to the signed-in user, including on shared canvases. Keys are encrypted in D1 with AES-256-GCM and bound to the account and connection. APIs return only the last four characters. Keys never enter chat messages, Durable Object state, browser storage, or logs. Editing with a blank key keeps the existing key; a failed check preserves the existing connection. Removing a connection makes conversations using it request another model. The assistant never silently switches to a different provider or bills another key.
+
+Encryption derives a separate key from `BYOK_ENCRYPTION_KEY`, or from `BETTER_AUTH_SECRET` when the optional dedicated secret is absent. Use a stable random secret of at least 32 characters. Configure the same secret across Worker versions; changing the encryption secret requires users to re-enter saved keys. For a new deployment, set the dedicated secret before accepting connections. `.test` is ignored and is only a local credential file for manual testing.
+
+The UI distinguishes rejected keys, permission failures, unavailable models, exhausted credits/quota, rate limits, context limits, unsupported tools/images/settings, content-policy blocks, timeouts, connectivity failures, removed connections, and provider outages. Responses time out after two minutes; connection checks after 30 seconds. Retries are explicit. Provider failure logs contain only an event, provider or run IDs, and a safe error code.
+
+BYOK tests run against the installed Wrangler/Miniflare Workers runtime with isolated D1 and mocked provider responses. They verify all four provider APIs, encryption, secret-free responses, account isolation, key-preserving edits, failed-save rollback, model removal, and redirect rejection without using real API credentials.
+
 ## Validation
 
 Run `pnpm test`, `pnpm check-types`, `pnpm lint`, and `pnpm build`. Tests cover canvas-tool replay safety, input validation, shape IDs, nested coordinate moves, change summaries, and conversation-title generation safeguards. For schema changes, run `pnpm db:generate` followed by `pnpm db:migrate` to apply local D1 migrations. `pnpm --filter api exec wrangler deploy --dry-run` checks Worker packaging without deploying.

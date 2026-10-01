@@ -1,3 +1,4 @@
+import { useAIConnections } from '@rhyme/hooks/queries'
 import { useRef, useState } from 'react'
 import { useAgentChat } from '@cloudflare/ai-chat/react'
 import { useAgent } from 'agents/react'
@@ -23,6 +24,7 @@ export function useCanvasAgent(
   const [configSaving, setConfigSaving] = useState(false)
   const configInFlight = useRef(false)
   const recordChange = useRecordChatChange()
+  const connections = useAIConnections()
   const agent = useAgent<AgentState>(
     getCanvasAgentOptions(fileId, conversationId, env.apiUrl),
   )
@@ -46,7 +48,9 @@ export function useCanvasAgent(
     credentials: 'include',
     body: async () => {
       const turnConfig = configRef.current
-      const model = AGENT_MODELS.find((item) => item.id === turnConfig.model)
+      const model = turnConfig.connectionId
+        ? connections.data?.find((item) => item.id === turnConfig.connectionId)
+        : AGENT_MODELS.find((item) => item.id === turnConfig.model)
       return {
         config: turnConfig,
         canvas: await buildCanvasContext(editor, model?.vision ?? false),
@@ -168,6 +172,9 @@ export function useCanvasAgent(
 
   return {
     ...chat,
+    error:
+      chat.error ??
+      (agent.state?.error ? new Error(agent.state.error) : undefined),
     busy,
     usingTools: activeTools > 0,
     config,

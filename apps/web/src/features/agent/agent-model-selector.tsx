@@ -1,4 +1,6 @@
 import { ChevronDown, Loader2 } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { useAIConnections } from '@rhyme/hooks/queries'
 import { AGENT_MODELS, defaultAgentConfig } from 'api/agent-config'
 import type { AgentConfig } from 'api/agent-config'
 import { InputGroupButton } from '@rhyme/ui/components/input-group'
@@ -7,6 +9,10 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@rhyme/ui/components/dropdown-menu'
 
@@ -21,7 +27,14 @@ export function AgentModelSelector({
   disabled: boolean
   saving: boolean
 }) {
+  const connections = useAIConnections()
   const currentModel = AGENT_MODELS.find((model) => model.id === config.model)
+  const currentConnection = connections.data?.find(
+    (item) => item.id === config.connectionId,
+  )
+  const selected = config.connectionId
+    ? `${config.connectionId}|${config.model}`
+    : config.model
 
   return (
     <DropdownMenu>
@@ -33,7 +46,11 @@ export function AgentModelSelector({
             aria-label="Choose model"
             className="h-8 min-w-0 gap-1.5 rounded-lg px-2.5 text-sm font-normal text-muted-foreground"
           >
-            <span className="truncate">{currentModel?.label ?? 'Model'}</span>
+            <span className="max-w-48 truncate">
+              {config.connectionId
+                ? `${currentConnection?.name ?? 'Saved connection'} · ${config.model}`
+                : (currentModel?.label ?? 'Model')}
+            </span>
             {saving ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
@@ -45,24 +62,61 @@ export function AgentModelSelector({
       <DropdownMenuContent
         side="top"
         align="start"
-        className="w-48 border shadow-none ring-0"
+        className="max-h-96 w-72 overflow-y-auto border shadow-none ring-0"
       >
         <DropdownMenuRadioGroup
-          value={config.model}
-          onValueChange={(model) => {
-            if (model !== config.model) void onSelect(defaultAgentConfig(model))
+          value={selected}
+          onValueChange={(value) => {
+            if (value === selected) return
+            const [connectionId, model] = value.split('|')
+            void onSelect(
+              model
+                ? defaultAgentConfig(model, connectionId)
+                : defaultAgentConfig(value),
+            )
           }}
         >
-          {AGENT_MODELS.map((model) => (
-            <DropdownMenuRadioItem
-              key={model.id}
-              value={model.id}
-              disabled={disabled}
-            >
-              {model.label}
-            </DropdownMenuRadioItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Rhyme models</DropdownMenuLabel>
+            {AGENT_MODELS.map((model) => (
+              <DropdownMenuRadioItem
+                key={model.id}
+                value={model.id}
+                disabled={disabled}
+              >
+                {model.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuGroup>
+          {connections.data?.map((connection) => (
+            <DropdownMenuGroup key={connection.id}>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>
+                {connection.name} · Your API key
+              </DropdownMenuLabel>
+              {connection.models.map((model) => (
+                <DropdownMenuRadioItem
+                  key={model}
+                  value={`${connection.id}|${model}`}
+                  disabled={disabled}
+                >
+                  {model}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuGroup>
           ))}
         </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          {connections.isError && (
+            <DropdownMenuItem onClick={() => void connections.refetch()}>
+              Connections unavailable · Retry
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem render={<Link to="/settings" />}>
+            Manage AI connections
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,4 +1,5 @@
 import { Component, useEffect, useRef, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react'
 import type { Editor } from 'tldraw'
@@ -220,6 +221,16 @@ export function AgentChat({
                         <RotateCcw className="size-3" />
                         Try again
                       </Button>
+                      {chat.config.connectionId && (
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          className="mt-2 ml-2"
+                          render={<Link to="/settings" />}
+                        >
+                          AI settings
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </MessageScrollerItem>
