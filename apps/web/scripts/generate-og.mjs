@@ -2,7 +2,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { create } from 'fontkit'
 import { Resvg } from '@resvg/resvg-js'
 import { seoPages } from '../src/lib/seo.ts'
-import { brandMarkPath, brandWordmarkPath } from '../src/components/brand.ts'
+import {
+  brandMarkPath,
+  brandWordmarkDotPath,
+  brandWordmarkPath,
+} from '../src/components/brand.ts'
 
 const fontData = await readFile(new URL('./fonts/Geist.ttf', import.meta.url))
 const regular = create(fontData).getVariation({ wght: 400 })
@@ -204,7 +208,7 @@ function imageSvg(page) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
     <rect width="1200" height="630" fill="#ffffff"/>
     <g transform="translate(64 64) scale(1.35)"><path d="${brandMarkPath}" fill="${primary}"/></g>
-    <g transform="translate(118 63) scale(1.14)"><path d="${brandWordmarkPath}" fill="${ink}"/></g>
+    <g transform="translate(118 63) scale(1.14)"><path d="${brandWordmarkPath}" fill="${ink}" fill-rule="evenodd"/><path d="${brandWordmarkDotPath}" fill="${primary}"/></g>
     ${page.imageTitle.map((line, i) => text(line, 64, titleY + i * 65, size, ink, true)).join('')}
     ${descriptionLines.map((line, i) => text(line, 67, titleY + page.imageTitle.length * 65 + 14 + i * 29, 21, muted)).join('')}
     <g transform="translate(760 158)">${illustration(page.id)}</g>

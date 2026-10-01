@@ -1,5 +1,5 @@
 import type { EmailOTPOptions } from 'better-auth/plugins/email-otp'
-import { emailLogo } from './brand.ts'
+import { emailLogo, emailLogoDark } from './brand.ts'
 
 export type VerificationPurpose = Parameters<
   EmailOTPOptions['sendVerificationOTP']
@@ -64,46 +64,70 @@ export function verificationCodeEmail({
         disposition: 'inline' as const,
         contentId: 'rhyme-logo',
       },
+      {
+        content: emailLogoDark,
+        filename: 'rhyme-logo-dark.png',
+        type: 'image/png',
+        disposition: 'inline' as const,
+        contentId: 'rhyme-logo-dark',
+      },
     ],
     html: `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>${copy.subject}</title>
     <style>
+      :root { color-scheme:light dark; supported-color-schemes:light dark; }
       @media only screen and (max-width:480px) {
         .email-content { padding:28px 24px !important; }
       }
+      @media (prefers-color-scheme:dark) {
+        .email-background { background-color:#171717 !important; color:#fafafa !important; }
+        .email-muted { color:#a3a3a3 !important; }
+        .email-header { border-color:#383838 !important; }
+        .email-code { background-color:#322c3e !important; border-color:#454545 !important; }
+        .email-code-text { color:#ded4eb !important; }
+        .logo-light { display:none !important; }
+        .logo-dark { display:block !important; max-height:none !important; overflow:visible !important; }
+      }
     </style>
   </head>
-  <body style="margin:0;padding:0;width:100%;background-color:#ffffff;color:#262626;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
+  <body class="email-background" style="margin:0;padding:0;width:100%;background-color:#ffffff;color:#262626;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;">
     <div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;" aria-hidden="true">${copy.preview}</div>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">
+    <table class="email-background" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">
       <tr><td align="center" style="padding:16px 0;">
         <!--[if mso]><table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;">
           <tr><td class="email-content" style="padding:32px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr><td style="padding-bottom:28px;border-bottom:1px solid #e5e5e5;">
-                <img src="cid:rhyme-logo" alt="Rhyme" width="132" height="32" style="display:block;border:0;outline:none;color:#262626;font-family:Georgia,'Times New Roman',serif;font-size:26px;">
+              <tr><td class="email-header" style="padding-bottom:28px;border-bottom:1px solid #e5e5e5;">
+                <div class="logo-light">
+                  <img src="cid:rhyme-logo" alt="Rhyme" width="125" height="32" style="display:block;border:0;outline:none;color:#262626;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:26px;">
+                </div>
+                <!--[if !mso]><!-->
+                <div class="logo-dark" style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+                  <img src="cid:rhyme-logo-dark" alt="Rhyme" width="125" height="32" style="display:block;border:0;outline:none;color:#fafafa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:26px;">
+                </div>
+                <!--<![endif]-->
               </td></tr>
               <tr><td style="padding-top:28px;">
                 <h1 style="margin:0;font-size:24px;line-height:32px;font-weight:600;letter-spacing:-0.5px;">${copy.title}</h1>
-                <p style="margin:12px 0 0;font-size:14px;line-height:22px;color:#737373;">${copy.description}</p>
+                <p class="email-muted" style="margin:12px 0 0;font-size:14px;line-height:22px;color:#737373;">${copy.description}</p>
               </td></tr>
               <tr><td style="padding-top:24px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                  <tr><td align="center" bgcolor="#eeeaf4" style="padding:18px 12px;background-color:#eeeaf4;border:1px solid #e7e1ef;border-radius:8px;">
-                    <p aria-label="Verification code" style="margin:0;padding-left:6px;color:#514569;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-size:32px;line-height:44px;font-weight:600;letter-spacing:6px;">${code}</p>
+                  <tr><td class="email-code" align="center" bgcolor="#eeeaf4" style="padding:18px 12px;background-color:#eeeaf4;border:1px solid #e7e1ef;border-radius:8px;">
+                    <p class="email-code-text" aria-label="Verification code" style="margin:0;padding-left:6px;color:#514569;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;font-size:32px;line-height:44px;font-weight:600;letter-spacing:6px;">${code}</p>
                   </td></tr>
                 </table>
-                <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#737373;">${expiry} Do not share this code.</p>
+                <p class="email-muted" style="margin:16px 0 0;font-size:13px;line-height:20px;color:#737373;">${expiry} Do not share this code.</p>
               </td></tr>
               <tr><td style="padding-top:28px;">
-                <p style="margin:0;font-size:13px;line-height:20px;color:#737373;">${notice}</p>
+                <p class="email-muted" style="margin:0;font-size:13px;line-height:20px;color:#737373;">${notice}</p>
               </td></tr>
             </table>
           </td></tr>

@@ -1,5 +1,10 @@
 import { cn } from '@rhyme/ui/lib/utils'
-import { brandMarkPath, brandWordmarkPath, brandWordmarkViewBox } from './brand'
+import {
+  brandMarkPath,
+  brandWordmarkDotPath,
+  brandWordmarkPath,
+  brandWordmarkViewBox,
+} from './brand'
 
 export function Logo({
   className,
@@ -24,7 +29,8 @@ export function Logo({
         fill="currentColor"
         aria-hidden="true"
       >
-        <path d={brandWordmarkPath} />
+        <path d={brandWordmarkPath} fillRule="evenodd" />
+        <path d={brandWordmarkDotPath} className="text-primary" />
       </svg>
     </div>
   )

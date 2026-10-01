@@ -1,4 +1,4 @@
-export const SEO_IMAGE_VERSION = 1
+export const SEO_IMAGE_VERSION = 2
 
 export interface SeoPage {
   id: string

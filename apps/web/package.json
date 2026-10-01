@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite dev",
     "generate-routes": "tsr generate",
-    "build": "pnpm generate:og && vite build && pnpm generate:404 && pnpm check:seo",
+    "build": "pnpm generate:brand && pnpm generate:email-logo && pnpm generate:og && vite build && pnpm generate:404 && pnpm check:seo",
     "generate:404": "node scripts/generate-404.mjs",
     "generate:og": "node --experimental-strip-types scripts/generate-og.mjs",
     "check:seo": "node --experimental-strip-types scripts/check-seo.mjs",
@@ -16,6 +16,7 @@
     "check-types": "tsr generate && tsc --noEmit",
     "test": "node --test --test-force-exit tests/*.test.mjs",
     "test:ui": "node --test tests/*.browser.mjs",
+    "generate:brand": "node --experimental-strip-types scripts/generate-brand.mjs",
     "generate:email-logo": "node scripts/generate-email-logo.mjs"
   },
   "dependencies": {
