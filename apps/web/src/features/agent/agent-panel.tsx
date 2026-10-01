@@ -148,17 +148,17 @@ export function AgentPanel({
   return (
     <section
       className="bg-background flex h-full min-h-0 flex-col"
-      aria-label="Canvas assistant"
+      aria-label="Rhyme"
     >
-      <div className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
+      <div className="flex shrink-0 items-center gap-2 border-b p-2">
         <AgentFace status={status} className="size-8" />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-medium">Rhyme assistant</h2>
-          <p className="text-muted-foreground text-[11px]" role="status">
-            {status === 'idle'
-              ? 'Draw, edit, and organize shapes'
-              : agentStatusLabels[status]}
-          </p>
+          <h2 className="truncate text-sm font-medium">Rhyme</h2>
+          {status !== 'idle' && (
+            <p className="text-muted-foreground text-[11px]" role="status">
+              {agentStatusLabels[status]}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-0">
           <Button
@@ -186,7 +186,7 @@ export function AgentPanel({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Close assistant"
+            aria-label="Close Rhyme"
             onClick={onClose}
           >
             <X className="size-3.5" />
@@ -445,11 +445,7 @@ function EmptyChat({
         viewportClassName="[&>div]:block!"
         viewportProps={{ 'aria-label': 'Assistant suggestions' }}
       >
-        <AgentEmptyState
-          status={pending ? 'connecting' : 'idle'}
-          disabled={pending}
-          onSubmit={submit}
-        />
+        <AgentEmptyState disabled={pending} onSubmit={submit} />
       </ScrollArea>
       <AgentComposer
         draft={draft}

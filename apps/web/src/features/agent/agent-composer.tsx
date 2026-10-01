@@ -13,18 +13,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@rhyme/ui/components/tooltip'
-import { AgentFace } from './agent-face'
-import type { AgentStatus } from './agent-status'
 import { AgentModelSelector } from './agent-model-selector'
 
 const SUGGESTIONS = [
   {
-    label: 'Create a mind map',
+    label: 'Mind map',
     prompt:
       'Create a clear mind map for a new project idea. Start with goals, users, and next steps.',
   },
   {
-    label: 'Create a flowchart',
+    label: 'Flowchart',
     prompt: 'Sketch a simple sign-up flow as a diagram with connected steps.',
   },
   {
@@ -37,36 +35,34 @@ const SUGGESTIONS = [
 export function AgentEmptyState({
   onSubmit,
   disabled,
-  status = 'idle',
 }: {
   onSubmit: (text: string) => void
   disabled?: boolean
-  status?: AgentStatus
 }) {
   return (
-    <div className="flex min-h-full flex-col justify-center px-3 py-5">
-      <AgentFace status={status} className="mb-5 size-12" />
-      <h3 className="text-lg font-medium tracking-tight">Canvas assistant</h3>
-      <p className="text-muted-foreground mt-2 text-sm leading-6">
-        Create diagrams or edit shapes using a prompt.
+    <div className="flex min-h-full flex-col justify-center px-4 py-5">
+      <h3 className="text-base font-medium tracking-tight">
+        What shall we make?
+      </h3>
+      <p className="text-muted-foreground mt-1.5 text-sm leading-5">
+        Turn an idea into a diagram, or reshape what’s here.
       </p>
-      <div className="mt-6 flex flex-col gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {SUGGESTIONS.map((suggestion) => (
           <Button
             key={suggestion.label}
             variant="outline"
-            className="h-11 justify-between rounded-lg px-3 text-sm font-normal shadow-none"
+            size="sm"
+            className="rounded-full font-normal shadow-none"
             disabled={disabled}
             onClick={() => onSubmit(suggestion.prompt)}
           >
             {suggestion.label}
-            <ArrowUp className="size-3 -rotate-45 text-muted-foreground" />
           </Button>
         ))}
       </div>
-      <p className="text-muted-foreground mt-6 text-[11px] leading-5">
-        The assistant can read the canvas and your selection. Use Undo to revert
-        its edits.
+      <p className="text-muted-foreground mt-4 text-[11px] leading-5">
+        Works with your canvas and selection. Undo any change.
       </p>
     </div>
   )
@@ -138,9 +134,9 @@ export function AgentComposer({
       >
         <InputGroupTextarea
           ref={textareaRef}
-          aria-label="Message the assistant"
+          aria-label="Message Rhyme"
           aria-describedby={hintId}
-          placeholder="Describe a change…"
+          placeholder="Ask Rhyme…"
           value={draft}
           rows={1}
           onChange={(event) => onDraft(event.target.value)}
@@ -164,7 +160,7 @@ export function AgentComposer({
         >
           <span id={hintId} className="sr-only">
             Press Enter to send. Shift + Enter adds a new line. You can edit
-            your draft while the assistant is responding or reconnecting.
+            your draft while Rhyme is responding or reconnecting.
           </span>
           <div className="flex min-w-0 items-center gap-2">
             <AgentModelSelector

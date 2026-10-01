@@ -44,7 +44,7 @@ function SignInPage() {
               { icon: Check, label: 'Automatic saving' },
               {
                 icon: Sparkles,
-                label: 'Canvas assistant',
+                label: 'Rhyme',
               },
               { icon: LayoutTemplate, label: 'Viewer and editor permissions' },
             ].map(({ icon: Icon, label }) => (

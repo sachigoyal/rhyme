@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { Button } from '@rhyme/ui/components/button'
 import { cn } from '@rhyme/ui/lib/utils'
 import { AgentFace } from './agent-face'
@@ -7,22 +8,19 @@ import type { AgentStatus } from './agent-status'
 export function AgentLauncher({
   status = 'idle',
   open,
-  onClick,
+  ...props
 }: {
   status?: AgentStatus
   open: boolean
-  onClick: () => void
-}) {
+} & ComponentProps<typeof Button>) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon"
-      onClick={onClick}
+      {...props}
       aria-label={
-        open
-          ? 'Close Rhyme assistant'
-          : `Open Rhyme assistant: ${agentStatusLabels[status]}`
+        open ? 'Close Rhyme' : `Open Rhyme: ${agentStatusLabels[status]}`
       }
       aria-expanded={open}
       className={cn(
@@ -39,7 +37,7 @@ export function AgentLauncher({
             : 'opacity-100',
         )}
       >
-        {open ? 'Close assistant' : agentStatusLabels[status]}
+        {open ? 'Close Rhyme' : agentStatusLabels[status]}
       </span>
     </Button>
   )

@@ -17,8 +17,8 @@ export const seoPages = {
     path: '/',
     title: 'Rhyme — Online whiteboard with a canvas assistant',
     description:
-      'Draw diagrams, organize ideas, and add images on an infinite canvas. Save your work, share viewer or editor access, and edit shapes with the Rhyme assistant.',
-    imageTitle: ['Online whiteboard.', 'Canvas assistant.'],
+      'Draw diagrams, organize ideas, and add images on an infinite canvas. Save your work, share viewer or editor access, and edit shapes with Rhyme.',
+    imageTitle: ['Online whiteboard.', 'Rhyme.'],
     imageDescription: 'Draw diagrams. Share canvases. Edit with the assistant.',
     imageAlt:
       'Rhyme online whiteboard with connected shapes and a canvas assistant',
@@ -98,7 +98,7 @@ export const seoPages = {
     path: '/chats',
     title: 'Conversations · Rhyme',
     description:
-      'Review your Rhyme assistant conversations, view messages and saved canvas changes, or continue a conversation.',
+      'Review your Rhyme conversations, view messages and saved canvas changes, or continue a conversation.',
     imageTitle: ['Canvas conversations.'],
     imageDescription: 'Review messages and continue canvas edits.',
     imageAlt:
@@ -109,7 +109,7 @@ export const seoPages = {
     path: '/activity',
     title: 'Agent activity · Rhyme',
     description:
-      'Review Rhyme assistant usage across your canvases, including agent runs, canvas actions, token usage, and average run time.',
+      'Review Rhyme usage across your canvases, including agent runs, canvas actions, token usage, and average run time.',
     imageTitle: ['Agent activity.'],
     imageDescription: 'Usage and performance across your canvases.',
     imageAlt: 'Rhyme agent activity preview with usage and performance metrics',

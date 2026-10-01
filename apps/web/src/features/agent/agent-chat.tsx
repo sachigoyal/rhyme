@@ -182,7 +182,6 @@ export function AgentChat({
               {chat.messages.length === 0 ? (
                 <MessageScrollerItem messageId="empty">
                   <AgentEmptyState
-                    status={status}
                     disabled={!chat.connected || chat.configSaving}
                     onSubmit={submit}
                   />
