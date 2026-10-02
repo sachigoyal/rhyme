@@ -34,6 +34,28 @@ export const seoPages = {
     imageDescription: 'Save canvases and access your workspace.',
     imageAlt: 'Rhyme sign-in preview with an email verification form',
   },
+  privacy: {
+    id: 'privacy',
+    path: '/privacy',
+    title: 'Privacy policy · Rhyme',
+    description:
+      'How Rhyme, a personal learning project, handles sign-in details, drawings, browser storage, and AI conversations.',
+    imageTitle: ['Your privacy.'],
+    imageDescription: 'How this personal learning project handles your data.',
+    imageAlt: 'Rhyme privacy policy preview',
+    indexable: true,
+  },
+  terms: {
+    id: 'terms',
+    path: '/terms',
+    title: 'Terms of Service · Rhyme',
+    description:
+      'Simple expectations for using Rhyme, an experimental personal whiteboard project built for learning.',
+    imageTitle: ['A learning project.'],
+    imageDescription: 'Simple expectations for using Rhyme.',
+    imageAlt: 'Rhyme Terms of Service preview',
+    indexable: true,
+  },
   onboarding: {
     id: 'onboarding',
     path: '/onboarding',
@@ -221,7 +243,7 @@ export function createSeoHead(
       { name: 'twitter:description', content: page.description },
       { name: 'twitter:image', content: image },
       { name: 'twitter:image:alt', content: page.imageAlt },
-      ...(page.indexable && canIndexSite(origin, allowIndexing)
+      ...(page.id === 'home' && indexable
         ? [
             {
               'script:ld+json': {
@@ -250,6 +272,6 @@ export function createSeoHead(
           ]
         : []),
     ],
-    links: page.indexable ? [{ rel: 'canonical', href: `${origin}/` }] : [],
+    links: page.indexable ? [{ rel: 'canonical', href: url }] : [],
   }
 }

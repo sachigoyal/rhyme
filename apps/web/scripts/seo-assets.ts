@@ -5,6 +5,8 @@ import { canIndexSite, normalizeSiteUrl, seoPages } from '../src/lib/seo.ts'
 export const seoPrerenderPages = [
   '/',
   '/sign-in',
+  '/privacy',
+  '/terms',
   '/onboarding',
   '/auth/complete',
   '/files',
@@ -13,9 +15,12 @@ export const seoPrerenderPages = [
   '/settings',
 ].map((path) => ({
   path,
-  sitemap: { exclude: path !== '/' },
+  sitemap: { exclude: !['/', '/privacy', '/terms'].includes(path) },
   prerender: {
-    headers: { 'X-TSS_SHELL': 'true' },
+    headers:
+      path === '/privacy' || path === '/terms'
+        ? undefined
+        : { 'X-TSS_SHELL': 'true' },
     crawlLinks: false,
     outputPath: path === '/' ? '/index.html' : `${path}.html`,
   },

@@ -5,6 +5,8 @@ import { seoPages } from '../src/lib/seo.ts'
 const outputs = {
   'index.html': 'home',
   'sign-in.html': 'signIn',
+  'privacy.html': 'privacy',
+  'terms.html': 'terms',
   'onboarding.html': 'onboarding',
   'auth/complete.html': 'authComplete',
   'files.html': 'files',
@@ -77,6 +79,15 @@ for (const [file, key] of Object.entries(outputs)) {
       /<h1\b[^>]*>Page not found<\/h1>/,
       `${file}: missing error heading`,
     )
+  if (page.id === 'privacy' || page.id === 'terms') {
+    assert.match(
+      html,
+      page.id === 'privacy'
+        ? /<h1\b[^>]*>Privacy policy<\/h1>/
+        : /<h1\b[^>]*>Terms of Service<\/h1>/,
+      `${file}: missing policy content`,
+    )
+  }
   process.stdout.write(`${file}: metadata verified\n`)
 }
 

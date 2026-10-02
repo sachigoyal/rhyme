@@ -18,6 +18,7 @@ export interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  ssr: true,
   beforeLoad: ({ location }) => ({ seoLocation: location.href }),
   head: ({ match }) => {
     const seo = createSeoHead(

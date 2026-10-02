@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AppActivityRouteImport } from './routes/_app/activity'
 import { Route as AppChatsRouteImport } from './routes/_app/chats'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
@@ -34,9 +36,19 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppActivityRoute = AppActivityRouteImport.update({
@@ -73,7 +85,9 @@ const AppFilesFileIdRoute = AppFilesFileIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/activity': typeof AppActivityRoute
   '/chats': typeof AppChatsRoute
   '/settings': typeof AppSettingsRoute
@@ -84,7 +98,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/activity': typeof AppActivityRoute
   '/chats': typeof AppChatsRoute
   '/settings': typeof AppSettingsRoute
@@ -97,7 +113,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
   '/sign-in': typeof SignInRoute
+  '/terms': typeof TermsRoute
   '/_app/activity': typeof AppActivityRoute
   '/_app/chats': typeof AppChatsRoute
   '/_app/settings': typeof AppSettingsRoute
@@ -110,7 +128,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/onboarding'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/activity'
     | '/chats'
     | '/settings'
@@ -121,7 +141,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/onboarding'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/activity'
     | '/chats'
     | '/settings'
@@ -133,7 +155,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/onboarding'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/_app/activity'
     | '/_app/chats'
     | '/_app/settings'
@@ -146,7 +170,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  PrivacyRoute: typeof PrivacyRoute
   SignInRoute: typeof SignInRoute
+  TermsRoute: typeof TermsRoute
   AuthCompleteRoute: typeof AuthCompleteRoute
 }
 
@@ -173,11 +199,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-in': {
       id: '/sign-in'
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/activity': {
@@ -247,7 +287,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  PrivacyRoute: PrivacyRoute,
   SignInRoute: SignInRoute,
+  TermsRoute: TermsRoute,
   AuthCompleteRoute: AuthCompleteRoute,
 }
 export const routeTree = rootRouteImport

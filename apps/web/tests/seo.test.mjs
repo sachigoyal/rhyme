@@ -14,19 +14,27 @@ const meta = (head, key) =>
   head.meta.find((entry) => entry.name === key || entry.property === key)
     ?.content
 
-test('only the public whiteboard is eligible for indexing and the sitemap', () => {
+test('the whiteboard and policy pages are indexable while workspace routes stay private', () => {
+  const publicPages = new Set(['home', 'privacy', 'terms'])
   for (const page of Object.values(seoPages)) {
     const head = createSeoHead(page, origin)
-    assert.equal(meta(head, 'robots').startsWith('index,'), page.id === 'home')
-    assert.equal(head.links.length, page.id === 'home' ? 1 : 0)
+    assert.equal(
+      meta(head, 'robots').startsWith('index,'),
+      publicPages.has(page.id),
+    )
+    assert.equal(head.links.length, publicPages.has(page.id) ? 1 : 0)
+    if (publicPages.has(page.id))
+      assert.equal(head.links[0].href, new URL(page.path, origin).href)
     assert.equal(
       head.meta.some((entry) => 'script:ld+json' in entry),
       page.id === 'home',
     )
   }
   const sitemap = sitemapXml(origin)
-  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 1)
+  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 3)
   assert.ok(sitemap.includes(`${origin}/</loc>`))
+  assert.ok(sitemap.includes(`${origin}/privacy</loc>`))
+  assert.ok(sitemap.includes(`${origin}/terms</loc>`))
   assert.ok(robotsTxt(origin).includes(`Sitemap: ${origin}/sitemap.xml`))
 })
 
