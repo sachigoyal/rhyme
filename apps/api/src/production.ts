@@ -5,7 +5,7 @@ import app from './index'
 export { CanvasAgent } from './agents/canvas-agent'
 
 const apiPath =
-  /^(?:\/auth\/|\/trpc\/|\/profile\/|\/files\/[^/]+\/(?:assets|thumbnail|agent)(?:\/|$)|\/assets\/[0-9a-f-]{36}$)/i
+  /^(?:\/auth\/(?!complete(?:\.html)?\/?$)|\/trpc\/|\/profile\/|\/files\/[^/]+\/(?:assets|thumbnail|agent)(?:\/|$)|\/assets\/[0-9a-f-]{36}$)/i
 
 export default {
   fetch(request, env, ctx) {
