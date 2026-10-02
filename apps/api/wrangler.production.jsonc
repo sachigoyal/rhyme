@@ -15,13 +15,20 @@
     "API_URL": "https://rhyme.sachi.dev",
     "WEB_URL": "https://rhyme.sachi.dev",
     "EMAIL_FROM": "auth@rhyme.sachi.dev",
+    "AI_MONTHLY_TOKEN_LIMIT": "100000",
     "AI_MODEL": "@cf/moonshotai/kimi-k2.6",
   },
   "assets": {
     "directory": "../web/dist/client",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/auth/*", "/trpc/*", "/profile/*", "/files/*", "/assets/*"],
+    "run_worker_first": [
+      "/auth/*",
+      "/trpc/*",
+      "/profile/*",
+      "/files/*",
+      "/assets/*",
+    ],
   },
   "d1_databases": [
     {

@@ -19,6 +19,7 @@ export interface Env {
   EMAIL_FROM: string
   BYOK_ENCRYPTION_KEY?: string
   BETTER_AUTH_SECRET: string
+  AI_MONTHLY_TOKEN_LIMIT?: string
   AI_MODEL: string
 }
 

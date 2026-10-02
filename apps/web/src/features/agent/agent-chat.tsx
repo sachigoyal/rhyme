@@ -14,6 +14,14 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from '@rhyme/ui/components/message-scroller'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@rhyme/ui/components/dialog'
+import { AIConnectionsSettings } from '../settings/ai-connections'
 import { ActivityIndicator, pendingActivity } from './agent-activity'
 import { resolveAgentStatus } from './agent-status'
 import type { AgentStatus } from './agent-status'
@@ -91,6 +99,7 @@ export function AgentChat({
   layout?: 'panel' | 'workspace'
 }) {
   const chat = useCanvasAgent(fileId, conversationId, editor, initialMessages)
+  const [connectionsOpen, setConnectionsOpen] = useState(false)
   const [localDraft, setLocalDraft] = useState('')
   const draft = controlledDraft ?? localDraft
   const setDraft = onDraft ?? setLocalDraft
@@ -162,6 +171,37 @@ export function AgentChat({
 
   return (
     <>
+      {chat.quotaExceeded && (
+        <div
+          role="status"
+          className="bg-muted/40 space-y-2 border-b px-4 py-3 text-xs"
+        >
+          <p className="font-medium">Free AI allowance reached</p>
+          <p className="text-muted-foreground leading-5">
+            Add your own API key and select its model to keep chatting. Your
+            free allowance resets next month (UTC).
+          </p>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => setConnectionsOpen(true)}
+          >
+            Add your API key
+          </Button>
+        </div>
+      )}
+      <Dialog open={connectionsOpen} onOpenChange={setConnectionsOpen}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Continue with your own API key</DialogTitle>
+            <DialogDescription>
+              Connect your provider, then choose its model in the assistant.
+              Usage is billed to your provider account.
+            </DialogDescription>
+          </DialogHeader>
+          <AIConnectionsSettings />
+        </DialogContent>
+      </Dialog>
       {chat.connectionError && (
         <div
           role="status"
@@ -213,7 +253,7 @@ export function AgentChat({
                   <ActivityIndicator label={activity} />
                 </MessageScrollerItem>
               )}
-              {chat.error && !busy && (
+              {chat.error && !busy && !chat.quotaExceeded && (
                 <MessageScrollerItem messageId="error">
                   <div className="bg-muted/40 flex items-start gap-2 rounded-xl border p-3 text-xs">
                     <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />

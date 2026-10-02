@@ -228,6 +228,8 @@ export function useCanvasAgent(
 
   return {
     ...chat,
+    quotaExceeded:
+      agent.state?.errorCode === 'free_quota' && !config.connectionId,
     error:
       chat.error ??
       (agent.state?.error ? new Error(agent.state.error) : undefined),

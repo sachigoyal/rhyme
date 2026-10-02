@@ -1,6 +1,7 @@
 {
   "name": "rhyme",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "turbo run dev",

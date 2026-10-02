@@ -9,6 +9,7 @@
     "API_URL": "http://localhost:8787",
     "WEB_URL": "http://localhost:3000",
     "EMAIL_FROM": "auth@rhyme.localhost",
+    "AI_MONTHLY_TOKEN_LIMIT": "100000",
     "AI_MODEL": "@cf/moonshotai/kimi-k2.6",
   },
   "d1_databases": [

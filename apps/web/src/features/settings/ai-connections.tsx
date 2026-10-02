@@ -95,7 +95,7 @@ export function AIConnectionsSettings() {
       <p className="text-muted-foreground mt-3 text-xs leading-5">
         Keys are encrypted and private to your account. Your provider receives
         your messages and canvas context when selected, and bills your API
-        usage. Rhyme’s built-in models remain available.
+        usage. Built-in models include a limited free allowance each month.
       </p>
       {connections.isPending ? (
         <p role="status" className="mt-4 text-sm text-muted-foreground">

@@ -57,6 +57,13 @@
       "when": 1790860982632,
       "tag": "0007_hesitant_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790935141367,
+      "tag": "0008_redundant_network",
+      "breakpoints": true
     }
   ]
 }

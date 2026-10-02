@@ -92,6 +92,7 @@ export type AgentState = {
   status: 'ready' | 'running' | 'error'
   config?: AgentConfig
   error?: string
+  errorCode?: string
 }
 
 export const DEFAULT_AGENT_CONFIG: AgentConfig = {
