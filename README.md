@@ -4,6 +4,40 @@ A personal whiteboard project for sketches, diagrams, and ideas, with an AI assi
 
 Built with tldraw, React, TanStack Start, and Cloudflare Workers, D1, and R2.
 
+## Infrastructure
+
+```mermaid
+flowchart TD
+  Browser["Browser<br/>React + tldraw canvas"]
+  Local[("IndexedDB<br/>Local drawing cache")]
+
+  subgraph Cloudflare["Cloudflare · rhyme.sachi.dev"]
+    Worker["Production Worker<br/>Frontend assets + Hono API<br/>Authentication · tRPC · Uploads"]
+    D1[("D1<br/>Users · Files · Permissions<br/>Chat metadata + AI usage")]
+    R2[("R2<br/>Drawings · Media<br/>Thumbnails + Previews")]
+    Agent["CanvasAgent Durable Objects<br/>Conversation state + Messages"]
+    AI["Workers AI"]
+    Email["Email<br/>Sign-in codes"]
+  end
+
+  External["Personal-key AI providers<br/>OpenAI · Anthropic · Gemini<br/>OpenAI-compatible endpoints"]
+  Deploy["GitHub Actions<br/>Checks · Build · Migrate · Deploy"]
+
+  Browser <--> Local
+  Browser <-->|HTTPS| Worker
+  Worker <--> D1
+  Worker <--> R2
+  Worker --> Email
+  Worker <-->|Assistant WebSocket| Agent
+  Agent <--> D1
+  Agent <--> AI
+  Agent <--> External
+  Deploy -.-> Worker
+  Deploy -.-> D1
+```
+
+Drawings persist locally, then sync to R2 with version checks in D1. Assistant conversations run in Durable Objects; their tool calls return through the Worker to the browser, where edits enter the same save flow.
+
 ## Run locally
 
 Requires Node.js 22+ and pnpm 11.25.0.
