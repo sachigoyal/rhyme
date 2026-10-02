@@ -48,7 +48,7 @@ context budgets and limitations are documented in `docs/canvas-agent-tools.md`.
 ## Authentication
 
 `auth-flow.browser.mjs` runs the real application routes against mocked auth and
-tRPC responses. It covers existing and new accounts, OTP, guest import success
+tRPC responses. It covers Google and GitHub redirects, OAuth errors, existing and new accounts, OTP, guest import success
 and retry, account switching, empty drafts, onboarding, expired sessions, and
 redirect destinations with search parameters and hashes. No account or API is
 required. Run it with `test:ui`, or independently:

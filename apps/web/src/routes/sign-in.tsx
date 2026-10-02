@@ -1,13 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Check, LayoutTemplate, Sparkles } from 'lucide-react'
 import { SignInForm } from '@/features/auth/sign-in-form'
-import { authSearch } from '@/features/auth/redirect'
+import { signInSearch } from '@/features/auth/redirect'
 import { Logo } from '@/components/logo'
 import { sessionQuery } from '@/lib/auth'
 
 export const Route = createFileRoute('/sign-in')({
   ssr: false,
-  validateSearch: authSearch,
+  validateSearch: signInSearch,
   beforeLoad: async ({ context, search }) => {
     if (await context.queryClient.fetchQuery(sessionQuery)) {
       throw redirect({ to: '/auth/complete', search })
@@ -17,7 +17,7 @@ export const Route = createFileRoute('/sign-in')({
 })
 
 function SignInPage() {
-  const { redirect: next } = Route.useSearch()
+  const { redirect: next, error } = Route.useSearch()
   return (
     <main className="bg-background grid min-h-svh lg:grid-cols-2">
       <section className="flex flex-col px-6 py-6 sm:px-12">
@@ -26,7 +26,7 @@ function SignInPage() {
         </header>
         <div className="flex flex-1 items-center justify-center py-16">
           <div className="w-full max-w-sm">
-            <SignInForm redirectTo={next ?? '/'} />
+            <SignInForm redirectTo={next ?? '/'} authError={error} />
           </div>
         </div>
       </section>

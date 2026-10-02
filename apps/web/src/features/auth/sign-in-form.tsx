@@ -11,6 +11,7 @@ import {
 } from '@rhyme/ui/components/input-otp'
 import { Label } from '@rhyme/ui/components/label'
 import { authClient, sessionQuery } from '@/lib/auth'
+import { SocialSignIn, useSocialSignIn } from './social-sign-in'
 
 const CODE_LENGTH = 6
 
@@ -23,13 +24,21 @@ async function unwrap<T>(
   return data
 }
 
-export function SignInForm({ redirectTo }: { redirectTo: string }) {
+export function SignInForm({
+  redirectTo,
+  authError,
+}: {
+  redirectTo: string
+  authError?: string
+}) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [resendIn, setResendIn] = useState(0)
   const queryClient = useQueryClient()
   const router = useRouter()
+  const socialSignIn = useSocialSignIn(redirectTo)
+  const socialBusy = socialSignIn.isPending || socialSignIn.isSuccess
   const sendCode = useMutation({
     mutationFn: () =>
       unwrap(
@@ -78,13 +87,18 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
           Sign in to Rhyme
         </h1>
         <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
-          Enter your email to sign in or create an account.
+          Sign in or create an account to start drawing.
         </p>
+        <SocialSignIn
+          signIn={socialSignIn}
+          authError={authError}
+          disabled={sendCode.isPending}
+        />
         <form
-          className="mt-9 space-y-5"
+          className="mt-6 space-y-5"
           onSubmit={(event) => {
             event.preventDefault()
-            sendCode.mutate()
+            if (!sendCode.isPending && !socialBusy) sendCode.mutate()
           }}
         >
           <div className="space-y-2">
@@ -99,14 +113,14 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="h-11 px-3"
-              disabled={sendCode.isPending}
+              disabled={sendCode.isPending || socialBusy}
             />
           </div>
           <ErrorText error={sendCode.error} />
           <Button
             type="submit"
             className="h-11 w-full justify-between px-4"
-            disabled={sendCode.isPending}
+            disabled={sendCode.isPending || socialBusy}
           >
             Continue with email{' '}
             {sendCode.isPending ? (

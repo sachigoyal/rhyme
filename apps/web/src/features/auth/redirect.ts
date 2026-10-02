@@ -38,3 +38,10 @@ export function safeAuthRedirect(value: unknown): string | undefined {
 export const authSearch = z.object({
   redirect: z.unknown().optional().transform(safeAuthRedirect),
 })
+
+export const signInSearch = authSearch.extend({
+  error: z
+    .unknown()
+    .optional()
+    .transform((value) => (typeof value === 'string' ? value : undefined)),
+})

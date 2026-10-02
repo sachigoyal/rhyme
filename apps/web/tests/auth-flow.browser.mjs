@@ -13,7 +13,9 @@ let server,
   imports,
   importFailure,
   profileFailure,
-  sessionFailure
+  sessionFailure,
+  socialRequests,
+  socialFailure
 const user = { id: 'test-user', name: 'Example', email: 'test@example.com' }
 const session = {
   user,
@@ -80,6 +82,8 @@ beforeEach(async () => {
   importFailure = false
   profileFailure = false
   sessionFailure = false
+  socialRequests = []
+  socialFailure = false
   errors.length = 0
   page = await browser.newPage()
   page.setDefaultTimeout(15000)
@@ -129,6 +133,24 @@ beforeEach(async () => {
       return
     }
     if (url.pathname.startsWith('/auth/')) {
+      if (url.pathname.endsWith('/sign-in/social')) {
+        const body = request.postDataJSON()
+        socialRequests.push(body)
+        if (socialFailure) {
+          await route.fulfill({
+            headers,
+            status: 404,
+            json: { code: 'PROVIDER_NOT_FOUND', message: 'Provider not found' },
+          })
+        } else {
+          signedIn = true
+          await route.fulfill({
+            headers,
+            json: { redirect: true, url: body.callbackURL },
+          })
+        }
+        return
+      }
       if (url.pathname.endsWith('/sign-out')) signedIn = false
       if (url.pathname.endsWith('/sign-in/email-otp')) signedIn = true
       await route.fulfill({
@@ -228,6 +250,143 @@ test('reported completion URL works for a returning account without a drawing', 
   await page.goto(`${origin}auth/complete?redirect=%2Ffiles`)
   await assertWorkspace()
   assert.equal(imports.length, 0)
+})
+
+for (const [provider, label] of [
+  ['google', 'Google'],
+  ['github', 'GitHub'],
+]) {
+  test(`${label} sign-in preserves the destination and imports the guest drawing`, async () => {
+    signedIn = false
+    await seed(draft())
+    const destination = '/files?view=shared#saved'
+    await page.goto(
+      `${origin}sign-in?redirect=${encodeURIComponent(destination)}`,
+    )
+    await page.getByRole('button', { name: `Continue with ${label}` }).click()
+    await page.waitForURL(
+      (url) =>
+        url.pathname === '/files' && url.searchParams.get('view') === 'shared',
+    )
+    assert.equal(new URL(page.url()).hash, '#saved')
+    assert.equal(socialRequests.length, 1)
+    const request = socialRequests[0]
+    assert.equal(request.provider, provider)
+    assert.equal(new URL(request.callbackURL).pathname, '/auth/complete')
+    assert.equal(
+      new URL(request.callbackURL).searchParams.get('redirect'),
+      destination,
+    )
+    assert.equal(request.newUserCallbackURL, request.callbackURL)
+    assert.equal(new URL(request.errorCallbackURL).pathname, '/sign-in')
+    assert.equal(
+      new URL(request.errorCallbackURL).searchParams.get('redirect'),
+      destination,
+    )
+    assert.equal(imports.length, 1)
+    assert.equal(
+      await page.evaluate(() => localStorage.getItem('rhyme:signup-draft')),
+      null,
+    )
+    assert.deepEqual(errors, [])
+  })
+}
+
+test('unconfigured social sign-in shows a recoverable error and keeps email available', async () => {
+  signedIn = false
+  socialFailure = true
+  await page.goto(`${origin}sign-in`)
+  await page.getByRole('button', { name: 'Continue with Google' }).click()
+  await page
+    .getByRole('alert')
+    .filter({ hasText: 'isn’t configured yet' })
+    .waitFor()
+  assert.equal(
+    await page.getByRole('button', { name: 'Continue with email' }).isEnabled(),
+    true,
+  )
+  assert.equal(await page.getByLabel('Email address').isEnabled(), true)
+})
+
+test('OAuth initiation blocks competing email and provider sign-ins until failure', async () => {
+  signedIn = false
+  let release
+  const pending = new Promise((resolve) => {
+    release = resolve
+  })
+  let emailRequests = 0
+  page.on('request', (request) => {
+    if (request.url().endsWith('/email-otp/send-verification-otp'))
+      emailRequests++
+  })
+  await page.route('**/auth/sign-in/social', async (route) => {
+    if (route.request().method() === 'OPTIONS') {
+      await route.fallback()
+      return
+    }
+    await pending
+    await route.fulfill({
+      status: 404,
+      headers: {
+        'access-control-allow-origin': new URL(origin).origin,
+        'access-control-allow-credentials': 'true',
+      },
+      json: { code: 'PROVIDER_NOT_FOUND', message: 'Provider not found' },
+    })
+  })
+  await page.goto(`${origin}sign-in`)
+  await page.getByLabel('Email address').fill(user.email)
+  const request = page.waitForRequest(
+    (request) =>
+      request.method() === 'POST' && request.url().endsWith('/sign-in/social'),
+  )
+  await page.getByRole('button', { name: 'Continue with Google' }).click()
+  await request
+  try {
+    for (const name of [
+      'Continue with email',
+      'Continue with Google',
+      'Continue with GitHub',
+    ]) {
+      const button = page.getByRole('button', { name })
+      await button.and(page.locator(':disabled')).waitFor()
+      assert.equal(await button.isDisabled(), true, name)
+    }
+    assert.equal(await page.getByLabel('Email address').isDisabled(), true)
+    await page.locator('form').evaluate((form) => form.requestSubmit())
+  } finally {
+    release()
+  }
+  await page
+    .getByRole('alert')
+    .filter({ hasText: 'isn’t configured yet' })
+    .waitFor()
+  assert.equal(emailRequests, 0)
+  assert.equal(
+    await page.getByRole('button', { name: 'Continue with email' }).isEnabled(),
+    true,
+  )
+  assert.equal(
+    await page
+      .getByRole('button', { name: 'Continue with GitHub' })
+      .isEnabled(),
+    true,
+  )
+})
+
+test('OAuth callback errors display a safe message and preserve the retry destination', async () => {
+  signedIn = false
+  await page.goto(`${origin}sign-in?error=access_denied&redirect=%2Ffiles`)
+  await page
+    .getByRole('alert')
+    .filter({ hasText: 'Sign-in was canceled' })
+    .waitFor()
+  await page.getByRole('button', { name: 'Continue with GitHub' }).click()
+  await page.waitForURL((url) => url.pathname === '/files')
+  assert.equal(
+    new URL(socialRequests[0].callbackURL).searchParams.get('redirect'),
+    '/files',
+  )
 })
 test('guest drawing imports once after OTP and is cleared only after success', async () => {
   signedIn = false

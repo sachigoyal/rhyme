@@ -50,6 +50,29 @@ Requires Node.js 22+ and pnpm 11.25.0.
 
 Sign-in codes appear in the API console. Workers AI uses your Cloudflare account even locally.
 
+## Google and GitHub sign-in
+
+Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, and `GITHUB_CLIENT_SECRET` in `apps/api/.dev.vars` for local development. Each provider is enabled when both of its credentials are set. Email sign-in works without these credentials.
+
+Create a Google OAuth client with application type **Web application**, and a GitHub **OAuth App**. Register these callback URLs:
+
+| Provider | Local callback                               | Production callback                            |
+| -------- | -------------------------------------------- | ---------------------------------------------- |
+| Google   | `http://localhost:8787/auth/callback/google` | `https://rhyme.sachi.dev/auth/callback/google` |
+| GitHub   | `http://localhost:8787/auth/callback/github` | `https://rhyme.sachi.dev/auth/callback/github` |
+
+Use separate GitHub OAuth Apps for local and production callbacks. Google can register both callback URLs on one client. Successful sign-ins finish onboarding and import guest drawings through `/auth/complete`.
+
+For production, store all four values as Cloudflare Worker secrets. Run this command for each variable name, replacing `GOOGLE_CLIENT_ID` as needed:
+
+```sh
+pnpm --filter api exec wrangler secret put GOOGLE_CLIENT_ID --config wrangler.production.jsonc
+```
+
+Credentials stay on the API Worker; no frontend environment variables or database migrations are needed. Verified matching emails link Google and GitHub accounts to the same user, and email-code sign-in uses that user too. Email matching ignores case. Unverified provider emails cannot link to an existing user.
+
+OAuth signup saves the provider's profile picture. Linking a provider fills a missing picture while preserving an existing picture and chosen name. GitHub sign-in requests access to email addresses so a private verified email can identify the user.
+
 ## AI
 
 Built-in models include 100,000 tokens per user per calendar month (UTC), shared across chats. Set `AI_MONTHLY_TOKEN_LIMIT` in the Worker configuration to change this; `0` requires personal keys. Input and output tokens count, and an in-flight model step may cross the limit before further calls are blocked. Built-in conversation titles use a local fallback to avoid extra AI usage.
