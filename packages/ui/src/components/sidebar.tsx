@@ -1,7 +1,8 @@
 'use client'
 
 import * as React from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { cva } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
 import { cn } from 'cn'
 import { useRender } from '@base-ui/react/use-render'
 import { mergeProps } from '@base-ui/react/merge-props'

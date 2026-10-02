@@ -278,7 +278,8 @@ export function useDestroyFile() {
           filter: trpc.settings.get.queryFilter(),
           update: (data) => {
             const settings = data as
-              RouterOutputs['settings']['get'] | undefined
+              | RouterOutputs['settings']['get']
+              | undefined
             return settings?.lastEditedCanvasId === id
               ? { ...settings, lastEditedCanvasId: null }
               : settings

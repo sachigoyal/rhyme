@@ -7,7 +7,12 @@ import { cn } from '@rhyme/ui/lib/utils'
 import { Logo } from './logo'
 
 type Sketch =
-  'page' | 'canvas' | 'conversation' | 'folder' | 'connection' | 'access'
+  | 'page'
+  | 'canvas'
+  | 'conversation'
+  | 'folder'
+  | 'connection'
+  | 'access'
 
 export function RecoveryState({
   title,

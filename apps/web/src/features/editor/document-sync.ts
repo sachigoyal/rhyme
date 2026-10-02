@@ -5,7 +5,12 @@ import type { DocumentSnapshot } from '@rhyme/trpc-client'
 import { documentCache } from './document-cache'
 
 export type SyncStatus =
-  'saved' | 'unsaved' | 'saving' | 'offline' | 'error' | 'conflict'
+  | 'saved'
+  | 'unsaved'
+  | 'saving'
+  | 'offline'
+  | 'error'
+  | 'conflict'
 
 interface DocumentSyncOptions {
   fileId: string

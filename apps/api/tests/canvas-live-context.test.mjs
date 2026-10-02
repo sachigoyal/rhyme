@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { resolveCanvasSnapshot } from '../src/agents/canvas-live-context.ts'
+
 const user = (id) => ({ id, role: 'user', parts: [] })
 const tool = (id, state) => ({
   id: 'assistant',

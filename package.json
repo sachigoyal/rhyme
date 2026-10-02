@@ -6,16 +6,19 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "lint": "turbo run lint",
+    "lint": "oxlint --deny-warnings .",
     "check-types": "turbo run check-types",
-    "format": "prettier --write .",
+    "format": "oxfmt --write .",
     "db:generate": "pnpm --filter @rhyme/db db:generate",
     "db:migrate": "pnpm --filter api db:migrate",
     "test": "pnpm --filter api test && pnpm --filter @rhyme/hooks test && pnpm --filter web test",
-    "deploy": "pnpm --filter web build && pnpm --filter api db:migrate:production && pnpm --filter api deploy:production"
+    "deploy": "pnpm --filter web build && pnpm --filter api db:migrate:production && pnpm --filter api deploy:production",
+    "lint:fix": "oxlint --fix .",
+    "format:check": "oxfmt --check ."
   },
   "devDependencies": {
-    "prettier": "3.9.6",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
     "turbo": "^2.11.5",
     "typescript": "catalog:"
   },

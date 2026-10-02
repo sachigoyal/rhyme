@@ -84,7 +84,8 @@ const count = (value: unknown) => (Array.isArray(value) ? value.length : 0)
 function describeTool(name: string, part: ToolPart) {
   const input = (part.input ?? {}) as Record<string, unknown>
   const output = (part.state === 'output-available' ? part.output : {}) as
-    Record<string, unknown> | undefined
+    | Record<string, unknown>
+    | undefined
   const done = part.state === 'output-available'
 
   switch (name) {

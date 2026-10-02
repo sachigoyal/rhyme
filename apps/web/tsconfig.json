@@ -8,5 +8,5 @@
       "@rhyme/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "eslint.config.js"]
+  "include": ["**/*.ts", "**/*.tsx"]
 }

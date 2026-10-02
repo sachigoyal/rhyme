@@ -29,7 +29,10 @@ jobs:
           cache: true
       - run: pnpm install --frozen-lockfile
       - run: pnpm check-types
-      - run: pnpm lint
+      - name: Lint with Oxlint
+        run: pnpm lint
+      - name: Check formatting with Oxfmt
+        run: pnpm format:check
       - run: pnpm test
       - run: pnpm --filter web build
       - name: Check production Worker packaging

@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": false,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 80,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "pnpm-lock.yaml",
+    "**/routeTree.gen.ts",
+    "**/worker-configuration.d.ts",
+    "**/production-bindings.d.ts",
+    "packages/db/migrations/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.output/**"
+  ]
+}

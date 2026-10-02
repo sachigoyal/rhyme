@@ -58,12 +58,12 @@ If you prefer not to use Tailwind CSS:
 
 ## Linting & Formatting
 
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
+This project uses [Oxlint](https://oxc.rs/docs/guide/usage/linter) and [Oxfmt](https://oxc.rs/docs/guide/usage/formatter), configured at the repository root. Run these commands from the root to check every workspace:
 
 ```bash
 pnpm lint
 pnpm format
-pnpm check
+pnpm format:check
 ```
 
 ## Testing

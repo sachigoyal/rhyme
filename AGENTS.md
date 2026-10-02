@@ -22,7 +22,8 @@ tldraw-style whiteboard: users sign in, create files, and drawings sync to the c
 
 - `pnpm dev` — web on :3000, api on :8787.
 - `pnpm db:generate` after schema changes, then `pnpm db:migrate` (local D1).
-- `pnpm check-types`, `pnpm lint`, `pnpm build`.
+- `pnpm check-types`, `pnpm lint` (Oxlint), `pnpm format:check` (Oxfmt), `pnpm build`.
+- `pnpm lint:fix` and `pnpm format` apply fixes; shared configs live at the root.
 - Local sign-in codes are printed in the `wrangler dev` output (`send_email` is simulated).
 - The assistant runs on Workers AI (`AI` binding, model in the `AI_MODEL` var). Workers AI always calls Cloudflare, even in `wrangler dev`, so local dev needs `wrangler login`.
 

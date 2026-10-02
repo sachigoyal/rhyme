@@ -1,7 +1,13 @@
 import type { UIMessage } from 'ai'
 
 export type AgentStatus =
-  'idle' | 'connecting' | 'thinking' | 'editing' | 'approval' | 'done' | 'error'
+  | 'idle'
+  | 'connecting'
+  | 'thinking'
+  | 'editing'
+  | 'approval'
+  | 'done'
+  | 'error'
 
 export const agentStatusLabels = {
   idle: 'Ask Rhyme',
