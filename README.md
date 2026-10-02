@@ -30,6 +30,8 @@ At the limit, a banner opens AI connections. Add an OpenAI, Anthropic, Gemini, o
 
 Production canvases require `VITE_TLDRAW_LICENSE_KEY`. See [AGENTS.md](AGENTS.md) for repository conventions.
 
+GitHub Actions runs type checks, lint, tests, and production packaging for pull requests and pushes to `main`. Successful pushes to `main` deploy to [rhyme.sachi.dev](https://rhyme.sachi.dev); the workflow can also be run manually from `main`. Set the repository Actions secret `CLOUDFLARE_API_TOKEN` with Workers deployment and D1 migration permissions for the account in `wrangler.production.jsonc`. Production Worker secrets remain configured in Cloudflare.
+
 ## License
 
 [MIT](LICENSE). Dependencies retain their own licenses.
