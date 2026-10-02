@@ -44,3 +44,19 @@ PLAYWRIGHT_CHANNEL=chrome pnpm --filter web exec node --test tests/canvas-agent.
 
 Set `CANVAS_SCREENSHOT_DIR` to save a complex-scene screenshot. Tool schemas,
 context budgets and limitations are documented in `docs/canvas-agent-tools.md`.
+
+## Authentication
+
+`auth-flow.browser.mjs` runs the real application routes against mocked auth and
+tRPC responses. It covers existing and new accounts, OTP, guest import success
+and retry, account switching, empty drafts, onboarding, expired sessions, and
+redirect destinations with search parameters and hashes. No account or API is
+required. Run it with `test:ui`, or independently:
+
+```sh
+PLAYWRIGHT_CHANNEL=chrome pnpm --filter web exec node --test tests/auth-flow.browser.mjs
+```
+
+To run the same auth cases against the production build after `pnpm build`, add
+`AUTH_TEST_BUILD=1` to that command. API calls are mocked for both configured
+local and production origins; only tldraw CDN assets may load externally.

@@ -8,9 +8,9 @@ import { sessionQuery } from '@/lib/auth'
 export const Route = createFileRoute('/sign-in')({
   ssr: false,
   validateSearch: authSearch,
-  beforeLoad: async ({ context }) => {
-    if (await context.queryClient.ensureQueryData(sessionQuery)) {
-      throw redirect({ to: '/auth/complete' })
+  beforeLoad: async ({ context, search }) => {
+    if (await context.queryClient.fetchQuery(sessionQuery)) {
+      throw redirect({ to: '/auth/complete', search })
     }
   },
   component: SignInPage,

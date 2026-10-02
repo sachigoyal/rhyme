@@ -123,7 +123,14 @@ const questions = [
   },
 ] as const
 
-export function OnboardingForm({ user }: { user: SessionUser }) {
+export function OnboardingForm({
+  user,
+  redirectTo,
+}: {
+  user: SessionUser
+  redirectTo?: string
+}) {
+  const [finishing, setFinishing] = useState(false)
   const [draft, setDraft] = useState(() =>
     onboardingDraft.get(user.id, user.name || displayName(user)),
   )
@@ -181,14 +188,32 @@ export function OnboardingForm({ user }: { user: SessionUser }) {
           return
         }
         setValidationError(null)
-        complete.mutate(result.data, {
-          onSuccess: async () => {
+        setFinishing(true)
+        void (async () => {
+          try {
+            await complete.mutateAsync(result.data)
             await profile.refetch({ throwOnError: true })
-            await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
-            onboardingDraft.clear(user.id)
-            await navigate({ to: '/auth/complete', replace: true })
-          },
-        })
+            await queryClient.fetchQuery(sessionQuery)
+            try {
+              onboardingDraft.clear(user.id)
+            } catch {
+              setStorageError(true)
+            }
+            await navigate({
+              to: '/auth/complete',
+              search: { redirect: redirectTo },
+              replace: true,
+            })
+          } catch (cause) {
+            setValidationError(
+              cause instanceof Error
+                ? cause.message
+                : 'Unable to finish setup. Try again.',
+            )
+          } finally {
+            setFinishing(false)
+          }
+        })()
       }}
     >
       <div className="mb-10 flex items-center justify-between">
@@ -208,7 +233,7 @@ export function OnboardingForm({ user }: { user: SessionUser }) {
           />
         ))}
       </div>
-      <fieldset disabled={complete.isPending} className="min-w-0">
+      <fieldset disabled={complete.isPending || finishing} className="min-w-0">
         {questions.map((question) => (
           <Questionnaire.Item
             key={question.name}
@@ -311,12 +336,12 @@ export function OnboardingForm({ user }: { user: SessionUser }) {
               Continue <ArrowRight className="size-4" />
             </Questionnaire.Next>
             <Questionnaire.Submit className={buttonVariants()}>
-              {complete.isPending ? (
+              {complete.isPending || finishing ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <Check className="size-4" />
               )}{' '}
-              {complete.isPending ? 'Saving…' : 'Finish setup'}
+              {complete.isPending || finishing ? 'Saving…' : 'Finish setup'}
             </Questionnaire.Submit>
           </div>
         </div>

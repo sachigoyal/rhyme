@@ -15,7 +15,7 @@ export const Route = createFileRoute('/')({
   ssr: false,
   pendingComponent: BrandLoading,
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQuery)
+    const session = await context.queryClient.fetchQuery(sessionQuery)
     if (!session) return
     if (guestDraft.get()) throw redirect({ to: '/auth/complete' })
     const [profile, settings] = await Promise.all([

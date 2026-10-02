@@ -13,6 +13,16 @@ const draftSchema = z.object({
     .optional(),
 })
 
+export function hasGuestContent(document: DocumentSnapshot) {
+  return Object.values(document.store).some(
+    (record) =>
+      typeof record === 'object' &&
+      record !== null &&
+      'typeName' in record &&
+      record.typeName === 'shape',
+  )
+}
+
 export const guestDraft = {
   get() {
     try {
@@ -50,6 +60,10 @@ export const guestDraft = {
   claim(userId: string) {
     const draft = this.get()
     if (!draft) return null
+    if (!hasGuestContent(draft.document)) {
+      this.clear(draft.id)
+      return null
+    }
     if (draft.import && draft.import.userId !== userId)
       throw new Error('Sign in to the account that started saving this canvas.')
     const claimed = {

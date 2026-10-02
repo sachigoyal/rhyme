@@ -51,7 +51,9 @@ export function SignInForm({ redirectTo }: { redirectTo: string }) {
       queryClient.removeQueries({
         predicate: (query) => query.queryKey[0] !== 'session',
       })
-      await queryClient.fetchQuery({ ...sessionQuery, staleTime: 0 })
+      const session = await queryClient.fetchQuery(sessionQuery)
+      if (!session)
+        throw new Error('Unable to start your session. Please sign in again.')
       await router.navigate({
         to: '/auth/complete',
         search: { redirect: redirectTo },

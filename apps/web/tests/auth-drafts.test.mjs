@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, before, beforeEach, test } from 'node:test'
 import { createServer } from 'vite'
 
-let server, guestDraft, onboardingDraft, lastEditedCanvas
+let server, guestDraft, onboardingDraft, lastEditedCanvas, authSearch
 const storage = () => {
   const values = new Map()
   return {
@@ -15,6 +15,7 @@ const storage = () => {
 const document = {
   store: {
     'page:one': { id: 'page:one', typeName: 'page' },
+    'shape:one': { id: 'shape:one', typeName: 'shape' },
     'asset:image': { props: { src: 'data:image/png;base64,example' } },
   },
   schema: {},
@@ -29,6 +30,9 @@ before(async () => {
     server: { middlewareMode: true },
     optimizeDeps: { noDiscovery: true, include: [] },
   })
+  ;({ authSearch } = await server.ssrLoadModule(
+    '/src/features/auth/redirect.ts',
+  ))
   ;({ guestDraft } = await server.ssrLoadModule(
     '/src/features/auth/guest-draft.ts',
   ))
@@ -125,4 +129,48 @@ test('home opens only an accessible canvas edited by this user and falls back wh
   assert.equal(lastEditedCanvas(files, 'me'), 'recent')
   assert.equal(lastEditedCanvas(files, 'nobody'), undefined)
   assert.equal(lastEditedCanvas([], 'me'), undefined)
+})
+
+test('blank guest canvases from older clients are cleared without an import', () => {
+  guestDraft.set({ store: { 'page:one': { typeName: 'page' } }, schema: {} })
+  assert.equal(guestDraft.claim('user'), null)
+  assert.equal(guestDraft.get(), null)
+})
+
+test('auth redirects retain internal destinations including search and hash', () => {
+  for (const redirect of [
+    '/',
+    '/files',
+    '/files/a?foo=bar#shape',
+    '/files?view=shared',
+  ])
+    assert.equal(authSearch.parse({ redirect }).redirect, redirect)
+})
+
+test('invalid and recursive auth redirects fall back without crashing validation', () => {
+  for (const redirect of [
+    undefined,
+    null,
+    42,
+    ['/', '/files'],
+    'https://example.com',
+    '//example.com',
+    '/\\example.com',
+    '/%2fexample.com',
+    '/%5cexample.com',
+    '/%0aexample.com',
+    '/sign-in',
+    '/auth/complete?redirect=/files',
+    '/onboarding/',
+    '/foo/../auth/complete',
+    '/%61uth/complete',
+    '/%invalid',
+    '/files\n',
+    '/' + 'a'.repeat(2048),
+  ])
+    assert.equal(
+      authSearch.parse({ redirect }).redirect,
+      undefined,
+      String(redirect),
+    )
 })

@@ -7,14 +7,13 @@ import { sessionQuery } from '@/lib/auth'
 export const Route = createFileRoute('/onboarding')({
   ssr: false,
   validateSearch: authSearch,
-  beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQuery)
-    if (!session)
-      throw redirect({ to: '/sign-in', search: { redirect: '/onboarding' } })
+  beforeLoad: async ({ context, search }) => {
+    const session = await context.queryClient.fetchQuery(sessionQuery)
+    if (!session) throw redirect({ to: '/sign-in', search })
     const profile = await context.queryClient.ensureQueryData(
       context.trpc.profile.get.queryOptions(),
     )
-    if (profile) throw redirect({ to: '/auth/complete' })
+    if (profile) throw redirect({ to: '/auth/complete', search })
     return { user: session.user }
   },
   component: OnboardingPage,
@@ -22,6 +21,7 @@ export const Route = createFileRoute('/onboarding')({
 
 function OnboardingPage() {
   const { user } = Route.useRouteContext()
+  const { redirect: redirectTo } = Route.useSearch()
   return (
     <main className="bg-background flex min-h-svh flex-col">
       <header className="flex h-16 items-center justify-between border-b px-6 sm:px-10">
@@ -44,7 +44,7 @@ function OnboardingPage() {
           </div>
         </aside>
         <section className="flex items-center justify-center px-6 py-12 sm:px-12 lg:py-16">
-          <OnboardingForm user={user} />
+          <OnboardingForm user={user} redirectTo={redirectTo} />
         </section>
       </div>
     </main>

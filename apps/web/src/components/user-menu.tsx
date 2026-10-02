@@ -88,7 +88,12 @@ export function UserMenu({
   const navigate = useNavigate()
 
   const signOut = async () => {
-    await authClient.signOut()
+    const { error } = await authClient.signOut()
+    if (error) {
+      toast.error(error.message ?? 'Unable to sign out. Try again.')
+      return
+    }
+    await queryClient.cancelQueries()
     queryClient.clear()
     await navigate({ to: '/' })
   }

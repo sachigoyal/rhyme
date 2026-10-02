@@ -10,7 +10,7 @@ import { Logo } from '@/components/logo'
 import { GuestIntroduction } from '@/components/guest-introduction'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
 import { env } from '@/lib/env'
-import { guestDraft } from './guest-draft'
+import { guestDraft, hasGuestContent } from './guest-draft'
 
 export function GuestCanvas() {
   const [editor, setEditor] = useState<Editor | null>(null)
@@ -36,10 +36,15 @@ export function GuestCanvas() {
       if (!dirty) return !failed.current
       try {
         const { document } = getSnapshot(editor.store)
-        guestDraft.set({
+        const snapshot = {
           store: document.store,
           schema: { ...document.schema },
-        })
+        }
+        if (hasGuestContent(snapshot)) guestDraft.set(snapshot)
+        else {
+          const draft = guestDraft.get()
+          if (draft && !draft.import) guestDraft.clear(draft.id)
+        }
         dirty = false
         failed.current = false
         setStorageError(false)

@@ -4,31 +4,52 @@ import { guestDraft } from './guest-draft'
 
 export function useImportGuestDraft(userId: string) {
   const { mutateAsync } = useImportGuestCanvas()
-  const started = useRef(false)
-  const [ready, setReady] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const taskRef = useRef<{ userId: string; task: Promise<void> } | null>(null)
+  const [result, setResult] = useState({
+    userId,
+    ready: false,
+    error: null as Error | null,
+  })
 
   useEffect(() => {
-    if (started.current) return
-    started.current = true
-    const save = async () => {
-      const draft = guestDraft.claim(userId)
-      if (draft) {
-        await mutateAsync({ id: draft.import.fileId, document: draft.document })
-        guestDraft.clear(draft.id)
+    let active = true
+    if (taskRef.current?.userId !== userId) {
+      const save = async () => {
+        const draft = guestDraft.claim(userId)
+        if (draft) {
+          await mutateAsync({
+            id: draft.import.fileId,
+            document: draft.document,
+          })
+          guestDraft.clear(draft.id)
+        }
       }
+      const task = Promise.resolve().then(() =>
+        navigator.locks
+          ? navigator.locks.request('rhyme:guest-import', save)
+          : save(),
+      )
+      taskRef.current = { userId, task }
     }
-    const { locks } = navigator as Partial<Navigator>
-    const task = locks ? locks.request('rhyme:guest-import', save) : save()
-    void task
-      .then(() => setReady(true))
-      .catch((cause: unknown) => {
-        setError(
-          cause instanceof Error
-            ? cause
-            : new Error('Unable to save your guest canvas.'),
-        )
-      })
+    void taskRef.current.task.then(
+      () => {
+        if (active) setResult({ userId, ready: true, error: null })
+      },
+      (cause: unknown) => {
+        if (active)
+          setResult({
+            userId,
+            ready: false,
+            error:
+              cause instanceof Error
+                ? cause
+                : new Error('Unable to save your guest canvas.'),
+          })
+      },
+    )
+    return () => {
+      active = false
+    }
   }, [userId, mutateAsync])
-  return { ready, error }
+  return result.userId === userId ? result : { ready: false, error: null }
 }

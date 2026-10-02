@@ -10,6 +10,7 @@ import { RoutePending } from './components/route-pending'
 import { Providers } from './components/providers'
 import { env } from './lib/env'
 import { sessionQuery } from './lib/auth'
+import { safeAuthRedirect } from './features/auth/redirect'
 import { routeTree } from './routeTree.gen'
 
 const FINAL_ERRORS = new Set([
@@ -25,7 +26,18 @@ export function getRouter() {
     if (errorCode(error) !== 'UNAUTHORIZED') return
     queryClient.clear()
     queryClient.setQueryData(sessionQuery.queryKey, null)
-    void router.navigate({ to: '/sign-in' })
+    void router.navigate({
+      to: '/sign-in',
+      search: {
+        redirect:
+          safeAuthRedirect(router.state.location.href) ??
+          safeAuthRedirect(
+            new URL(router.state.location.href, env.siteUrl).searchParams.get(
+              'redirect',
+            ),
+          ),
+      },
+    })
   }
 
   const queryClient = new QueryClient({
