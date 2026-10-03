@@ -210,3 +210,82 @@ test('flush waits for an active save and drains edits made during that save', as
   assert.equal(sync.getStatus(), 'saved')
   assert.equal(sync.getVersion(), 2)
 })
+
+test('nested agent batches keep local recovery current and save once on finalization', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 20_000 })
+  const saves = []
+  let cached = 0
+  let document = { store: {}, schema: {} }
+  const sync = new DocumentSync({
+    fileId: 'canvas',
+    version: 0,
+    dirty: false,
+    save: async (input) => {
+      saves.push(input)
+      return { version: saves.length }
+    },
+    fetchVersion: async () => 0,
+  })
+  sync.read = () => document
+  sync.writeCache = async () => {
+    cached++
+  }
+  const endTurn = sync.beginBatch()
+  const endTool = sync.beginBatch()
+  for (let index = 1; index <= 20; index++) {
+    document = { store: { count: index }, schema: {} }
+    sync.onChange()
+    t.mock.timers.tick(400)
+    await setImmediate()
+  }
+  await sync.flush()
+  assert.equal(saves.length, 0)
+  assert.ok(cached > 0)
+  endTool()
+  t.mock.timers.tick(1000)
+  await setImmediate()
+  assert.equal(saves.length, 0)
+  endTurn()
+  t.mock.timers.tick(0)
+  await setImmediate()
+  assert.equal(saves.length, 1)
+  assert.deepEqual(saves[0].document, document)
+  assert.equal(sync.getStatus(), 'saved')
+  endTurn()
+  endTool()
+  t.mock.timers.tick(5000)
+  await setImmediate()
+  assert.equal(saves.length, 1)
+})
+
+test('a save already in flight cannot schedule more writes during an agent batch', async (t) => {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 20_000 })
+  const active = deferred()
+  const saves = []
+  const sync = new DocumentSync({
+    fileId: 'canvas',
+    version: 0,
+    dirty: true,
+    save: async (input) => {
+      saves.push(input)
+      return saves.length === 1 ? active.promise : { version: 2 }
+    },
+    fetchVersion: async () => 0,
+  })
+  sync.read = () => ({ store: {}, schema: {} })
+  sync.writeCache = async () => {}
+  const saving = sync.flush()
+  const finalize = sync.beginBatch()
+  sync.onChange()
+  active.resolve({ version: 1 })
+  await saving
+  t.mock.timers.tick(10_000)
+  await setImmediate()
+  assert.equal(saves.length, 1)
+  finalize()
+  t.mock.timers.tick(0)
+  await setImmediate()
+  assert.equal(saves.length, 2)
+  assert.equal(saves[1].baseVersion, 1)
+  assert.equal(sync.getStatus(), 'saved')
+})

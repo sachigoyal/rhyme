@@ -274,7 +274,7 @@ function createArrow(
   }
 }
 
-export function createShapes(editor: Editor, { shapes }: CreateShapesInput) {
+function prepareShapes(editor: Editor, { shapes }: CreateShapesInput) {
   ensureUniqueIds(shapes)
   const aliases = new Map<string, TLShapeId>()
   const planned = shapes.map((shape) => {
@@ -308,26 +308,64 @@ export function createShapes(editor: Editor, { shapes }: CreateShapesInput) {
   }
   const created: TLShapeId[] = []
   const errors: Array<{ index: number; error: string }> = []
-  editor.run(() => {
-    for (const { shape, id } of [
-      ...planned.filter((item) => item.shape.type !== 'arrow'),
-      ...planned.filter((item) => item.shape.type === 'arrow'),
-    ]) {
-      try {
-        createShape(editor, shape, id, resolve)
-        created.push(id)
-      } catch (error) {
-        errors.push({ index: shapes.indexOf(shape), error: errorText(error) })
-      }
+  const steps = [
+    ...planned.filter((item) => item.shape.type !== 'arrow'),
+    ...planned.filter((item) => item.shape.type === 'arrow'),
+  ].map(({ shape, id }) => () => {
+    try {
+      createShape(editor, shape, id, resolve)
+      created.push(id)
+    } catch (error) {
+      errors.push({ index: shapes.indexOf(shape), error: errorText(error) })
     }
   })
   return {
-    created: descriptions(editor, created),
-    aliases: Object.fromEntries(
-      [...aliases].map(([alias, id]) => [alias, toAgentId(id)]),
-    ),
-    ...(errors.length ? { errors } : {}),
+    steps,
+    result: () => ({
+      created: descriptions(editor, created),
+      aliases: Object.fromEntries(
+        [...aliases].map(([alias, id]) => [alias, toAgentId(id)]),
+      ),
+      ...(errors.length ? { errors } : {}),
+    }),
   }
+}
+
+export function createShapes(editor: Editor, input: CreateShapesInput) {
+  const creation = prepareShapes(editor, input)
+  editor.run(() => {
+    for (const step of creation.steps) step()
+  })
+  return creation.result()
+}
+
+async function createShapesProgressively(
+  editor: Editor,
+  input: CreateShapesInput,
+  onStep: (count: number) => Promise<void>,
+) {
+  const creation = prepareShapes(editor, input)
+  await onStep(creation.steps.length)
+  try {
+    for (const [index, step] of creation.steps.entries()) {
+      if (editor.isDisposed) throw new Error('Canvas was closed while drawing')
+      if (editor.getIsReadonly()) throw new Error('Canvas is read-only')
+      editor.run(step)
+      if (index < creation.steps.length - 1) await onStep(creation.steps.length)
+    }
+  } catch (error) {
+    if (editor.isDisposed) throw error
+    const result = creation.result()
+    return {
+      ...result,
+      interrupted: true,
+      errors: [
+        ...(result.errors ?? []),
+        { index: result.created.length, error: errorText(error) },
+      ],
+    }
+  }
+  return creation.result()
 }
 
 export function updateShapes(editor: Editor, input: UpdateShapesInput) {
@@ -496,7 +534,11 @@ function routeConnectors(editor: Editor, ids: TLShapeId[]) {
   })
 }
 
-export function connectShapes(editor: Editor, input: ConnectShapesInput) {
+export async function connectShapes(
+  editor: Editor,
+  input: ConnectShapesInput,
+  onStep?: (count: number) => Promise<void>,
+) {
   const newConnections = input.connections.filter(
     (connection) => !connection.arrowId,
   )
@@ -516,15 +558,18 @@ export function connectShapes(editor: Editor, input: ConnectShapesInput) {
     )
       throw new Error('An arrow cannot start and end on the same shape')
   }
-  const result = newConnections.length
-    ? createShapes(editor, {
-        shapes: newConnections.map((connection) => ({
-          type: 'arrow' as const,
-          ...connection,
-        })),
-      })
+  const shapes = newConnections.map((connection) => ({
+    type: 'arrow' as const,
+    ...connection,
+  }))
+  const result = shapes.length
+    ? onStep
+      ? await createShapesProgressively(editor, { shapes }, onStep)
+      : createShapes(editor, { shapes })
     : { created: [], aliases: {} }
   const updated: string[] = []
+  if ('interrupted' in result)
+    return { ...result, updated, connected: result.created }
   editor.run(() => {
     for (const connection of existing) {
       createArrow(
@@ -701,7 +746,11 @@ export async function arrangeShapes(editor: Editor, input: ArrangeShapesInput) {
   }
 }
 
-export async function createDiagram(editor: Editor, input: CreateDiagramInput) {
+export async function createDiagram(
+  editor: Editor,
+  input: CreateDiagramInput,
+  onStep?: (count: number) => Promise<void>,
+) {
   ensureUniqueIds(input.nodes)
   ensureUniqueIds(input.edges)
   const nodeIds = new Set(input.nodes.map((node) => node.id))
@@ -756,7 +805,9 @@ export async function createDiagram(editor: Editor, input: CreateDiagramInput) {
       labelColor: edge.labelColor ?? ('black' as const),
     })),
   )
-  const result = createShapes(editor, { shapes })
+  const result = onStep
+    ? await createShapesProgressively(editor, { shapes }, onStep)
+    : createShapes(editor, { shapes })
   const autoIds = result.created
     .filter((shape) => shape.type === 'arrow')
     .flatMap((shape, index) => {
@@ -791,7 +842,12 @@ export async function createDiagram(editor: Editor, input: CreateDiagramInput) {
   }
 }
 
-export function runCanvasTool(editor: Editor, name: string, input: unknown) {
+export function runCanvasTool(
+  editor: Editor,
+  name: string,
+  input: unknown,
+  onStep?: (count: number) => Promise<void>,
+) {
   if (
     editor.getIsReadonly() &&
     name !== 'read_canvas' &&
@@ -803,7 +859,9 @@ export function runCanvasTool(editor: Editor, name: string, input: unknown) {
     case 'read_canvas':
       return describeCanvas(editor, parseToolInput(name, input))
     case 'create_shapes':
-      return createShapes(editor, parseToolInput(name, input))
+      return onStep
+        ? createShapesProgressively(editor, parseToolInput(name, input), onStep)
+        : createShapes(editor, parseToolInput(name, input))
     case 'update_shapes':
       return updateShapes(editor, parseToolInput(name, input))
     case 'delete_shapes':
@@ -811,9 +869,9 @@ export function runCanvasTool(editor: Editor, name: string, input: unknown) {
     case 'arrange_shapes':
       return arrangeShapes(editor, parseToolInput(name, input))
     case 'connect_shapes':
-      return connectShapes(editor, parseToolInput(name, input))
+      return connectShapes(editor, parseToolInput(name, input), onStep)
     case 'create_diagram':
-      return createDiagram(editor, parseToolInput(name, input))
+      return createDiagram(editor, parseToolInput(name, input), onStep)
     case 'inspect_scene':
       return inspectScene(editor, parseToolInput(name, input))
   }

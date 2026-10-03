@@ -65,8 +65,8 @@ export function Canvas({
     return () => {
       onReady?.(null)
       stopSaved()
-      void thumbnailer.flush(mounted)
       detach()
+      void thumbnailer.flush(mounted)
     }
   }
 

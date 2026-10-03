@@ -300,6 +300,67 @@ test('replayed tool calls return their original result without drawing twice', a
   assert.equal(editor.historyPoints, 2)
 })
 
+test('creation reveals nodes before arrows and replay does not animate again', async () => {
+  const editor = makeEditor()
+  const frames = []
+  const runner = createCanvasToolRunner(editor, async () => {
+    frames.push([...editor.shapes.values()].map((shape) => shape.type))
+  })
+  const input = {
+    shapes: [
+      { type: 'arrow', id: 'link', from: 'a', to: 'b' },
+      box('a'),
+      box('b', 200),
+    ],
+  }
+  const execution = await runner.run('progressive', 'create_shapes', input)
+  assert.deepEqual(frames, [[], ['geo'], ['geo', 'geo']])
+  assert.equal(execution.result.output.created.length, 3)
+  assert.equal(editor.bindings.length, 2)
+  assert.equal(editor.historyPoints, 1)
+  await runner.run('progressive', 'create_shapes', input)
+  assert.equal(frames.length, 3)
+  assert.equal(editor.shapes.size, 3)
+})
+
+test('stopping progressive creation preserves completed shapes and releases the batch', async () => {
+  const editor = makeEditor()
+  let stopped = false
+  const runner = createCanvasToolRunner(editor, async () => {
+    if (!stopped && editor.shapes.size === 1) {
+      stopped = true
+      runner.cancel()
+    }
+  })
+  const execution = await runner.run('stop', 'create_shapes', {
+    shapes: [box('a'), box('b')],
+  })
+  assert.equal(editor.shapes.size, 1)
+  assert.equal(execution.applied, true)
+  assert.equal(execution.result.output.created.length, 1)
+  assert.equal(execution.result.output.errors.length, 1)
+  runner.beginTurn()
+  const next = await runner.run('next-turn', 'create_shapes', {
+    shapes: [box('c')],
+  })
+  assert.equal(next.result.state, 'output-available')
+  assert.equal(editor.shapes.size, 2)
+})
+
+test('invalid creation batches never start the live preview', async () => {
+  const editor = makeEditor()
+  let frames = 0
+  const runner = createCanvasToolRunner(editor, async () => {
+    frames++
+  })
+  const execution = await runner.run('invalid-preview', 'create_shapes', {
+    shapes: [box('a'), { type: 'arrow', from: 'a', to: 'missing' }],
+  })
+  assert.equal(execution.result.state, 'output-error')
+  assert.equal(editor.shapes.size, 0)
+  assert.equal(frames, 0)
+})
+
 test('invalid external input cannot mutate the editor, including on replay', async () => {
   const editor = makeEditor()
   const runner = createCanvasToolRunner(editor)

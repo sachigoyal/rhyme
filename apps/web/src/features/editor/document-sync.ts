@@ -3,6 +3,7 @@ import type { Editor } from 'tldraw'
 import { errorCode } from '@rhyme/trpc-client'
 import type { DocumentSnapshot } from '@rhyme/trpc-client'
 import { documentCache } from './document-cache'
+import { registerEditorBatch } from './editor-batch'
 
 export type SyncStatus =
   | 'saved'
@@ -42,6 +43,7 @@ export class DocumentSync {
   private cacheTimer?: ReturnType<typeof setTimeout>
   private read: () => DocumentSnapshot | null = () => null
   private readonly listeners = new Set<() => void>()
+  private readonly batches = new Set<symbol>()
 
   constructor(private readonly options: DocumentSyncOptions) {
     this.version = options.version
@@ -58,7 +60,18 @@ export class DocumentSync {
   getVersion = () => this.version
   getRevision = () => this.revision
 
+  beginBatch = () => {
+    const batch = Symbol()
+    this.batches.add(batch)
+    clearTimeout(this.saveTimer)
+    return () => {
+      if (!this.batches.delete(batch) || this.batches.size) return
+      if (this.isDirty && this.status !== 'conflict') this.schedule(0)
+    }
+  }
+
   attach(editor: Editor) {
+    const unregisterBatch = registerEditorBatch(editor, this.beginBatch)
     this.read = () =>
       getSnapshot(editor.store).document as unknown as DocumentSnapshot
 
@@ -79,6 +92,7 @@ export class DocumentSync {
     if (this.isDirty) this.schedule(0)
 
     return () => {
+      unregisterBatch()
       stopListening()
       window.removeEventListener('online', onOnline)
       window.removeEventListener('beforeunload', onUnload)
@@ -87,6 +101,7 @@ export class DocumentSync {
 
       const final = this.read()
       this.read = () => final
+      this.batches.clear()
       void this.writeCache()
       void this.flush()
     }
@@ -94,6 +109,7 @@ export class DocumentSync {
 
   async flush(): Promise<void> {
     clearTimeout(this.saveTimer)
+    if (this.batches.size) return
     if (this.saving) {
       await this.saving
       if (this.status === 'unsaved') await this.flush()
@@ -125,7 +141,7 @@ export class DocumentSync {
       .finally(() => {
         this.saving = null
         void this.writeCache()
-        if (this.isDirty && this.status !== 'conflict') {
+        if (this.isDirty && this.status !== 'conflict' && !this.batches.size) {
           this.schedule(this.status === 'unsaved' ? SAVE_DELAY : RETRY_DELAY)
         }
       })
@@ -152,6 +168,7 @@ export class DocumentSync {
 
     clearTimeout(this.cacheTimer)
     this.cacheTimer = setTimeout(() => void this.writeCache(), CACHE_DELAY)
+    if (this.batches.size) return
     this.schedule(
       Math.min(SAVE_DELAY, MAX_SAVE_DELAY - (Date.now() - this.pendingSince)),
     )

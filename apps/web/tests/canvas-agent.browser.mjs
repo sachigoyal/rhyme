@@ -62,6 +62,213 @@ const run = (name, input) =>
 const node = (id, role = 'process', text = id) => ({ id, role, text })
 const box = (id, x = 0, y = 0) => ({ id, type: 'geo', x, y, w: 160, h: 100 })
 
+test('agent creation renders progressively, saves the final scene once, and undoes together', async () => {
+  await page.evaluate(() => {
+    const { editor, runner, sync } = window.canvasFixture
+    const release = sync.beginBatch()
+    const frames = []
+    const stop = editor.store.listen(
+      () => frames.push(editor.getCurrentPageShapeIds().size),
+      { source: 'user', scope: 'document' },
+    )
+    const shapes = Array.from({ length: 20 }, (_, index) => ({
+      id: `live-${index}`,
+      type: 'geo',
+      x: 40 + (index % 7) * 180,
+      y: 40 + Math.floor(index / 7) * 120,
+      w: 160,
+      h: 100,
+      text: `Step ${index + 1}`,
+      color: index % 2 ? 'blue' : 'green',
+    }))
+    Object.assign(window.canvasFixture, {
+      frames,
+      release,
+      stop,
+      pending: runner.run('live-build', 'create_shapes', { shapes }),
+    })
+  })
+  await page.waitForFunction(() => {
+    const count = window.canvasFixture.editor.getCurrentPageShapeIds().size
+    return count >= 2 && count < 20
+  })
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 0)
+  if (process.env.CANVAS_SCREENSHOT_DIR) {
+    await mkdir(process.env.CANVAS_SCREENSHOT_DIR, { recursive: true })
+    await page.screenshot({
+      path: `${process.env.CANVAS_SCREENSHOT_DIR}/live-build-progress.png`,
+    })
+  }
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    const execution = await fixture.pending
+    fixture.stop()
+    await fixture.runner.run('live-color', 'update_shapes', {
+      updates: [{ id: 'live-0', color: 'red' }],
+    })
+    await fixture.sync.flush()
+    return {
+      frames: fixture.frames,
+      saves: fixture.saves.length,
+      created: execution.result.output.created.length,
+    }
+  })
+  assert.equal(result.created, 20)
+  assert.equal(result.saves, 0)
+  assert.ok(result.frames.some((count) => count > 0 && count < 20))
+  await page.evaluate(() => window.canvasFixture.release())
+  await page.waitForFunction(
+    () => window.canvasFixture.sync.getStatus() === 'saved',
+  )
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  const savedCount = await page.evaluate(
+    () =>
+      Object.values(window.canvasFixture.saves[0].document.store).filter(
+        (record) => record.typeName === 'shape',
+      ).length,
+  )
+  assert.equal(savedCount, 20)
+  if (process.env.CANVAS_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: `${process.env.CANVAS_SCREENSHOT_DIR}/live-build-finished.png`,
+    })
+  await page.evaluate(() => window.canvasFixture.editor.undo())
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    0,
+  )
+  assert.deepEqual(errors, [])
+})
+
+test('stopping a live build saves its completed portion without drawing the remaining shapes', async () => {
+  await page.evaluate(() => {
+    const fixture = window.canvasFixture
+    const shapes = Array.from({ length: 30 }, (_, index) => ({
+      id: `partial-${index}`,
+      type: 'geo',
+      x: index * 180,
+      y: 0,
+      w: 160,
+      h: 100,
+    }))
+    fixture.pending = fixture.runner.run('partial-build', 'create_shapes', {
+      shapes,
+    })
+  })
+  await page.waitForFunction(
+    () => window.canvasFixture.editor.getCurrentPageShapeIds().size >= 2,
+  )
+  const created = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    fixture.runner.cancel()
+    const execution = await fixture.pending
+    return execution.result.output.created.length
+  })
+  assert.ok(created >= 2 && created < 30)
+  await page.waitForFunction(
+    () => window.canvasFixture.sync.getStatus() === 'saved',
+  )
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    created,
+  )
+  assert.deepEqual(errors, [])
+})
+
+test('leaving during a build saves the completed scene despite outstanding batch holds', async () => {
+  await page.evaluate(() => {
+    const fixture = window.canvasFixture
+    fixture.release = fixture.sync.beginBatch()
+    fixture.pending = fixture.runner.run('exit-build', 'create_shapes', {
+      shapes: Array.from({ length: 30 }, (_, index) => ({
+        id: `exit-${index}`,
+        type: 'geo',
+        x: index * 180,
+        y: 0,
+        w: 160,
+        h: 100,
+      })),
+    })
+  })
+  await page.waitForFunction(
+    () => window.canvasFixture.editor.getCurrentPageShapeIds().size >= 2,
+  )
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    fixture.runner.cancel()
+    fixture.detach()
+    const execution = await fixture.pending
+    fixture.release()
+    await fixture.sync.flush()
+    return {
+      created: execution.result.output.created.length,
+      saves: fixture.saves.length,
+      savedShapes: Object.values(fixture.saves[0].document.store).filter(
+        (record) => record.typeName === 'shape',
+      ).length,
+    }
+  })
+  assert.ok(result.created >= 2 && result.created < 30)
+  assert.equal(result.saves, 1)
+  assert.equal(result.savedShapes, result.created)
+  assert.deepEqual(errors, [])
+})
+
+test('live diagrams reveal their nodes before bound connectors and save after routing', async () => {
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    const frames = []
+    const stop = fixture.editor.store.listen(
+      () => {
+        const shapes = fixture.editor.getCurrentPageShapesSorted()
+        frames.push({
+          nodes: shapes.filter((shape) => shape.type !== 'arrow').length,
+          arrows: shapes.filter((shape) => shape.type === 'arrow').length,
+        })
+      },
+      { source: 'user', scope: 'document' },
+    )
+    const execution = await fixture.runner.run(
+      'live-diagram',
+      'create_diagram',
+      {
+        nodes: Array.from({ length: 5 }, (_, index) => ({
+          id: `node-${index}`,
+          text: `Step ${index + 1}`,
+        })),
+        edges: Array.from({ length: 4 }, (_, index) => ({
+          from: `node-${index}`,
+          to: `node-${index + 1}`,
+        })),
+      },
+    )
+    stop()
+    return { frames, output: execution.result.output }
+  })
+  assert.equal(result.output.created.length, 9)
+  assert.ok(result.frames.some((frame) => frame.nodes > 0 && frame.nodes < 5))
+  assert.ok(
+    result.frames
+      .filter((frame) => frame.arrows > 0)
+      .every((frame) => frame.nodes === 5),
+  )
+  assert.ok(
+    result.output.created
+      .filter((shape) => shape.type === 'arrow')
+      .every((shape) => shape.from && shape.to),
+  )
+  await page.waitForFunction(
+    () => window.canvasFixture.sync.getStatus() === 'saved',
+  )
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  assert.deepEqual(errors, [])
+})
+
 test('branching diagrams use semantic shapes, readable labels, measured sizes and safe spacing', async () => {
   const result = await run('create_diagram', {
     nodes: [

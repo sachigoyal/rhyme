@@ -17,6 +17,7 @@ import {
   continuingToolResult,
 } from './canvas-tool-runner'
 import { getCanvasAgentOptions } from './agent-connection'
+import { beginEditorBatch } from '../editor/editor-batch'
 
 export function useCanvasAgent(
   fileId: string,
@@ -139,6 +140,12 @@ export function useCanvasAgent(
     chat.isRecovering ||
     chat.isToolContinuation
 
+  useEffect(() => {
+    if (busy) return beginEditorBatch(editor)
+  }, [busy, editor])
+
+  useEffect(() => () => runner.cancel(), [runner])
+
   const startRequest = (request: () => Promise<void>) => {
     if (
       requestInFlight.current ||
@@ -150,11 +157,13 @@ export function useCanvasAgent(
     requestInFlight.current = true
     setRequestPending(true)
     runner.beginTurn()
+    const release = beginEditorBatch(editor)
     void request()
       .catch((error: unknown) =>
         console.warn('Assistant request could not complete', error),
       )
       .finally(() => {
+        release()
         requestInFlight.current = false
         setRequestPending(false)
       })
@@ -228,6 +237,10 @@ export function useCanvasAgent(
 
   return {
     ...chat,
+    stop: async () => {
+      runner.cancel()
+      await chat.stop()
+    },
     quotaExceeded:
       agent.state?.errorCode === 'free_quota' && !config.connectionId,
     error:
