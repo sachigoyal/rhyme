@@ -38,7 +38,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={changeOpen}>
-      <AlertDialogContent size="sm">
+      <AlertDialogContent className="data-[size=default]:max-w-[calc(100vw-2rem)] data-[size=default]:sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -49,9 +49,13 @@ export function ConfirmDialog({
           </p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel size="lg" disabled={pending}>
+            Cancel
+          </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
+            size="lg"
+            className="min-w-0 whitespace-normal text-center"
             disabled={pending}
             onClick={async (event) => {
               event.preventDefault()

@@ -271,34 +271,64 @@ export function useRestoreFile() {
 export function useDestroyFile() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const options = useFileChange(() => null, true, true)
+  const cache = useFilesCache()
   return useMutation(
     trpc.files.destroy.mutationOptions({
-      ...options,
-      onSuccess: (_data, { id }) => {
+      onMutate: (input) => {
+        const ids = new Set('ids' in input ? input.ids : [input.id])
+        return cache.begin(
+          ['files', 'chats'],
+          [
+            cache.listUpdate((rows) =>
+              rows.filter((file) => !ids.has(file.id)),
+            ),
+            {
+              filter: trpc.chats.list.queryFilter(),
+              update: (data) =>
+                data &&
+                (data as ChatSummary[]).filter((chat) => !ids.has(chat.fileId)),
+            },
+          ],
+        )
+      },
+      onError: (_error, _input, transaction) => cache.rollback(transaction),
+      onSuccess: ({ deleted }) => {
+        const ids = new Set(deleted)
         patchCache(queryClient, {
           filter: trpc.settings.get.queryFilter(),
           update: (data) => {
             const settings = data as
               | RouterOutputs['settings']['get']
               | undefined
-            return settings?.lastEditedCanvasId === id
+            return settings?.lastEditedCanvasId &&
+              ids.has(settings.lastEditedCanvasId)
               ? { ...settings, lastEditedCanvasId: null }
               : settings
           },
         })
-        queryClient.removeQueries(trpc.files.get.queryFilter({ id }))
-        queryClient.removeQueries(trpc.files.document.queryFilter({ id }))
-        queryClient.removeQueries(trpc.collaborators.list.queryFilter({ id }))
+        for (const id of ids) {
+          queryClient.removeQueries(trpc.files.get.queryFilter({ id }))
+          queryClient.removeQueries(trpc.files.document.queryFilter({ id }))
+          queryClient.removeQueries(trpc.collaborators.list.queryFilter({ id }))
+        }
         for (const [key, detail] of queryClient.getQueriesData<ChatDetail>(
           trpc.chats.get.queryFilter(),
         )) {
-          if (detail?.chat.fileId === id)
+          if (detail && ids.has(detail.chat.fileId))
             queryClient.removeQueries({ queryKey: key, exact: true })
         }
       },
-      onSettled: (_data, error, input, transaction) =>
-        options.onSettled(_data, error, input, transaction),
+      onSettled: (_data, _error, input, transaction) =>
+        cache.settle(transaction, [
+          cache.listInvalidation,
+          ...('ids' in input ? input.ids : [input.id]).map(
+            cache.fileInvalidation,
+          ),
+          { scope: 'settings', filter: trpc.settings.get.queryFilter() },
+          { scope: 'chats', filter: trpc.chats.list.queryFilter() },
+          { scope: 'chats', filter: trpc.chats.activity.queryFilter() },
+          { scope: 'chats', filter: trpc.chats.analytics.queryFilter() },
+        ]),
     }),
   )
 }

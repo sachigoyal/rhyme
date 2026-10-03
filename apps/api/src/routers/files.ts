@@ -1,9 +1,18 @@
 import { TRPCError } from '@trpc/server'
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  notExists,
+  sql,
+} from 'drizzle-orm'
 import { z } from 'zod'
 import { schema } from '@rhyme/db'
 import type { Database, File, FileRole } from '@rhyme/db'
-import { isFolderOwner } from '../services/access'
+import { getOwnedFiles, isFolderOwner } from '../services/access'
 import {
   deletePrefix,
   objectKeys,
@@ -268,39 +277,80 @@ export const filesRouter = router({
       .where(eq(files.id, ctx.file.id))
   }),
 
-  destroy: fileProcedure('owner').mutation(async ({ ctx }) => {
-    const running = await ctx.db
-      .select({ id: schema.chats.id })
-      .from(schema.chats)
-      .where(
-        and(
-          eq(schema.chats.fileId, ctx.file.id),
-          eq(schema.chats.status, 'running'),
-        ),
-      )
-      .get()
-    if (running)
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message:
-          'Wait for the assistant to finish before deleting this canvas.',
-      })
-    await ctx.db.delete(files).where(eq(files.id, ctx.file.id))
-    ctx.waitUntil(
-      Promise.all([
-        deletePrefix(
-          ctx.env.STORAGE,
-          `${objectKeys.file(ctx.file.id)}documents/`,
-        ),
-        deletePrefix(ctx.env.STORAGE, `${objectKeys.file(ctx.file.id)}assets/`),
-        deletePrefix(
-          ctx.env.STORAGE,
-          `${objectKeys.file(ctx.file.id)}thumbnails/`,
-        ),
-        ctx.env.STORAGE.delete(`${objectKeys.file(ctx.file.id)}thumbnail`),
+  destroy: protectedProcedure
+    .input(
+      z.union([
+        z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }),
+        z.object({ id: z.string().uuid() }),
       ]),
     )
-  }),
+    .mutation(async ({ ctx, input }) => {
+      const ids = [...new Set('ids' in input ? input.ids : [input.id])]
+      const owned = await getOwnedFiles(ctx.db, ids, ctx.user.id)
+      if (owned.length !== ids.length)
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'A selected canvas is unavailable.',
+        })
+      const requested = sql`(select value from json_each(${JSON.stringify(ids)}))`
+      const runningChats = ctx.db
+        .select({ id: schema.chats.id })
+        .from(schema.chats)
+        .where(
+          and(
+            inArray(schema.chats.fileId, requested),
+            eq(schema.chats.status, 'running'),
+          ),
+        )
+      const running = await runningChats.limit(1).get()
+      if (running)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'Wait for the assistant to finish before deleting this canvas.',
+        })
+      const canDelete = and(
+        notExists(runningChats),
+        sql`(select count(*) from ${files} where ${files.ownerId} = ${ctx.user.id} and ${files.id} in ${requested}) = ${ids.length}`,
+      )
+      const [, deleted] = await ctx.db.batch([
+        ctx.db
+          .update(userSettings)
+          .set({
+            lastEditedCanvasId: null,
+            updatedAt: sql`${userSettings.updatedAt}`,
+          })
+          .where(
+            and(inArray(userSettings.lastEditedCanvasId, requested), canDelete),
+          ),
+        ctx.db
+          .delete(files)
+          .where(
+            and(
+              inArray(files.id, requested),
+              eq(files.ownerId, ctx.user.id),
+              canDelete,
+            ),
+          )
+          .returning({ id: files.id }),
+      ])
+      if (deleted.length !== ids.length)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'The selected canvases changed. Refresh and try again.',
+        })
+      ctx.waitUntil(
+        Promise.all(
+          ids.flatMap((id) => [
+            deletePrefix(ctx.env.STORAGE, `${objectKeys.file(id)}documents/`),
+            deletePrefix(ctx.env.STORAGE, `${objectKeys.file(id)}assets/`),
+            deletePrefix(ctx.env.STORAGE, `${objectKeys.file(id)}thumbnails/`),
+            ctx.env.STORAGE.delete(`${objectKeys.file(id)}thumbnail`),
+          ]),
+        ),
+      )
+      return { deleted: deleted.map((file) => file.id) }
+    }),
 
   document: fileProcedure('viewer').query(async ({ ctx }) => {
     const { documentKey, version } = ctx.file

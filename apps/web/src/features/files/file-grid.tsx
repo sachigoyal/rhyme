@@ -131,6 +131,14 @@ export function FileGrid({
     const failed = new Set<string>()
     let succeeded = 0
     try {
+      if (action === 'destroy') {
+        await destroy.mutateAsync({ ids: selection.map((file) => file.id) })
+        setSelected(new Set())
+        toast.success(
+          `${selection.length} ${selection.length === 1 ? 'canvas' : 'canvases'} deleted`,
+        )
+        return
+      }
       for (const file of selection) {
         try {
           if (action === 'move')
@@ -139,7 +147,7 @@ export function FileGrid({
               folderId: destinationFolderId,
             })
           else
-            await { trash, restore, destroy }[action].mutateAsync({
+            await { trash, restore }[action].mutateAsync({
               id: file.id,
             })
           succeeded++
@@ -150,7 +158,7 @@ export function FileGrid({
       setSelected(failed)
       if (succeeded)
         toast.success(
-          `${succeeded} ${succeeded === 1 ? 'canvas' : 'canvases'} ${action === 'trash' ? 'moved to trash' : action === 'restore' ? 'restored' : action === 'destroy' ? 'deleted' : 'moved'}`,
+          `${succeeded} ${succeeded === 1 ? 'canvas' : 'canvases'} ${action === 'trash' ? 'moved to trash' : action === 'restore' ? 'restored' : 'moved'}`,
         )
       if (failed.size)
         throw new Error(

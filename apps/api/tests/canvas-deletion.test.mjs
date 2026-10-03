@@ -52,7 +52,7 @@ before(async () => {
         try {
           const action = new URL(request.url).pathname.slice(1);
           const input = request.method === 'POST' ? await request.json() : {};
-          const result = action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]({id:new URL(request.url).searchParams.get('id') ?? '${fileId}', ...input});
+          const result = action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]('ids' in input ? input : {id:new URL(request.url).searchParams.get('id') ?? '${fileId}', ...input});
           return Response.json(result ?? {});
         } catch(error) { return Response.json({code:error.code, error:error.message}, {status:400}); }
       }};
@@ -263,11 +263,29 @@ test('thumbnails follow saved versions, clear on deletion, and reject uploads ov
 })
 
 test('trash and permanent deletion preserve activity and isolate it by user', async () => {
+  await db
+    .prepare(
+      'UPDATE user_settings SET last_edited_canvas_id = ? WHERE user_id = ?',
+    )
+    .bind(fileId, 'owner')
+    .run()
   assert.equal((await call('destroy', 'other')).status, 400)
   assert.equal((await call('trash')).status, 200)
   assert.equal((await (await call('analytics')).json()).totalTokens, 42)
   assert.equal((await (await call('activity')).json())[0].available, false)
-  assert.equal((await call('destroy')).status, 200)
+  const destroyed = await call('destroy')
+  assert.equal(destroyed.status, 200, await destroyed.text())
+  assert.equal(
+    (
+      await db
+        .prepare(
+          'SELECT last_edited_canvas_id FROM user_settings WHERE user_id = ?',
+        )
+        .bind('owner')
+        .first()
+    ).last_edited_canvas_id,
+    null,
+  )
   const activity = await (await call('activity')).json()
   assert.equal(activity[0].id, chatId)
   assert.equal(activity[0].available, false)
@@ -288,6 +306,119 @@ test('trash and permanent deletion preserve activity and isolate it by user', as
     0,
   )
   assert.ok(await storage.get(`files/${fileId}/chats/${chatId}/preview.jpg`))
+})
+
+test('bulk deletion validates the whole selection and deletes more than 100 canvases in one request', async () => {
+  const ids = Array.from({ length: 105 }, () => crypto.randomUUID())
+  const foreignId = crypto.randomUUID()
+  await db.batch(
+    [...ids, foreignId].map((id) =>
+      db
+        .prepare(
+          'INSERT INTO files (id,owner_id,name,trashed_at,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+        .bind(
+          id,
+          id === foreignId ? 'other' : 'owner',
+          'Bulk canvas',
+          Date.now(),
+          Date.now(),
+          Date.now(),
+        ),
+    ),
+  )
+  await db
+    .prepare(
+      'UPDATE user_settings SET last_edited_canvas_id = ? WHERE user_id = ?',
+    )
+    .bind(ids[0], 'owner')
+    .run()
+  await db
+    .prepare(
+      'INSERT INTO user_settings (user_id,last_edited_canvas_id,created_at,updated_at) VALUES (?, ?, ?, ?)',
+    )
+    .bind('other', ids[1], Date.now(), Date.now())
+    .run()
+  const destroy = (selected) =>
+    runtime.dispatchFetch('https://test/destroy', {
+      method: 'POST',
+      headers: { 'x-user': 'owner', 'content-type': 'application/json' },
+      body: JSON.stringify({ ids: selected }),
+    })
+  const exists = async (id) =>
+    Boolean(
+      await db.prepare('SELECT id FROM files WHERE id = ?').bind(id).first(),
+    )
+  assert.equal((await (await destroy([])).json()).code, 'BAD_REQUEST')
+  assert.equal(
+    (await (await destroy([ids[0], foreignId])).json()).code,
+    'NOT_FOUND',
+  )
+  assert.equal(
+    (await (await destroy([ids[0], crypto.randomUUID()])).json()).code,
+    'NOT_FOUND',
+  )
+  assert.ok(await exists(ids[0]))
+  assert.equal(
+    (
+      await db
+        .prepare(
+          'SELECT last_edited_canvas_id FROM user_settings WHERE user_id = ?',
+        )
+        .bind('owner')
+        .first()
+    ).last_edited_canvas_id,
+    ids[0],
+  )
+  const runningChat = crypto.randomUUID()
+  await db
+    .prepare(
+      'INSERT INTO chats (id,file_id,user_id,title,status,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    )
+    .bind(
+      runningChat,
+      ids[1],
+      'owner',
+      'Running',
+      'running',
+      Date.now(),
+      Date.now(),
+    )
+    .run()
+  assert.equal((await (await destroy(ids)).json()).code, 'CONFLICT')
+  assert.ok(await exists(ids[0]))
+  assert.ok(await exists(ids[1]))
+  await db
+    .prepare('UPDATE chats SET status = ? WHERE id = ?')
+    .bind('ready', runningChat)
+    .run()
+  for (const id of ids.slice(0, 2))
+    await storage.put(`files/${id}/thumbnails/1/test`, 'preview')
+  const response = await destroy([...ids, ids[0]])
+  assert.equal(response.status, 200)
+  assert.deepEqual(new Set((await response.json()).deleted), new Set(ids))
+  for (const id of ids) assert.equal(await exists(id), false)
+  assert.ok(await exists(foreignId))
+  for (const user of ['owner', 'other'])
+    assert.equal(
+      (
+        await db
+          .prepare(
+            'SELECT last_edited_canvas_id FROM user_settings WHERE user_id = ?',
+          )
+          .bind(user)
+          .first()
+      ).last_edited_canvas_id,
+      null,
+    )
+  for (const id of ids.slice(0, 2))
+    assert.equal(await storage.get(`files/${id}/thumbnails/1/test`), null)
+  assert.ok(
+    await db
+      .prepare('SELECT id FROM chats WHERE id = ?')
+      .bind(runningChat)
+      .first(),
+  )
 })
 
 test('profile uploads authenticate, validate type and size, persist, replace and reset', async () => {

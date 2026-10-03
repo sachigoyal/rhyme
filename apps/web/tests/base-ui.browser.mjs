@@ -209,6 +209,50 @@ test('tooltip and dropdown share one button and open a rename dialog with focuse
   assert.deepEqual(errors, [])
 })
 
+test('permanent-delete confirmation has padded buttons that fit on desktop and mobile', async () => {
+  for (const width of [320, 390, 1024]) {
+    await page.setViewportSize({ width, height: 844 })
+    await openMenuDialog('Delete file')
+    const dialog = page.getByRole('alertdialog')
+    await dialog.waitFor()
+    await dialog.evaluate((element) =>
+      Promise.all(
+        element.getAnimations().map((animation) => animation.finished),
+      ),
+    )
+    const box = await dialog.boundingBox()
+    assert.ok(box.x >= 16)
+    assert.ok(box.x + box.width <= width - 16)
+    for (const name of ['Cancel', 'Delete permanently']) {
+      const button = dialog.getByRole('button', { name, exact: true })
+      const metrics = await button.evaluate((element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        const text = range.getBoundingClientRect()
+        const bounds = element.getBoundingClientRect()
+        return {
+          height: bounds.height,
+          left: text.left - bounds.left,
+          right: bounds.right - text.right,
+          scroll: element.scrollWidth,
+          width: element.clientWidth,
+        }
+      })
+      assert.equal(metrics.height, 40)
+      assert.ok(metrics.left >= 10)
+      assert.ok(metrics.right >= 10)
+      assert.ok(metrics.scroll <= metrics.width)
+    }
+    if (process.env.UI_SCREENSHOT_DIR)
+      await page.screenshot({
+        path: `${process.env.UI_SCREENSHOT_DIR}/delete-dialog-${width}.png`,
+      })
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await dialog.waitFor({ state: 'hidden' })
+  }
+  assert.deepEqual(errors, [])
+})
+
 test('confirmation survives outside clicks, cancellation, async failure and pending Escape', async () => {
   await openMenuDialog('Delete file')
   const dialog = page.getByRole('alertdialog')

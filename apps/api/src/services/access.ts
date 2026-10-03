@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import { schema } from '@rhyme/db'
 import type { Database, File, FileRole } from '@rhyme/db'
 
@@ -8,6 +8,25 @@ const rank: Record<FileRole, number> = { viewer: 0, editor: 1, owner: 2 }
 
 export const hasRole = (role: FileRole, required: FileRole) =>
   rank[role] >= rank[required]
+
+export async function getOwnedFiles(
+  db: Database,
+  ids: string[],
+  userId: string,
+) {
+  return db
+    .select()
+    .from(files)
+    .where(
+      and(
+        eq(files.ownerId, userId),
+        inArray(
+          files.id,
+          sql`(select value from json_each(${JSON.stringify(ids)}))`,
+        ),
+      ),
+    )
+}
 
 export interface FileAccess {
   file: File

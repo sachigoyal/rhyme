@@ -299,7 +299,7 @@ function FileMenu({ file, folders }: FileCardProps) {
         title={`Delete “${file.name}” permanently?`}
         description="The canvas and its assets will be permanently deleted. This cannot be undone."
         confirmLabel="Delete permanently"
-        onConfirm={() => destroyFile.mutateAsync({ id: file.id })}
+        onConfirm={() => destroyFile.mutateAsync({ ids: [file.id] })}
       />
     </>
   )
