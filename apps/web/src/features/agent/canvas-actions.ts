@@ -788,6 +788,7 @@ export async function createDiagram(
   editor: Editor,
   input: CreateDiagramInput,
   onStep?: (count: number) => Promise<void>,
+  reuse?: { created: string[]; aliases: Record<string, string> },
 ) {
   ensureUniqueIds(input.nodes)
   ensureUniqueIds(input.edges)
@@ -805,7 +806,15 @@ export async function createDiagram(
       throw new Error('Node and edge ids must be distinct')
   }
   const nodes = input.nodes.map((node) => prepareDiagramNode(editor, node))
+  const originals = reuse?.created.map((id) => ({
+    id: toShapeId(id),
+    record: editor.getShape(toShapeId(id)),
+  }))
   const positions = await computeLayout(nodes, input.edges, input.layout)
+  if (originals?.some(({ id, record }) => editor.getShape(id) !== record))
+    throw new Error(
+      'Shapes changed during layout; completed edits were retained',
+    )
   const placed = nodes.map((node) => ({
     ...node,
     ...positions.find((position) => position.id === node.id)!,
@@ -815,7 +824,10 @@ export async function createDiagram(
   const origin = input.origin ?? { x: viewport.x + 40, y: viewport.y + 40 }
   const obstacles = editor
     .getCurrentPageShapesSorted()
-    .filter((shape) => shape.type !== 'arrow')
+    .filter(
+      (shape) =>
+        shape.type !== 'arrow' && !reuse?.created.includes(toAgentId(shape.id)),
+    )
     .flatMap((shape) => {
       const bounds = editor.getShapePageBounds(shape)
       return bounds ? [bounds] : []
@@ -843,9 +855,51 @@ export async function createDiagram(
       labelColor: edge.labelColor ?? ('black' as const),
     })),
   )
-  const result = onStep
-    ? await createShapesProgressively(editor, { shapes }, onStep)
-    : createShapes(editor, { shapes })
+  if (reuse) {
+    updateShapes(editor, {
+      updates: shapes
+        .filter((shape) => shape.type !== 'arrow')
+        .flatMap((shape) => {
+          const id = shape.id && reuse.aliases[shape.id]
+          return id
+            ? [
+                {
+                  id,
+                  x: shape.x,
+                  y: shape.y,
+                  ...(shape.type === 'geo' ? { w: shape.w, h: shape.h } : {}),
+                },
+              ]
+            : []
+        }),
+    })
+    updateShapes(editor, {
+      updates: reuse.created
+        .filter((id) => editor.getShape(toShapeId(id))?.type === 'arrow')
+        .flatMap((id, index) => {
+          const edge = input.edges[index]
+          return edge && edge.kind === undefined
+            ? [
+                {
+                  id,
+                  kind:
+                    input.layout.mode === 'flow'
+                      ? ('elbow' as const)
+                      : ('arc' as const),
+                },
+              ]
+            : []
+        }),
+    })
+  }
+  const result = reuse
+    ? {
+        created: descriptions(editor, reuse.created.map(toShapeId)),
+        aliases: reuse.aliases,
+      }
+    : onStep
+      ? await createShapesProgressively(editor, { shapes }, onStep)
+      : createShapes(editor, { shapes })
   const autoIds = result.created
     .filter((shape) => shape.type === 'arrow')
     .flatMap((shape, index) => {

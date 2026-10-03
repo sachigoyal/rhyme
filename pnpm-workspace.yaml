@@ -33,6 +33,7 @@ catalog:
   '@ai-sdk/google': 4.0.87
   '@ai-sdk/openai-compatible': 3.0.61
   elkjs: ^0.12.0
+  '@streamparser/json': ^0.0.26
 
 minimumReleaseAgeExclude:
   - '@turbo/darwin-64@2.11.5'

@@ -2,7 +2,6 @@ import type { Editor, TLAssetStore } from 'tldraw'
 import { publishThumbnail, uploadAsset } from '@/lib/storage'
 import type { Thumbnail } from '@/lib/storage'
 import type { DocumentSync } from './document-sync'
-import { getEditorPreviewVersion, hasEditorPreview } from './editor-preview'
 
 export function createAssetStore(fileId: string): TLAssetStore {
   return {
@@ -29,8 +28,6 @@ export function createThumbnailer(
   let publishing = Promise.resolve()
 
   const capture = async (editor: Editor) => {
-    if (hasEditorPreview(editor)) return
-    const previewVersion = getEditorPreviewVersion(editor)
     lastRun = Date.now()
     const revision = sync.getRevision()
     const shapes = [...editor.getCurrentPageShapeIds()]
@@ -56,8 +53,6 @@ export function createThumbnailer(
       ])
       const version = sync.getVersion()
       const current = () =>
-        !hasEditorPreview(editor) &&
-        getEditorPreviewVersion(editor) === previewVersion &&
         sync.getStatus() === 'saved' &&
         sync.getRevision() === revision &&
         sync.getVersion() === version

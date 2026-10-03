@@ -62,287 +62,110 @@ const run = (name, input) =>
 const node = (id, role = 'process', text = id) => ({ id, role, text })
 const box = (id, x = 0, y = 0) => ({ id, type: 'geo', x, y, w: 160, h: 100 })
 
-test('streaming tool arguments preview creation and updates without saving or changing undo history', async () => {
-  const result = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    const { editor, streamPreview, sync } = fixture
-    const release = sync.beginBatch()
-    const message = (name, input) => [
-      {
-        id: 'stream',
-        role: 'assistant',
-        parts: [
-          {
-            type: `tool-${name}`,
-            toolCallId: name,
-            state: 'input-streaming',
+const startTool = (id, name, request = 'turn') =>
+  page.evaluate(
+    ({ id, name, request }) => {
+      window.canvasFixture.runner.receive(
+        JSON.stringify({
+          type: 'cf_agent_use_chat_response',
+          id: request,
+          body: JSON.stringify({
+            type: 'tool-input-start',
+            toolCallId: id,
+            toolName: name,
+          }),
+          done: false,
+        }),
+      )
+    },
+    { id, name, request },
+  )
+const delta = async (id, text, request = 'turn') => {
+  await page.evaluate(
+    ({ id, text, request }) =>
+      window.canvasFixture.runner.receive(
+        JSON.stringify({
+          type: 'cf_agent_use_chat_response',
+          id: request,
+          body: JSON.stringify({
+            type: 'tool-input-delta',
+            toolCallId: id,
+            inputTextDelta: text,
+          }),
+          done: false,
+        }),
+      ),
+    { id, text, request },
+  )
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 50)))
+}
+const finishTool = (id, name, input) =>
+  page.evaluate(
+    async ({ id, name, input }) => {
+      const fixture = window.canvasFixture
+      fixture.runner.receive(
+        JSON.stringify({
+          type: 'cf_agent_use_chat_response',
+          id: 'turn',
+          body: JSON.stringify({
+            type: 'tool-input-available',
+            toolCallId: id,
+            toolName: name,
             input,
-          },
-        ],
-      },
-    ]
-    const shape = {
-      id: 'stream-node',
-      type: 'geo',
-      x: 40,
-      y: 80,
-      w: 180,
-      h: 100,
-      color: 'green',
-    }
-    streamPreview.update(
-      message('create_shapes', { shapes: [shape, { type: 'geo' }] }),
-    )
-    const previewCount = editor.getCurrentPageShapeIds().size
-    const stableCount = Object.values(fixture.document().store).filter(
-      (record) => record.typeName === 'shape',
-    ).length
-    await sync.flush()
-    const previewSaves = fixture.saves.length
-    streamPreview.finish('create_shapes')
-    const clearedCount = editor.getCurrentPageShapeIds().size
-    await fixture.runner.run('stream-create-final', 'create_shapes', {
-      shapes: [shape],
-    })
-    streamPreview.update(
-      message('update_shapes', {
-        updates: [{ id: 'stream-node', color: 'red', dx: 30, text: 'Live' }],
-      }),
-    )
-    const updatedPreview = editor.getShape('shape:stream-node')
-    const stable = fixture.document().store['shape:stream-node']
-    streamPreview.update(
-      message('update_shapes', {
-        updates: [
-          { id: 'stream-node', color: 'red', dx: 30, text: 'Live text' },
-        ],
-      }),
-    )
-    const nonAccumulatingX = editor.getShape('shape:stream-node').x
-    streamPreview.clear()
-    const restored = editor.getShape('shape:stream-node')
-    streamPreview.finish('update_shapes')
-    await fixture.runner.run('stream-update-final', 'update_shapes', {
-      updates: [{ id: 'stream-node', color: 'red', dx: 30 }],
-    })
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    release()
-    await sync.flush()
-    const final = editor.getShape('shape:stream-node')
-    editor.undo()
-    return {
-      previewCount,
-      stableCount,
-      previewSaves,
-      clearedCount,
-      previewColor: updatedPreview.props.color,
-      previewX: updatedPreview.x,
-      stableColor: stable.props.color,
-      stableX: stable.x,
-      nonAccumulatingX,
-      restoredColor: restored.props.color,
-      restoredX: restored.x,
-      finalColor: final.props.color,
-      finalX: final.x,
-      saves: fixture.saves.length,
-      afterUndo: editor.getCurrentPageShapeIds().size,
-    }
-  })
-  assert.deepEqual(result, {
-    previewCount: 1,
-    stableCount: 0,
-    previewSaves: 0,
-    clearedCount: 0,
-    previewColor: 'red',
-    previewX: 70,
-    stableColor: 'green',
-    stableX: 40,
-    nonAccumulatingX: 70,
-    restoredColor: 'green',
-    restoredX: 40,
-    finalColor: 'red',
-    finalX: 70,
-    saves: 1,
-    afterUndo: 0,
-  })
-  assert.deepEqual(errors, [])
-})
-
-test('streaming diagram drafts and connectors render before final layout and disappear on cancellation', async () => {
-  await page.evaluate(() => {
-    const fixture = window.canvasFixture
-    fixture.streamMessage = [
-      {
-        id: 'diagram-stream',
-        role: 'assistant',
-        parts: [
-          {
-            type: 'tool-create_diagram',
-            toolCallId: 'diagram-stream',
-            state: 'input-streaming',
-            input: {
-              nodes: [
-                { id: 'draft-a', text: 'First' },
-                { id: 'draft-b', text: 'Second' },
-              ],
-              edges: [{ from: 'draft-a', to: 'draft-b' }, { from: 'draft-b' }],
-            },
-          },
-        ],
-      },
-    ]
-    fixture.streamPreview.update(fixture.streamMessage)
-  })
-  await page.waitForFunction(
-    () => window.canvasFixture.editor.getCurrentPageShapeIds().size === 3,
+          }),
+          done: false,
+        }),
+      )
+      const result = await fixture.runner.run(id, name, input)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await fixture.sync.flush()
+      return result
+    },
+    { id, name, input },
   )
-  if (process.env.CANVAS_SCREENSHOT_DIR) {
-    await mkdir(process.env.CANVAS_SCREENSHOT_DIR, { recursive: true })
-    await page.screenshot({
-      path: `${process.env.CANVAS_SCREENSHOT_DIR}/streaming-diagram.png`,
-    })
-  }
-  const result = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    const shapes = fixture.editor.getCurrentPageShapesSorted()
-    const arrow = shapes.find((shape) => shape.type === 'arrow')
-    const bindings = fixture.editor.getBindingsFromShape(arrow.id, 'arrow')
-    const stableCount = Object.values(fixture.document().store).filter(
-      (record) => record.typeName === 'shape',
-    ).length
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    await fixture.sync.flush()
-    fixture.streamPreview.cancel()
-    fixture.streamPreview.update(fixture.streamMessage)
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    return {
-      bindings: bindings.length,
-      stableCount,
-      saves: fixture.saves.length,
-      afterCancel: fixture.editor.getCurrentPageShapeIds().size,
-    }
-  })
-  assert.deepEqual(result, {
-    bindings: 2,
-    stableCount: 0,
-    saves: 0,
-    afterCancel: 0,
-  })
-  assert.deepEqual(errors, [])
-})
 
-test('completed update calls reveal each edited shape and stop without applying the remainder', async () => {
-  await run('create_shapes', {
-    shapes: Array.from({ length: 20 }, (_, index) => ({
-      id: `update-${index}`,
-      type: 'geo',
-      x: index * 180,
-      y: 0,
-      w: 160,
-      h: 100,
-    })),
-  })
-  await page.evaluate(() => {
-    const fixture = window.canvasFixture
-    fixture.pending = fixture.runner.run('live-update', 'update_shapes', {
-      ids: Array.from({ length: 20 }, (_, index) => `update-${index}`),
-      patch: { color: 'red' },
-    })
-  })
-  await page.waitForFunction(
-    () =>
-      window.canvasFixture.editor
-        .getCurrentPageShapesSorted()
-        .filter((shape) => shape.props.color === 'red').length >= 2,
+test('raw argument chunks execute completed shapes before JSON ends, without recreation or replay', async () => {
+  const shapes = [box('first', 80, 100), box('second', 300, 100)]
+  await startTool('build', 'create_shapes')
+  await delta('build', '{"shapes":[' + JSON.stringify(shapes[0]).slice(0, -1))
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    0,
   )
-  const result = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    fixture.runner.cancel()
-    const execution = await fixture.pending
-    return {
-      updated: execution.result.output.updated.length,
-      red: fixture.editor
-        .getCurrentPageShapesSorted()
-        .filter((shape) => shape.props.color === 'red').length,
-      interrupted: execution.result.output.interrupted,
-    }
-  })
-  assert.ok(result.updated >= 2 && result.updated < 20)
-  assert.equal(result.red, result.updated)
-  assert.equal(result.interrupted, true)
-  assert.deepEqual(errors, [])
-})
-
-test('agent creation renders progressively, saves the final scene once, and undoes together', async () => {
+  await delta('build', '},' + JSON.stringify(shapes[1]).slice(0, -1))
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    1,
+  )
   await page.evaluate(() => {
-    const { editor, runner, sync } = window.canvasFixture
-    const release = sync.beginBatch()
-    const frames = []
-    const stop = editor.store.listen(
-      () => frames.push(editor.getCurrentPageShapeIds().size),
-      { source: 'user', scope: 'document' },
-    )
-    const shapes = Array.from({ length: 20 }, (_, index) => ({
-      id: `live-${index}`,
-      type: 'geo',
-      x: 40 + (index % 7) * 180,
-      y: 40 + Math.floor(index / 7) * 120,
-      w: 160,
-      h: 100,
-      text: `Step ${index + 1}`,
-      color: index % 2 ? 'blue' : 'green',
-    }))
-    Object.assign(window.canvasFixture, {
-      frames,
-      release,
-      stop,
-      pending: runner.run('live-build', 'create_shapes', { shapes }),
-    })
-  })
-  await page.waitForFunction(() => {
-    const count = window.canvasFixture.editor.getCurrentPageShapeIds().size
-    return count >= 2 && count < 20
+    window.canvasFixture.firstRecord =
+      window.canvasFixture.editor.getShape('shape:first')
   })
   assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 0)
   if (process.env.CANVAS_SCREENSHOT_DIR) {
     await mkdir(process.env.CANVAS_SCREENSHOT_DIR, { recursive: true })
     await page.screenshot({
-      path: `${process.env.CANVAS_SCREENSHOT_DIR}/live-build-progress.png`,
+      path: process.env.CANVAS_SCREENSHOT_DIR + '/real-stream-creation.png',
     })
   }
-  const result = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    const execution = await fixture.pending
-    fixture.stop()
-    await fixture.runner.run('live-color', 'update_shapes', {
-      updates: [{ id: 'live-0', color: 'red' }],
-    })
-    await fixture.sync.flush()
-    return {
-      frames: fixture.frames,
-      saves: fixture.saves.length,
-      created: execution.result.output.created.length,
-    }
-  })
-  assert.equal(result.created, 20)
-  assert.equal(result.saves, 0)
-  assert.ok(result.frames.some((count) => count > 0 && count < 20))
-  await page.evaluate(() => window.canvasFixture.release())
-  await page.waitForFunction(
-    () => window.canvasFixture.sync.getStatus() === 'saved',
+  await delta('build', '}]}')
+  await startTool('build', 'create_shapes')
+  await delta('build', JSON.stringify({ shapes }))
+  const result = await finishTool('build', 'create_shapes', { shapes })
+  assert.equal(result.result.output.created.length, 2)
+  assert.equal(
+    await page.evaluate(
+      () =>
+        window.canvasFixture.firstRecord ===
+        window.canvasFixture.editor.getShape('shape:first'),
+    ),
+    true,
   )
   assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
-  const savedCount = await page.evaluate(
-    () =>
-      Object.values(window.canvasFixture.saves[0].document.store).filter(
-        (record) => record.typeName === 'shape',
-      ).length,
-  )
-  assert.equal(savedCount, 20)
-  if (process.env.CANVAS_SCREENSHOT_DIR)
-    await page.screenshot({
-      path: `${process.env.CANVAS_SCREENSHOT_DIR}/live-build-finished.png`,
-    })
   await page.evaluate(() => window.canvasFixture.editor.undo())
   assert.equal(
     await page.evaluate(
@@ -353,130 +176,281 @@ test('agent creation renders progressively, saves the final scene once, and undo
   assert.deepEqual(errors, [])
 })
 
-test('stopping a live build saves its completed portion without drawing the remaining shapes', async () => {
-  await page.evaluate(() => {
-    const fixture = window.canvasFixture
-    const shapes = Array.from({ length: 30 }, (_, index) => ({
-      id: `partial-${index}`,
-      type: 'geo',
-      x: index * 180,
-      y: 0,
-      w: 160,
-      h: 100,
-    }))
-    fixture.pending = fixture.runner.run('partial-build', 'create_shapes', {
-      shapes,
-    })
-  })
-  await page.waitForFunction(
-    () => window.canvasFixture.editor.getCurrentPageShapeIds().size >= 2,
+test('streamed updates execute once when each object closes, including escaped JSON and relative moves', async () => {
+  await run('create_shapes', { shapes: [box('existing', 80, 100)] })
+  const updates = [
+    {
+      id: 'existing',
+      dx: 30,
+      color: 'red',
+      text: 'Quoted "text" with } and 雨',
+    },
+    { id: 'existing', dy: 20 },
+  ]
+  await startTool('edit', 'update_shapes')
+  await delta('edit', '{"updates":[' + JSON.stringify(updates[0]).slice(0, -1))
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getShape('shape:existing').x,
+    ),
+    80,
   )
-  const created = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    fixture.runner.cancel()
-    const execution = await fixture.pending
-    return execution.result.output.created.length
-  })
-  assert.ok(created >= 2 && created < 30)
-  await page.waitForFunction(
-    () => window.canvasFixture.sync.getStatus() === 'saved',
+  await delta('edit', '},' + JSON.stringify(updates[1]).slice(0, -1))
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getShape('shape:existing').x,
+    ),
+    110,
+  )
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getShape('shape:existing').y,
+    ),
+    100,
+  )
+  if (process.env.CANVAS_SCREENSHOT_DIR)
+    await page.screenshot({
+      path: process.env.CANVAS_SCREENSHOT_DIR + '/real-stream-update.png',
+    })
+  await delta('edit', '}]}')
+  await startTool('edit', 'update_shapes')
+  await delta('edit', JSON.stringify({ updates }))
+  const result = await finishTool('edit', 'update_shapes', { updates })
+  assert.equal(result.result.output.updated.length, 2)
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const shape = window.canvasFixture.editor.getShape('shape:existing')
+      return { x: shape.x, y: shape.y, color: shape.props.color }
+    }),
+    { x: 110, y: 120, color: 'red' },
   )
   assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  assert.deepEqual(errors, [])
+})
+
+test('stopping the raw stream retains completed edits, saves once, and ignores late chunks', async () => {
+  const shapes = [box('kept', 80, 100), box('not-created', 300, 100)]
+  await startTool('cancel-build', 'create_shapes')
+  await delta(
+    'cancel-build',
+    '{"shapes":[' +
+      JSON.stringify(shapes[0]) +
+      ',' +
+      JSON.stringify(shapes[1]).slice(0, -1),
+  )
+  await page.evaluate(() => window.canvasFixture.runner.cancel())
+  await delta('cancel-build', '}]}')
+  const result = await finishTool('cancel-build', 'create_shapes', { shapes })
+  assert.equal(result.result.output.interrupted, true)
+  assert.equal(result.result.output.created.length, 1)
   assert.equal(
     await page.evaluate(
       () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
     ),
-    created,
+    1,
+  )
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  await page.evaluate(() => window.canvasFixture.editor.undo())
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    0,
   )
   assert.deepEqual(errors, [])
 })
 
-test('leaving during a build saves the completed scene despite outstanding batch holds', async () => {
+test('forward connectors wait for nodes and collisions preserve the actual streamed identities', async () => {
+  await run('create_shapes', { shapes: [box('a', 600, 100)] })
+  const shapes = [
+    { type: 'arrow', id: 'edge', from: 'a', to: 'b' },
+    box('a', 80, 100),
+    box('b', 300, 100),
+  ]
+  await startTool('bound', 'create_shapes')
+  await delta('bound', '{"shapes":[' + JSON.stringify(shapes[0]) + ',')
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    1,
+  )
+  await delta(
+    'bound',
+    JSON.stringify(shapes[1]) + ',' + JSON.stringify(shapes[2]),
+  )
+  await page.waitForFunction(
+    () => window.canvasFixture.editor.getCurrentPageShapeIds().size === 4,
+  )
+  const ids = await page.evaluate(() =>
+    [...window.canvasFixture.editor.getCurrentPageShapeIds()].sort(),
+  )
+  await delta('bound', ']}')
+  const result = await finishTool('bound', 'create_shapes', { shapes })
+  assert.notEqual(result.result.output.aliases.a, 'a')
+  assert.deepEqual(
+    await page.evaluate(() =>
+      [...window.canvasFixture.editor.getCurrentPageShapeIds()].sort(),
+    ),
+    ids,
+  )
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getShape('shape:a').x,
+    ),
+    600,
+  )
+  const edge = result.result.output.created.find(
+    (shape) => shape.type === 'arrow',
+  )
+  assert.equal(edge.from, result.result.output.aliases.a)
+  assert.equal(edge.to, 'b')
+  assert.deepEqual(errors, [])
+})
+
+test('streamed diagram nodes are real shapes and final layout moves those same records instead of recreating them', async () => {
+  const input = {
+    nodes: [
+      node('node-a', 'start', 'First'),
+      node('node-b', 'decision', 'Next?'),
+    ],
+    edges: [{ from: 'node-a', to: 'node-b' }],
+    layout: { mode: 'flow', direction: 'right' },
+  }
+  await startTool('diagram', 'create_diagram')
+  await delta('diagram', '{"nodes":[' + JSON.stringify(input.nodes[0]) + ',')
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    1,
+  )
+  await delta(
+    'diagram',
+    JSON.stringify(input.nodes[1]) +
+      '],"edges":[' +
+      JSON.stringify(input.edges[0]) +
+      '],',
+  )
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    3,
+  )
+  const ids = await page.evaluate(() =>
+    [...window.canvasFixture.editor.getCurrentPageShapeIds()].sort(),
+  )
+  await delta('diagram', '"layout":' + JSON.stringify(input.layout) + '}')
+  const result = await finishTool('diagram', 'create_diagram', input)
+  assert.equal(result.result.output.created.length, 3)
+  assert.deepEqual(
+    await page.evaluate(() =>
+      [...window.canvasFixture.editor.getCurrentPageShapeIds()].sort(),
+    ),
+    ids,
+  )
+  assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  const nodes = result.result.output.created.filter(
+    (shape) => shape.type !== 'arrow',
+  )
+  assert.ok(nodes[1].x > nodes[0].x)
+  assert.deepEqual(errors, [])
+})
+
+test('a new runner resumes completed instructions from document metadata without duplicating shapes or relative moves', async () => {
+  const shapes = [box('resumed', 80, 100), box('next', 300, 100)]
+  await startTool('resume-create', 'create_shapes')
+  await delta('resume-create', '{"shapes":[' + JSON.stringify(shapes[0]) + ',')
   await page.evaluate(() => {
     const fixture = window.canvasFixture
-    fixture.release = fixture.sync.beginBatch()
-    fixture.pending = fixture.runner.run('exit-build', 'create_shapes', {
-      shapes: Array.from({ length: 30 }, (_, index) => ({
-        id: `exit-${index}`,
-        type: 'geo',
-        x: index * 180,
-        y: 0,
-        w: 160,
-        h: 100,
-      })),
-    })
+    fixture.runner = fixture.resetRunner()
   })
-  await page.waitForFunction(
-    () => window.canvasFixture.editor.getCurrentPageShapeIds().size >= 2,
+  const creation = await finishTool('resume-create', 'create_shapes', {
+    shapes,
+  })
+  assert.equal(creation.result.output.created.length, 2)
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getCurrentPageShapeIds().size,
+    ),
+    2,
   )
-  const result = await page.evaluate(async () => {
+  const updates = [
+    { id: 'resumed', dx: 30 },
+    { id: 'resumed', dy: 20 },
+  ]
+  await startTool('resume-update', 'update_shapes', 'next-turn')
+  await delta(
+    'resume-update',
+    '{"updates":[' + JSON.stringify(updates[0]) + ',',
+    'next-turn',
+  )
+  await page.evaluate(() => {
+    const fixture = window.canvasFixture
+    fixture.runner = fixture.resetRunner()
+  })
+  await finishTool('resume-update', 'update_shapes', { updates })
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const shape = window.canvasFixture.editor.getShape('shape:resumed')
+      return [shape.x, shape.y]
+    }),
+    [110, 120],
+  )
+  assert.deepEqual(errors, [])
+})
+
+test('shared patch execution waits for the complete patch, regardless of JSON field order', async () => {
+  await run('create_shapes', {
+    shapes: [box('a', 80, 100), box('b', 300, 100)],
+  })
+  await startTool('shared', 'update_shapes')
+  await delta('shared', '{"ids":["a","b"],"patch":{"dx":3')
+  assert.equal(
+    await page.evaluate(
+      () => window.canvasFixture.editor.getShape('shape:a').x,
+    ),
+    80,
+  )
+  await delta('shared', '0}}')
+  const input = { ids: ['a', 'b'], patch: { dx: 30 } }
+  await finishTool('shared', 'update_shapes', input)
+  assert.deepEqual(
+    await page.evaluate(() =>
+      ['shape:a', 'shape:b'].map(
+        (id) => window.canvasFixture.editor.getShape(id).x,
+      ),
+    ),
+    [110, 330],
+  )
+  assert.deepEqual(errors, [])
+})
+
+test('leaving during a stream saves completed instructions and not an unfinished object', async () => {
+  await startTool('exit', 'create_shapes')
+  await delta(
+    'exit',
+    '{"shapes":[' +
+      JSON.stringify(box('saved', 80, 100)) +
+      ',{"id":"incomplete"',
+  )
+  await page.evaluate(async () => {
     const fixture = window.canvasFixture
     fixture.runner.cancel()
     fixture.detach()
-    const execution = await fixture.pending
-    fixture.release()
     await fixture.sync.flush()
-    return {
-      created: execution.result.output.created.length,
-      saves: fixture.saves.length,
-      savedShapes: Object.values(fixture.saves[0].document.store).filter(
-        (record) => record.typeName === 'shape',
-      ).length,
-    }
   })
-  assert.ok(result.created >= 2 && result.created < 30)
-  assert.equal(result.saves, 1)
-  assert.equal(result.savedShapes, result.created)
-  assert.deepEqual(errors, [])
-})
-
-test('live diagrams reveal their nodes before bound connectors and save after routing', async () => {
-  const result = await page.evaluate(async () => {
-    const fixture = window.canvasFixture
-    const frames = []
-    const stop = fixture.editor.store.listen(
-      () => {
-        const shapes = fixture.editor.getCurrentPageShapesSorted()
-        frames.push({
-          nodes: shapes.filter((shape) => shape.type !== 'arrow').length,
-          arrows: shapes.filter((shape) => shape.type === 'arrow').length,
-        })
-      },
-      { source: 'user', scope: 'document' },
-    )
-    const execution = await fixture.runner.run(
-      'live-diagram',
-      'create_diagram',
-      {
-        nodes: Array.from({ length: 5 }, (_, index) => ({
-          id: `node-${index}`,
-          text: `Step ${index + 1}`,
-        })),
-        edges: Array.from({ length: 4 }, (_, index) => ({
-          from: `node-${index}`,
-          to: `node-${index + 1}`,
-        })),
-      },
-    )
-    stop()
-    return { frames, output: execution.result.output }
-  })
-  assert.equal(result.output.created.length, 9)
-  assert.ok(result.frames.some((frame) => frame.nodes > 0 && frame.nodes < 5))
-  assert.ok(
-    result.frames
-      .filter((frame) => frame.arrows > 0)
-      .every((frame) => frame.nodes === 5),
-  )
-  assert.ok(
-    result.output.created
-      .filter((shape) => shape.type === 'arrow')
-      .every((shape) => shape.from && shape.to),
-  )
-  await page.waitForFunction(
-    () => window.canvasFixture.sync.getStatus() === 'saved',
-  )
   assert.equal(await page.evaluate(() => window.canvasFixture.saves.length), 1)
+  assert.equal(
+    await page.evaluate(
+      () =>
+        Object.values(window.canvasFixture.saves[0].document.store).filter(
+          (record) => record.typeName === 'shape',
+        ).length,
+    ),
+    1,
+  )
   assert.deepEqual(errors, [])
 })
 

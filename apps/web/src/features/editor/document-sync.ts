@@ -1,9 +1,9 @@
+import { getSnapshot } from 'tldraw'
 import type { Editor } from 'tldraw'
 import { errorCode } from '@rhyme/trpc-client'
 import type { DocumentSnapshot } from '@rhyme/trpc-client'
 import { documentCache } from './document-cache'
 import { registerEditorBatch } from './editor-batch'
-import { getDocumentSnapshot } from './editor-preview'
 
 export type SyncStatus =
   | 'saved'
@@ -75,7 +75,8 @@ export class DocumentSync {
 
   attach(editor: Editor) {
     const unregisterBatch = registerEditorBatch(editor, this.beginBatch)
-    this.read = () => getDocumentSnapshot(editor) as unknown as DocumentSnapshot
+    this.read = () =>
+      getSnapshot(editor.store).document as unknown as DocumentSnapshot
 
     const stopListening = editor.store.listen(() => this.onChange(), {
       source: 'user',

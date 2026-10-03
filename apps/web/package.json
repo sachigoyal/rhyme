@@ -26,6 +26,7 @@
     "@rhyme/trpc-client": "workspace:*",
     "@rhyme/ui": "workspace:*",
     "@shadcn/react": "catalog:",
+    "@streamparser/json": "catalog:",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "latest",

@@ -4,8 +4,6 @@ import { runCanvasTool } from '../../src/features/agent/canvas-actions'
 import { createCanvasToolRunner } from '../../src/features/agent/canvas-tool-runner'
 import { buildCanvasContext } from '../../src/features/agent/canvas-context'
 import { DocumentSync } from '../../src/features/editor/document-sync'
-import { createCanvasStreamPreview } from '../../src/features/agent/canvas-stream-preview'
-import { getDocumentSnapshot } from '../../src/features/editor/editor-preview'
 import 'tldraw/tldraw.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -24,16 +22,19 @@ createRoot(document.getElementById('root')!).render(
           fetchVersion: async () => saves.length,
         })
         const detach = sync.attach(editor)
-        const runner = createCanvasToolRunner(editor)
+        let runner = createCanvasToolRunner(editor)
         Object.assign(window, {
           canvasFixture: {
             editor,
             runner,
+            resetRunner: () => {
+              runner.cancel()
+              runner = createCanvasToolRunner(editor)
+              return runner
+            },
             sync,
             saves,
             detach,
-            streamPreview: createCanvasStreamPreview(editor),
-            document: () => getDocumentSnapshot(editor),
             run: (name: string, input: unknown) =>
               runCanvasTool(editor, name, input),
             context: () => buildCanvasContext(editor, true),

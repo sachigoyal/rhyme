@@ -8,7 +8,6 @@ import { env } from '@/lib/env'
 import { createAssetStore, createThumbnailer } from './assets'
 import type { DocumentSync } from './document-sync'
 import type { InitialDocument } from './use-initial-document'
-import { clearEditorPreview } from './editor-preview'
 
 interface CanvasProps {
   fileId: string
@@ -64,7 +63,6 @@ export function Canvas({
     )
     if (sync.getStatus() === 'saved') thumbnailer.schedule(mounted)
     return () => {
-      clearEditorPreview(mounted)
       onReady?.(null)
       stopSaved()
       detach()
