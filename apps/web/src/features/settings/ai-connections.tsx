@@ -147,16 +147,27 @@ export function AIConnectionsSettings() {
                     size="sm"
                     disabled={busy}
                     onClick={() =>
-                      test.mutate(connection, {
-                        onSuccess: (result) => {
-                          toast.success(`${result.model}: ${result.message}`)
-                          test.reset()
+                      test.mutate(
+                        {
+                          id: connection.id,
+                          name: connection.name,
+                          provider: connection.provider,
+                          baseUrl: connection.baseUrl,
+                          models: connection.models,
+                          vision: connection.vision,
+                          serviceTier: connection.serviceTier,
                         },
-                        onError: (failure) => {
-                          toast.error(failure.message)
-                          test.reset()
+                        {
+                          onSuccess: (result) => {
+                            toast.success(`${result.model}: ${result.message}`)
+                            test.reset()
+                          },
+                          onError: (failure) => {
+                            toast.error(failure.message)
+                            test.reset()
+                          },
                         },
-                      })
+                      )
                     }
                   >
                     Test

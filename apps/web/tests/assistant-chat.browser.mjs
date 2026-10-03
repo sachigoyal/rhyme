@@ -396,6 +396,30 @@ test('speed is shown only for supported OpenAI models and inherits each connecti
   assert.deepEqual(errors, [])
 })
 
+test('saved connection Test sends only accepted input fields', async () => {
+  let tested
+  await page.route(
+    'http://localhost:8787/trpc/aiConnections.test*',
+    async (route) => {
+      tested = route.request().postDataJSON()['0'].json
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          result({ model: 'gpt-6-astra', message: 'Connected' }),
+        ]),
+      })
+    },
+  )
+  await page.getByRole('button', { name: 'Toggle settings' }).click()
+  await page.getByRole('button', { name: 'Test', exact: true }).click()
+  await page.getByText('gpt-6-astra: Connected', { exact: true }).waitFor()
+  const { keyHint, ...expected } = connection
+  assert.deepEqual(tested, expected)
+  assert.equal('apiKey' in tested, false)
+  assert.deepEqual(errors, [])
+})
+
 test('BYOK settings edit and persist the connection default tier', async () => {
   let saved
   await page.route(
