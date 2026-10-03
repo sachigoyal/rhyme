@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
 } from '@rhyme/ui/components/sidebar'
 import { Logo } from '@/components/logo'
+import { GitHubLink } from '@/components/github-link'
 import { WorkspaceBreadcrumbs } from '@/components/workspace-breadcrumbs'
 import type { WorkspaceCrumb } from '@/components/workspace-breadcrumbs'
 
@@ -45,6 +46,7 @@ export function WorkspaceFrame({
           <header className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3">
             <SidebarTrigger className="-ml-1" />
             <WorkspaceBreadcrumbs items={breadcrumbs ?? [{ label: title }]} />
+            <GitHubLink />
             {actions}
           </header>
         )}
