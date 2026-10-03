@@ -42,6 +42,14 @@ export function providerError(error: unknown): ProviderError {
       'invalid_key',
       'The provider rejected your API key. Replace it in Settings → AI connections and try again.',
     )
+  if (
+    /service.?tier|ultrafast/.test(details) &&
+    (status === 400 || status === 403 || status === 422)
+  )
+    return new ProviderError(
+      'unsupported',
+      'Ultrafast is unavailable for this model or API project. Select Standard, or check your OpenAI tier access.',
+    )
   if (status === 403 || /permission_denied/.test(details))
     return new ProviderError(
       'permission',

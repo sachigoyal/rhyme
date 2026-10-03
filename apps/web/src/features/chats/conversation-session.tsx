@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@rhyme/ui/components/alert-dialog'
 import { AgentChat, AgentChatBoundary } from '@/features/agent/agent-chat'
-import { LoadingComposer } from '@/features/agent/chat-skeleton'
+import { LoadingComposer } from '@/features/agent/chat-loading'
 import { ChatTranscript } from '@/features/agent/chat-transcript'
 import { Canvas } from '@/features/editor/canvas'
 import { documentCache } from '@/features/editor/document-cache'

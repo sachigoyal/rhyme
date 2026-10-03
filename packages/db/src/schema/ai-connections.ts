@@ -14,6 +14,9 @@ export const aiConnections = sqliteTable('ai_connections', {
   baseUrl: text().notNull().default(''),
   models: text({ mode: 'json' }).$type<string[]>().notNull(),
   vision: integer({ mode: 'boolean' }).notNull().default(false),
+  serviceTier: text({ enum: ['standard', 'ultrafast'] })
+    .notNull()
+    .default('standard'),
   encryptedApiKey: text().notNull(),
   keyHint: text().notNull(),
   ...timestamps(),

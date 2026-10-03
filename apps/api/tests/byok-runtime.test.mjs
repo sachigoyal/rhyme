@@ -151,8 +151,8 @@ before(async () => {
         try {
           const input = request.method === 'POST' ? await request.json() : undefined;
           if (operation === 'resolve') {
-            const result = await resolveAgentModel(db, env, userId, defaultAgentConfig(input.model, input.id));
-            return Response.json({ modelId: result.model.modelId, vision: result.vision });
+            const result = await resolveAgentModel(db, env, userId, { ...defaultAgentConfig(input.model, input.id), serviceTier: input.serviceTier });
+            return Response.json({ modelId: result.model.modelId, vision: result.vision, ...(input.includeOptions ? { providerOptions: result.providerOptions } : {}) });
           }
           return Response.json(await caller[operation](input));
         } catch (error) {
@@ -353,4 +353,45 @@ test('provider errors and redirects are actionable without exposing the key', as
     requests.some((request) => request.url.includes('untrusted.example.org')),
     false,
   )
+})
+
+test('Ultrafast connection defaults reach OpenAI, while per-turn Standard overrides and unsupported models remain Standard', async () => {
+  const start = requests.length
+  const saved = await call(
+    'save',
+    input('openai', {
+      models: ['gpt-6.1-sol', 'gpt-6-astra'],
+      serviceTier: 'ultrafast',
+    }),
+  )
+  assert.ok(saved.id, JSON.stringify(saved))
+  assert.equal(saved.serviceTier, 'ultrafast')
+  assert.equal(requests[start].body.model, 'gpt-6-astra')
+  assert.equal(requests[start].body.service_tier, 'ultrafast')
+  assert.equal(
+    (await call('list')).find((item) => item.id === saved.id).serviceTier,
+    'ultrafast',
+  )
+  const resolve = (model, serviceTier) =>
+    call('resolve', { id: saved.id, model, serviceTier, includeOptions: true })
+  assert.equal(
+    (await resolve('gpt-6-astra')).providerOptions.openai.serviceTier,
+    'ultrafast',
+  )
+  assert.equal(
+    (await resolve('gpt-6-astra', 'standard')).providerOptions.openai
+      .serviceTier,
+    'default',
+  )
+  assert.equal(
+    (await resolve('gpt-6.1-sol')).providerOptions.openai.serviceTier,
+    'default',
+  )
+  assert.equal((await resolve('gpt-6.1-sol', 'ultrafast')).code, 'unsupported')
+  const checked = await call(
+    'test',
+    input('openai', { models: ['gpt-5.6-sol'], serviceTier: 'ultrafast' }),
+  )
+  assert.equal(checked.model, 'gpt-5.6-sol')
+  assert.equal(requests.at(-1).body.service_tier, 'ultrafast')
 })

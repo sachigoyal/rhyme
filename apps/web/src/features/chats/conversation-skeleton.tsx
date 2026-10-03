@@ -1,5 +1,5 @@
 import { Skeleton } from '@rhyme/ui/components/skeleton'
-import { ChatSkeleton } from '@/features/agent/chat-skeleton'
+import { LoadingChat } from '@/features/agent/chat-loading'
 
 export function ConversationSkeleton({
   draft,
@@ -18,11 +18,9 @@ export function ConversationSkeleton({
         className="bg-card flex h-12 shrink-0 items-center gap-2 border-b px-3"
         aria-hidden="true"
       >
-        <Skeleton className="size-7 shrink-0" />
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="hidden h-3 w-36 sm:block" />
+        <span className="text-sm font-medium">Conversation</span>
       </div>
-      <ChatSkeleton draft={draft} onDraft={onDraft} />
+      <LoadingChat draft={draft} onDraft={onDraft} />
     </section>
   )
 }

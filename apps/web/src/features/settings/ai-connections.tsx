@@ -25,7 +25,11 @@ import {
   SelectValue,
 } from '@rhyme/ui/components/select'
 import { toast } from '@rhyme/ui/components/toast'
-import { PROVIDERS, connectionInputSchema } from 'api/byok-schema'
+import {
+  PROVIDERS,
+  connectionInputSchema,
+  supportsUltrafast,
+} from 'api/byok-schema'
 import type { AIConnection, Provider } from 'api/byok-schema'
 
 export function AIConnectionsSettings() {
@@ -40,6 +44,9 @@ export function AIConnectionsSettings() {
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
   const [models, setModels] = useState('gpt-6.1-sol')
+  const [serviceTier, setServiceTier] = useState<'standard' | 'ultrafast'>(
+    'standard',
+  )
   const [vision, setVision] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
@@ -52,6 +59,7 @@ export function AIConnectionsSettings() {
     setName(connection?.name ?? 'OpenAI')
     setModels(connection?.models.join(', ') ?? 'gpt-6.1-sol')
     setVision(connection?.vision ?? true)
+    setServiceTier(connection?.serviceTier ?? 'standard')
     setBaseUrl(connection?.baseUrl ?? '')
     setApiKey('')
     setError(null)
@@ -174,6 +182,9 @@ export function AIConnectionsSettings() {
               <p className="text-muted-foreground mt-3 break-words text-xs leading-5">
                 {connection.models.join(' · ')}
                 {connection.vision ? ' · Canvas images enabled' : ''}
+                {connection.serviceTier === 'ultrafast'
+                  ? ' · Ultrafast default'
+                  : ''}
               </p>
               {removing === connection.id && (
                 <div
@@ -224,8 +235,9 @@ export function AIConnectionsSettings() {
               {editing ? 'Edit AI connection' : 'Add AI connection'}
             </DialogTitle>
             <DialogDescription>
-              Use a model that supports tool calling. Saving tests the first
-              model with a small request billed by your provider.
+              Use a model that supports tool calling. Saving makes a small
+              request billed by your provider, testing Ultrafast access when
+              enabled.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -243,6 +255,11 @@ export function AIConnectionsSettings() {
                   .map((model) => model.trim())
                   .filter(Boolean),
                 vision,
+                serviceTier: models
+                  .split(',')
+                  .some((model) => supportsUltrafast(provider, model.trim()))
+                  ? serviceTier
+                  : 'standard',
               })
               if (!parsed.success) {
                 setError(
@@ -285,6 +302,7 @@ export function AIConnectionsSettings() {
                   setModels(next.models[0] ?? '')
                   setVision(next.vision)
                   setBaseUrl('')
+                  setServiceTier('standard')
                   setApiKey('')
                   setError(null)
                 }}
@@ -406,6 +424,28 @@ export function AIConnectionsSettings() {
                 disabled={busy}
               />
             </div>
+            {models
+              .split(',')
+              .some((model) => supportsUltrafast(provider, model.trim())) && (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="ai-ultrafast">Default to Ultrafast</Label>
+                  <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    Faster responses at higher cost for supported models.
+                    GPT-5.6 Sol requires preview access. You can change the mode
+                    in the composer.
+                  </p>
+                </div>
+                <Switch
+                  id="ai-ultrafast"
+                  checked={serviceTier === 'ultrafast'}
+                  onCheckedChange={(checked) =>
+                    setServiceTier(checked ? 'ultrafast' : 'standard')
+                  }
+                  disabled={busy}
+                />
+              </div>
+            )}
             {error && (
               <p
                 role="alert"

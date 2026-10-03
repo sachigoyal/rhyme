@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   connectionInputSchema,
   isPublicProviderUrl,
+  supportsUltrafast,
 } from '../src/byok-schema.ts'
 import {
   encryptProviderKey,
@@ -177,4 +178,59 @@ test('provider failures have actionable messages and never expose upstream secre
     'Choose another saved connection.',
   )
   assert.equal(providerError(safe), safe)
+})
+
+test('Ultrafast is limited to supported OpenAI models and native connections', () => {
+  for (const model of [
+    'gpt-6-astra',
+    'gpt-5.6-sol',
+    'gpt-6-astra-2026-09-01',
+  ]) {
+    assert.equal(supportsUltrafast('openai', model), true)
+    assert.equal(supportsUltrafast('compatible', model), false)
+  }
+  for (const model of [
+    'gpt-6.1-sol',
+    'gpt-6-luna',
+    '@cf/openai/gpt-oss-120b',
+    'gpt-6-astra-pro',
+    'gpt-6-astra-fake',
+  ])
+    assert.equal(supportsUltrafast('openai', model), false)
+  assert.equal(
+    connectionInputSchema.safeParse({ ...connection, serviceTier: 'ultrafast' })
+      .success,
+    false,
+  )
+  assert.equal(
+    connectionInputSchema.safeParse({
+      ...connection,
+      models: ['gpt-6-astra'],
+      serviceTier: 'ultrafast',
+    }).success,
+    true,
+  )
+  assert.equal(
+    connectionInputSchema.safeParse({
+      ...connection,
+      models: ['gpt-6-astra'],
+      provider: 'anthropic',
+      serviceTier: 'ultrafast',
+    }).success,
+    false,
+  )
+  assert.equal(
+    agentConfigSchema.safeParse({
+      ...defaultAgentConfig('@cf/moonshotai/kimi-k2.6'),
+      serviceTier: 'ultrafast',
+    }).success,
+    false,
+  )
+  const denied = providerError({
+    statusCode: 403,
+    responseBody: 'service_tier ultrafast not allowed secret-key',
+  })
+  assert.equal(denied.code, 'unsupported')
+  assert.match(denied.message, /Standard/)
+  assert.equal(denied.message.includes('secret-key'), false)
 })

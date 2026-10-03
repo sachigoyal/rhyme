@@ -58,10 +58,10 @@ export function useCreateChat() {
   const cache = useChatsCache()
   return useMutation(
     trpc.chats.create.mutationOptions({
-      onMutate: async ({ fileId }) => {
+      onMutate: async ({ fileId, id }) => {
         const now = new Date()
         const chat: ChatSummary = {
-          id: pendingId(),
+          id: id ?? pendingId(),
           fileId,
           userId: sessionUser(queryClient)?.id ?? '',
           fileName: files.find(fileId)?.name ?? 'Untitled',

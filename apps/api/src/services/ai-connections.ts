@@ -13,7 +13,7 @@ import type { Env } from '../env'
 import type { AgentConfig } from '../agents/agent-config'
 import { modelOptions } from '../agents/agent-config'
 import type { ConnectionInput } from '../byok-schema'
-import { isPublicProviderUrl } from '../byok-schema'
+import { isPublicProviderUrl, supportsUltrafast } from '../byok-schema'
 import { decryptProviderKey } from './provider-keys'
 import { ProviderError, providerError } from './provider-errors'
 
@@ -97,9 +97,24 @@ export function providerModel(
   }
 }
 
-export function externalModelOptions(provider: ConnectionInput['provider']) {
+export function externalModelOptions(
+  provider: ConnectionInput['provider'],
+  model?: string,
+  serviceTier: ConnectionInput['serviceTier'] = 'standard',
+) {
+  if (serviceTier === 'ultrafast' && !supportsUltrafast(provider, model ?? ''))
+    throw new ProviderError(
+      'unsupported',
+      'Ultrafast is available only for OpenAI GPT-6 Astra and GPT-5.6 Sol (preview access required). Choose Standard or a supported model.',
+    )
   return provider === 'openai'
-    ? { openai: { strictJsonSchema: false, store: false } }
+    ? {
+        openai: {
+          strictJsonSchema: false,
+          store: false,
+          serviceTier: serviceTier === 'ultrafast' ? 'ultrafast' : 'default',
+        },
+      }
     : undefined
 }
 
@@ -134,14 +149,29 @@ export async function resolveAgentModel(
     vision: connection.vision,
     maxSteps: config.maxSteps,
     maxOutputTokens: config.maxOutputTokens,
-    providerOptions: externalModelOptions(connection.provider),
+    providerOptions: externalModelOptions(
+      connection.provider,
+      config.model,
+      config.serviceTier ??
+        (supportsUltrafast(connection.provider, config.model)
+          ? connection.serviceTier
+          : 'standard'),
+    ),
   }
 }
 
 export async function testAIConnection(input: ConnectionInput, apiKey: string) {
+  const model =
+    input.serviceTier === 'ultrafast'
+      ? input.models.find((model) => supportsUltrafast(input.provider, model))!
+      : input.models[0]!
   const result = await generateText({
-    model: providerModel(input, apiKey, input.models[0]!),
-    providerOptions: externalModelOptions(input.provider),
+    model: providerModel(input, apiKey, model),
+    providerOptions: externalModelOptions(
+      input.provider,
+      model,
+      input.serviceTier,
+    ),
     prompt: 'Call the connection_check tool with ok set to true.',
     tools: {
       connection_check: tool({
@@ -175,7 +205,7 @@ export async function testAIConnection(input: ConnectionInput, apiKey: string) {
       'This model did not complete a tool call. Choose a model that supports tool calling for the canvas assistant.',
     )
   return {
-    model: input.models[0]!,
+    model,
     message: 'Connected. API key, model access, and tool calling verified.',
   }
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useSettings } from '@rhyme/hooks/queries'
 import { Link } from '@tanstack/react-router'
 import { LayoutGrid } from 'lucide-react'
@@ -26,7 +26,7 @@ import { UserAvatar, UserMenu } from '@/components/user-menu'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
 import type { AgentStatus } from '@/features/agent/agent-status'
 import { Logo } from '@/components/logo'
-import { AssistantSkeleton } from '@/components/loading-states'
+import { AgentPanel } from '@/features/agent/agent-panel'
 import type { SessionUser } from '@/lib/auth'
 import { Canvas } from './canvas'
 import { useDocumentSync } from './use-document-sync'
@@ -34,12 +34,6 @@ import { FileTitle } from './file-title'
 import { SaveStatus } from './save-status'
 import { ShareDialog } from './share-dialog'
 import type { InitialDocument } from './use-initial-document'
-
-const AgentPanel = lazy(() =>
-  import('@/features/agent/agent-panel').then((module) => ({
-    default: module.AgentPanel,
-  })),
-)
 
 interface EditorSessionProps {
   file: FileSummary
@@ -151,15 +145,13 @@ export function EditorSession({
                     className={agentOpen ? 'h-full' : 'hidden'}
                     inert={!agentOpen}
                   >
-                    <Suspense fallback={<AssistantSkeleton />}>
-                      <AgentPanel
-                        fileId={file.id}
-                        editor={editor}
-                        onClose={() => setAgentVisible(false)}
-                        onStateChange={setAgentStatus}
-                        initialChatId={chatId}
-                      />
-                    </Suspense>
+                    <AgentPanel
+                      fileId={file.id}
+                      editor={editor}
+                      onClose={() => setAgentVisible(false)}
+                      onStateChange={setAgentStatus}
+                      initialChatId={chatId}
+                    />
                   </div>
                 )}
               </ResizablePanel>

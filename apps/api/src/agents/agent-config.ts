@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { serviceTierSchema } from '../byok-schema.ts'
 
 const reasoning = z.enum(['off', 'low', 'medium', 'high'])
 
@@ -62,9 +63,16 @@ export const agentConfigSchema = z
     maxOutputTokens: z.number().int().min(256).max(8192),
     maxSteps: z.number().int().min(1).max(12),
     reasoning,
+    serviceTier: serviceTierSchema.optional(),
   })
   .strict()
   .superRefine((config, ctx) => {
+    if (!config.connectionId && config.serviceTier === 'ultrafast')
+      ctx.addIssue({
+        code: 'custom',
+        path: ['serviceTier'],
+        message: 'Ultrafast requires an OpenAI connection.',
+      })
     if (config.connectionId) return
     const model = AGENT_MODELS.find((model) => model.id === config.model)
     if (!model)

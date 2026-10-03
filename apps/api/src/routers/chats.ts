@@ -180,7 +180,9 @@ export const chatsRouter = router({
     }
   }),
   create: protectedProcedure
-    .input(z.object({ fileId: z.string().min(1).max(128) }))
+    .input(
+      z.object({ fileId: z.string().min(1).max(128), id: z.uuid().optional() }),
+    )
     .mutation(async ({ ctx, input }) => {
       const access = await getFileAccess(ctx.db, input.fileId, ctx.user.id)
       if (!access || access.file.trashedAt)
@@ -188,11 +190,32 @@ export const chatsRouter = router({
       if (!hasRole(access.role, 'editor'))
         throw new TRPCError({ code: 'FORBIDDEN' })
       await ensureLegacyChats(ctx.db, ctx.env, ctx.user.id, input.fileId)
-      return ctx.db
+      const created = await ctx.db
         .insert(chats)
-        .values({ fileId: input.fileId, userId: ctx.user.id })
+        .values({ id: input.id, fileId: input.fileId, userId: ctx.user.id })
+        .onConflictDoNothing()
         .returning()
         .get()
+      if (created) return created
+      const existing = input.id
+        ? await ctx.db
+            .select()
+            .from(chats)
+            .where(
+              and(
+                eq(chats.id, input.id),
+                eq(chats.fileId, input.fileId),
+                eq(chats.userId, ctx.user.id),
+              ),
+            )
+            .get()
+        : undefined
+      if (!existing)
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Conversation ID is already in use.',
+        })
+      return existing
     }),
   rename: ownedChat
     .input(z.object({ title: z.string().trim().min(1).max(120) }))

@@ -20,6 +20,7 @@ const publicColumns = {
   baseUrl: aiConnections.baseUrl,
   models: aiConnections.models,
   vision: aiConnections.vision,
+  serviceTier: aiConnections.serviceTier,
   keyHint: aiConnections.keyHint,
 }
 
@@ -83,6 +84,7 @@ export const aiConnectionsRouter = router({
           baseUrl: input.baseUrl,
           models: input.models,
           vision: input.vision,
+          serviceTier: input.serviceTier,
           encryptedApiKey,
           keyHint: key.slice(-4),
         }

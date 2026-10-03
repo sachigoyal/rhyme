@@ -1,5 +1,14 @@
 import { z } from 'zod'
 
+export const serviceTierSchema = z.enum(['standard', 'ultrafast'])
+
+export function supportsUltrafast(provider: string, model: string) {
+  return (
+    provider === 'openai' &&
+    /^(gpt-6-astra|gpt-5\.6-sol)(-\d{4}-\d{2}-\d{2})?$/.test(model)
+  )
+}
+
 export const PROVIDERS = [
   {
     id: 'openai',
@@ -82,9 +91,20 @@ export const connectionInputSchema = z
       .max(20)
       .transform((models) => [...new Set(models)]),
     vision: z.boolean().default(false),
+    serviceTier: serviceTierSchema.default('standard'),
   })
   .strict()
   .superRefine((input, ctx) => {
+    if (
+      input.serviceTier === 'ultrafast' &&
+      !input.models.some((model) => supportsUltrafast(input.provider, model))
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['serviceTier'],
+        message:
+          'Ultrafast requires an OpenAI GPT-6 Astra or GPT-5.6 Sol model.',
+      })
     if (!input.id && !input.apiKey)
       ctx.addIssue({
         code: 'custom',

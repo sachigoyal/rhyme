@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
   Check,
@@ -12,9 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import type { Editor } from 'tldraw'
-import { DEFAULT_AGENT_CONFIG } from 'api/agent-config'
-import type { AgentConfig } from 'api/agent-config'
-import { useChats } from '@rhyme/hooks/queries'
+import { useChats, useChat } from '@rhyme/hooks/queries'
 import {
   useCreateChat,
   useDeleteChat,
@@ -33,7 +31,8 @@ import { toast } from '@rhyme/ui/components/toast'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ConversationHoverCard } from '@/features/chats/conversation-hover-card'
 import { ConversationActions } from '@/features/chats/conversation-actions'
-import { ChatSkeleton, MessagesSkeleton } from './chat-skeleton'
+import { LoadingComposer } from './chat-loading'
+import { useAssistantPreferences } from './assistant-preferences'
 import { AgentFace } from './agent-face'
 import { agentStatusLabels } from './agent-status'
 import type { AgentStatus } from './agent-status'
@@ -64,7 +63,10 @@ export function AgentPanel({
   const [activeId, setActiveId] = useState<string | null>(initialChatId ?? null)
   const [initialPrompt, setInitialPrompt] = useState('')
   const [draft, setDraft] = useState('')
-  const [initialConfig, setInitialConfig] = useState<AgentConfig>()
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [creationError, setCreationError] = useState<string | null>(null)
+  const creationInFlight = useRef(false)
   const [history, setHistory] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<AgentStatus>('idle')
@@ -76,20 +78,21 @@ export function AgentPanel({
   const active = chats.data?.find((chat) => chat.id === activeId)
 
   useEffect(() => {
-    if (initialized.current || !chats.data) return
+    if (initialized.current || !chats.data || draft) return
     initialized.current = true
     setActiveId(chats.data[0]?.id ?? null)
-  }, [chats.data])
+  }, [chats.data, draft])
 
   useEffect(() => {
     if (!initialChatId || requestedChat.current === initialChatId || busy)
       return
     requestedChat.current = initialChatId
     initialized.current = true
+    setCreatedId(null)
+    setCreationError(null)
     setActiveId(initialChatId)
     setDraft('')
     setInitialPrompt('')
-    setInitialConfig(undefined)
     setHistory(false)
     setRenaming(false)
   }, [initialChatId, busy])
@@ -102,36 +105,47 @@ export function AgentPanel({
   }, [onBusyChange, busy])
   useEffect(() => () => onBusyChange?.(false), [onBusyChange])
 
-  const start = async (prompt = '', config?: AgentConfig) => {
-    if (busy || createChat.isPending) return
-    if (!prompt.trim()) {
-      initialized.current = true
-      setActiveId(null)
-      setDraft('')
-      setInitialPrompt('')
-      setInitialConfig(undefined)
-      setHistory(false)
-      setRenaming(false)
-      setStatus('idle')
-      return
-    }
-    initialized.current = true
-    setStatus('connecting')
+  const create = async (id: string) => {
+    if (creationInFlight.current) return
+    creationInFlight.current = true
+    setCreating(true)
+    setCreationError(null)
+    setBusy(true)
     try {
-      const chat = await createChat.mutateAsync({ fileId })
-      setDraft('')
-      setInitialPrompt(prompt)
-      setInitialConfig(config)
-      setActiveId(chat.id)
-      setHistory(false)
+      await createChat.mutateAsync({ fileId, id })
+      setCreating(false)
     } catch (error) {
+      setCreating(false)
+      setBusy(false)
       setStatus('error')
-      toast.error(
+      setCreationError(
         error instanceof Error
           ? error.message
           : 'Could not start a conversation',
       )
+    } finally {
+      creationInFlight.current = false
     }
+  }
+
+  const start = (prompt = '') => {
+    if (busy || creationInFlight.current) return
+    initialized.current = true
+    setDraft('')
+    setHistory(false)
+    setRenaming(false)
+    setCreationError(null)
+    setInitialPrompt(prompt.trim())
+    if (!prompt.trim()) {
+      setActiveId(null)
+      setStatus('idle')
+      return
+    }
+    const id = crypto.randomUUID()
+    setCreatedId(id)
+    setActiveId(id)
+    setStatus('connecting')
+    void create(id)
   }
 
   const remove = async (id: string) => {
@@ -140,7 +154,6 @@ export function AgentPanel({
       setActiveId(null)
       setDraft('')
       setInitialPrompt('')
-      setInitialConfig(undefined)
       setStatus('idle')
     }
   }
@@ -215,7 +228,9 @@ export function AgentPanel({
               </Button>
             </div>
             {chats.isPending ? (
-              <MessagesSkeleton />
+              <p className="p-3 text-xs text-muted-foreground" role="status">
+                Loading conversations…
+              </p>
             ) : chats.isError ? (
               <div className="space-y-2 p-3 text-sm">
                 <p className="text-muted-foreground">
@@ -250,11 +265,17 @@ export function AgentPanel({
                         className="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left disabled:opacity-50"
                         disabled={busy && chat.id !== activeId}
                         onClick={() => {
+                          if (chat.id === activeId) {
+                            setHistory(false)
+                            return
+                          }
+                          initialized.current = true
                           setStatus('connecting')
+                          setCreatedId(null)
+                          setCreationError(null)
                           setActiveId(chat.id)
                           setDraft('')
                           setInitialPrompt('')
-                          setInitialConfig(undefined)
                           setHistory(false)
                         }}
                       >
@@ -270,7 +291,6 @@ export function AgentPanel({
                         setActiveId(null)
                         setDraft('')
                         setInitialPrompt('')
-                        setInitialConfig(undefined)
                         setStatus('idle')
                       }}
                     />
@@ -345,7 +365,7 @@ export function AgentPanel({
                   />
                   <DropdownMenuContent align="end" className="w-auto min-w-28">
                     <DropdownMenuItem
-                      disabled={busy}
+                      disabled={busy || Boolean(creationError)}
                       onClick={() => {
                         setTitle(active?.title ?? 'New conversation')
                         setRenaming(true)
@@ -356,7 +376,7 @@ export function AgentPanel({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       variant="destructive"
-                      disabled={busy}
+                      disabled={busy || Boolean(creationError)}
                       onClick={() => setDeletingId(activeId)}
                     >
                       <Trash2 />
@@ -368,42 +388,50 @@ export function AgentPanel({
             )}
           </div>
         )}
-        {chats.isPending && !activeId ? (
-          <ChatSkeleton layout="panel" draft={draft} onDraft={setDraft} />
-        ) : activeId ? (
+        {activeId ? (
           <AgentChatBoundary
             key={activeId}
-            onNew={() => void start()}
+            onNew={() => start()}
             onFailure={() => {
               setStatus('error')
               setBusy(false)
             }}
           >
-            <Suspense
-              fallback={
-                <ChatSkeleton layout="panel" draft={draft} onDraft={setDraft} />
-              }
-            >
+            {activeId === createdId ? (
               <AgentChat
                 fileId={fileId}
                 conversationId={activeId}
                 editor={editor}
                 initialPrompt={initialPrompt}
-                initialConfig={initialConfig}
+                initialMessages={[]}
+                ready={!creating && !creationError}
+                creationError={creationError}
+                onRetryCreation={() => void create(activeId)}
                 draft={draft}
                 onDraft={setDraft}
                 onStatus={setStatus}
                 onBusy={setBusy}
                 onComplete={() => void chats.refetch()}
               />
-            </Suspense>
+            ) : (
+              <ExistingChat
+                fileId={fileId}
+                id={activeId}
+                editor={editor}
+                draft={draft}
+                onDraft={setDraft}
+                onStatus={setStatus}
+                onBusy={setBusy}
+                onComplete={() => void chats.refetch()}
+              />
+            )}
           </AgentChatBoundary>
         ) : (
           <EmptyChat
             pending={createChat.isPending}
             draft={draft}
             onDraft={setDraft}
-            onSubmit={(prompt, config) => void start(prompt, config)}
+            onSubmit={(prompt) => start(prompt)}
           />
         )}
       </div>
@@ -432,11 +460,11 @@ function EmptyChat({
   pending: boolean
   draft: string
   onDraft: (text: string) => void
-  onSubmit: (text: string, config: AgentConfig) => void
+  onSubmit: (text: string) => void
 }) {
-  const [config, setConfig] = useState(DEFAULT_AGENT_CONFIG)
+  const { config, configure } = useAssistantPreferences()
   const submit = (text = draft) => {
-    if (text.trim() && !pending) onSubmit(text.trim(), config)
+    if (text.trim() && !pending) onSubmit(text.trim())
   }
   return (
     <>
@@ -453,11 +481,70 @@ function EmptyChat({
         onSubmit={() => submit()}
         connected={!pending}
         config={config}
-        onConfigure={async (nextConfig) => {
-          setConfig(nextConfig)
-          return true
-        }}
+        onConfigure={configure}
       />
     </>
+  )
+}
+
+function ExistingChat({
+  fileId,
+  id,
+  editor,
+  draft,
+  onDraft,
+  onStatus,
+  onBusy,
+  onComplete,
+}: {
+  fileId: string
+  id: string
+  editor: Editor
+  draft: string
+  onDraft: (text: string) => void
+  onStatus: (status: AgentStatus) => void
+  onBusy: (busy: boolean) => void
+  onComplete: () => void
+}) {
+  const detail = useChat(id)
+  if (!detail.data)
+    return (
+      <>
+        <div
+          className="flex-1 px-4 py-3 text-xs text-muted-foreground"
+          role={detail.isError ? 'alert' : 'status'}
+        >
+          {detail.isError ? (
+            <>
+              {detail.error.message}
+              <Button
+                size="xs"
+                variant="outline"
+                className="ml-2"
+                onClick={() => void detail.refetch()}
+              >
+                Try again
+              </Button>
+            </>
+          ) : (
+            'Loading messages…'
+          )}
+        </div>
+        <LoadingComposer draft={draft} onDraft={onDraft} />
+      </>
+    )
+  return (
+    <AgentChat
+      fileId={fileId}
+      conversationId={id}
+      editor={editor}
+      initialPrompt=""
+      initialMessages={detail.data.messages}
+      draft={draft}
+      onDraft={onDraft}
+      onStatus={onStatus}
+      onBusy={onBusy}
+      onComplete={onComplete}
+    />
   )
 }

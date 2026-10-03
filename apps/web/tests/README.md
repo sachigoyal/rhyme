@@ -60,3 +60,15 @@ PLAYWRIGHT_CHANNEL=chrome pnpm --filter web exec node --test tests/auth-flow.bro
 To run the same auth cases against the production build after `pnpm build`, add
 `AUTH_TEST_BUILD=1` to that command. API calls are mocked for both configured
 local and production origins; only tldraw CDN assets may load externally.
+
+## Assistant composer and chat startup
+
+`assistant-chat.browser.mjs` runs the real panel, composer, Zustand preferences,
+chat SDK and tldraw editor against delayed tRPC responses and a streaming
+WebSocket fixture. It verifies immediate optimistic messages, stable composer
+and message elements, no skeleton or empty-state flashes, creation retry,
+account isolation, cached connections, supported speed controls, and BYOK defaults.
+
+```sh
+PLAYWRIGHT_CHANNEL=chrome pnpm --filter web exec node --test tests/assistant-chat.browser.mjs
+```

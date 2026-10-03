@@ -2,9 +2,8 @@ import type { UIMessage } from 'ai'
 import { Component, useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react'
+import { AlertTriangle, RotateCcw } from 'lucide-react'
 import type { Editor } from 'tldraw'
-import type { AgentConfig } from 'api/agent-config'
 import { Button } from '@rhyme/ui/components/button'
 import {
   MessageScroller,
@@ -76,8 +75,10 @@ export function AgentChat({
   conversationId,
   editor,
   initialPrompt,
-  initialConfig,
   initialMessages,
+  ready = true,
+  creationError,
+  onRetryCreation,
   draft: controlledDraft,
   onDraft,
   onStatus,
@@ -89,8 +90,10 @@ export function AgentChat({
   conversationId: string
   editor: Editor
   initialPrompt: string
-  initialConfig?: AgentConfig
-  initialMessages?: UIMessage[]
+  initialMessages: UIMessage[]
+  ready?: boolean
+  creationError?: string | null
+  onRetryCreation?: () => void
   draft?: string
   onDraft?: (text: string) => void
   onStatus: (status: AgentStatus) => void
@@ -98,25 +101,48 @@ export function AgentChat({
   onComplete: () => void
   layout?: 'panel' | 'workspace'
 }) {
-  const chat = useCanvasAgent(fileId, conversationId, editor, initialMessages)
+  const chat = useCanvasAgent(
+    fileId,
+    conversationId,
+    editor,
+    initialMessages,
+    ready,
+  )
   const [connectionsOpen, setConnectionsOpen] = useState(false)
   const [localDraft, setLocalDraft] = useState('')
   const draft = controlledDraft ?? localDraft
   const setDraft = onDraft ?? setLocalDraft
+  const [firstMessage] = useState<UIMessage | null>(() =>
+    initialPrompt
+      ? {
+          id: crypto.randomUUID(),
+          role: 'user',
+          parts: [{ type: 'text', text: initialPrompt }],
+        }
+      : null,
+  )
   const initialSent = useRef(false)
   const wasBusy = useRef(false)
   const [completed, setCompleted] = useState(false)
   const completionRef = useRef(onComplete)
   completionRef.current = onComplete
-  const busy = chat.busy
+  const waitingToSend =
+    Boolean(initialPrompt) &&
+    !initialSent.current &&
+    !chat.error &&
+    !chat.connectionError &&
+    !creationError
+  const busy = chat.busy || waitingToSend
+  const messages =
+    chat.messages.length || !firstMessage ? chat.messages : [firstMessage]
   const lastMessageId = chat.messages.at(-1)?.id
-  const activity = pendingActivity(chat.messages, busy)
+  const activity = pendingActivity(messages, busy)
   const status = resolveAgentStatus({
-    messages: chat.messages,
+    messages,
     connected: chat.connected,
     busy,
     usingTools: chat.usingTools,
-    error: Boolean(chat.error || chat.connectionError),
+    error: Boolean(chat.error || chat.connectionError || creationError),
     completed,
   })
 
@@ -124,7 +150,7 @@ export function AgentChat({
     onStatus(status)
   }, [status, onStatus])
   useEffect(() => {
-    onBusy(busy || chat.configSaving)
+    onBusy(busy)
     if (busy) {
       wasBusy.current = true
       setCompleted(false)
@@ -133,7 +159,7 @@ export function AgentChat({
       setCompleted(true)
       completionRef.current()
     }
-  }, [busy, chat.configSaving, onBusy])
+  }, [busy, onBusy])
   useEffect(() => {
     if (!completed) return
     const timer = setTimeout(() => setCompleted(false), 2200)
@@ -142,30 +168,29 @@ export function AgentChat({
 
   useEffect(() => {
     if (
+      !ready ||
+      Boolean(creationError) ||
       !initialPrompt ||
       !chat.connected ||
-      chat.configSaving ||
       initialSent.current
     )
       return
     initialSent.current = true
-    void (async () => {
-      const configured = initialConfig
-        ? await chat.configure(initialConfig)
-        : true
-      if (!configured || !chat.send(initialPrompt)) setDraft(initialPrompt)
-    })()
+    if (!chat.send(initialPrompt, undefined, firstMessage?.id)) {
+      initialSent.current = false
+      setDraft(initialPrompt)
+    }
   }, [
+    ready,
+    creationError,
     chat.connected,
-    chat.configSaving,
     initialPrompt,
-    initialConfig,
-    chat.configure,
+    firstMessage,
     chat.send,
   ])
 
   const submit = (text = draft) => {
-    if (!text.trim() || busy || !chat.connected || chat.configSaving) return
+    if (!text.trim() || busy || !chat.connected) return
     if (chat.send(text.trim())) setDraft('')
   }
 
@@ -204,30 +229,30 @@ export function AgentChat({
       </Dialog>
       {chat.connectionError && (
         <div
-          role="status"
+          role="alert"
           className="text-muted-foreground flex items-center gap-2 border-b px-4 py-2 text-xs"
         >
-          <Loader2 className="size-3 animate-spin" />
-          Connection interrupted. Reconnecting…
+          <span className="flex-1">Could not connect to the assistant.</span>
+          <Button size="xs" variant="outline" onClick={chat.reconnect}>
+            Retry connection
+          </Button>
         </div>
       )}
       <MessageScrollerProvider>
         <MessageScroller className="min-h-0 flex-1">
           <MessageScrollerViewport>
             <MessageScrollerContent
-              className={
-                chat.messages.length ? chatMessageLayouts[layout] : 'gap-0'
-              }
+              className={messages.length ? chatMessageLayouts[layout] : 'gap-0'}
             >
-              {chat.messages.length === 0 ? (
+              {messages.length === 0 ? (
                 <MessageScrollerItem messageId="empty">
                   <AgentEmptyState
-                    disabled={!chat.connected || chat.configSaving}
+                    disabled={!chat.connected}
                     onSubmit={submit}
                   />
                 </MessageScrollerItem>
               ) : (
-                chat.messages.map((message) => (
+                messages.map((message) => (
                   <MessageScrollerItem key={message.id} messageId={message.id}>
                     <AgentMessage
                       message={message}
@@ -235,12 +260,18 @@ export function AgentChat({
                       live={busy && message.id === lastMessageId}
                       onResolveDeletion={chat.resolveDeletion}
                       onRegenerate={
-                        busy || chat.configSaving
+                        !chat.connected ||
+                        busy ||
+                        (message.id === firstMessage?.id &&
+                          !initialSent.current)
                           ? undefined
                           : (id) => chat.regenerate(id)
                       }
                       onEdit={
-                        busy || chat.configSaving
+                        !chat.connected ||
+                        busy ||
+                        (message.id === firstMessage?.id &&
+                          !initialSent.current)
                           ? undefined
                           : (id, text) => chat.send(text, id)
                       }
@@ -253,39 +284,45 @@ export function AgentChat({
                   <ActivityIndicator label={activity} />
                 </MessageScrollerItem>
               )}
-              {chat.error && !busy && !chat.quotaExceeded && (
-                <MessageScrollerItem messageId="error">
-                  <div className="bg-muted/40 flex items-start gap-2 rounded-xl border p-3 text-xs">
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">Response failed</p>
-                      <p className="text-muted-foreground mt-1 leading-5">
-                        {chat.error.message || 'Try again.'}
-                      </p>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        className="mt-2"
-                        disabled={!chat.connected || chat.configSaving}
-                        onClick={() => chat.regenerate()}
-                      >
-                        <RotateCcw className="size-3" />
-                        Try again
-                      </Button>
-                      {chat.config.connectionId && (
+              {(chat.error || creationError) &&
+                !busy &&
+                !chat.quotaExceeded && (
+                  <MessageScrollerItem messageId="error">
+                    <div className="bg-muted/40 flex items-start gap-2 rounded-xl border p-3 text-xs">
+                      <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">Response failed</p>
+                        <p className="text-muted-foreground mt-1 leading-5">
+                          {creationError ?? chat.error?.message ?? 'Try again.'}
+                        </p>
                         <Button
                           size="xs"
-                          variant="ghost"
-                          className="mt-2 ml-2"
-                          render={<Link to="/settings" />}
+                          variant="outline"
+                          className="mt-2"
+                          disabled={!creationError && !chat.connected}
+                          onClick={() =>
+                            creationError
+                              ? onRetryCreation?.()
+                              : chat.regenerate()
+                          }
                         >
-                          AI settings
+                          <RotateCcw className="size-3" />
+                          Try again
                         </Button>
-                      )}
+                        {chat.config.connectionId && (
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="mt-2 ml-2"
+                            render={<Link to="/settings" />}
+                          >
+                            AI settings
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </MessageScrollerItem>
-              )}
+                  </MessageScrollerItem>
+                )}
             </MessageScrollerContent>
           </MessageScrollerViewport>
           <MessageScrollerButton />
@@ -298,10 +335,9 @@ export function AgentChat({
           onSubmit={() => submit()}
           busy={busy}
           connected={chat.connected}
-          onStop={() => void chat.stop()}
+          onStop={chat.busy ? () => void chat.stop() : undefined}
           config={chat.config}
           onConfigure={chat.configure}
-          configSaving={chat.configSaving}
         />
       </div>
     </>

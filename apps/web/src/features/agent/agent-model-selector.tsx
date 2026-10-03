@@ -1,6 +1,6 @@
-import { ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-import { useAIConnections } from '@rhyme/hooks/queries'
+import { useAssistantPreferences } from './assistant-preferences'
 import { AGENT_MODELS, defaultAgentConfig } from 'api/agent-config'
 import type { AgentConfig } from 'api/agent-config'
 import { InputGroupButton } from '@rhyme/ui/components/input-group'
@@ -20,14 +20,12 @@ export function AgentModelSelector({
   config,
   onSelect,
   disabled,
-  saving,
 }: {
   config: AgentConfig
   onSelect: (config: AgentConfig) => Promise<boolean>
   disabled: boolean
-  saving: boolean
 }) {
-  const connections = useAIConnections()
+  const { connections } = useAssistantPreferences()
   const currentModel = AGENT_MODELS.find((model) => model.id === config.model)
   const currentConnection = connections.data?.find(
     (item) => item.id === config.connectionId,
@@ -44,18 +42,14 @@ export function AgentModelSelector({
             size="sm"
             disabled={disabled}
             aria-label="Choose model"
-            className="h-8 min-w-0 gap-1.5 rounded-lg px-2.5 text-sm font-normal text-muted-foreground"
+            className="h-8 min-w-0 shrink gap-1.5 rounded-lg px-2.5 text-sm font-normal text-muted-foreground"
           >
             <span className="max-w-48 truncate">
               {config.connectionId
                 ? `${currentConnection?.name ?? 'Saved connection'} · ${config.model}`
                 : (currentModel?.label ?? 'Model')}
             </span>
-            {saving ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <ChevronDown className="size-3.5" />
-            )}
+            <ChevronDown className="size-3.5" />
           </InputGroupButton>
         }
       />
@@ -69,11 +63,10 @@ export function AgentModelSelector({
           onValueChange={(value) => {
             if (value === selected) return
             const [connectionId, model] = value.split('|')
-            void onSelect(
-              model
-                ? defaultAgentConfig(model, connectionId)
-                : defaultAgentConfig(value),
-            )
+            const next = model
+              ? defaultAgentConfig(model, connectionId)
+              : defaultAgentConfig(value)
+            void onSelect(next)
           }}
         >
           <DropdownMenuGroup>

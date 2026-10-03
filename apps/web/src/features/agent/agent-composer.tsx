@@ -13,6 +13,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@rhyme/ui/components/tooltip'
+import { supportsUltrafast } from 'api/byok-schema'
+import { useAssistantPreferences } from './assistant-preferences'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from '@rhyme/ui/components/dropdown-menu'
 import { AgentModelSelector } from './agent-model-selector'
 
 const SUGGESTIONS = [
@@ -77,7 +86,6 @@ export function AgentComposer({
   onStop,
   config,
   onConfigure,
-  configSaving = false,
 }: {
   draft: string
   onDraft: (text: string) => void
@@ -87,23 +95,32 @@ export function AgentComposer({
   onStop?: () => void
   config: AgentConfig
   onConfigure: (config: AgentConfig) => Promise<boolean>
-  configSaving?: boolean
 }) {
+  const { connections } = useAssistantPreferences()
+  const connection = connections.data?.find(
+    (item) => item.id === config.connectionId,
+  )
+  const ultrafastSupported = supportsUltrafast(
+    connection?.provider ?? '',
+    config.model,
+  )
+  const tier =
+    config.serviceTier ??
+    (ultrafastSupported ? connection?.serviceTier : 'standard') ??
+    'standard'
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const hintId = useId()
-  const canSend = Boolean(draft.trim()) && connected && !busy && !configSaving
+  const canSend = Boolean(draft.trim()) && connected && !busy
   const actionDisabled = busy ? !onStop : !canSend
   const actionHint = busy
     ? onStop
       ? 'Stop response'
       : 'Response in progress'
-    : configSaving
-      ? 'Saving model settings'
-      : !connected
-        ? 'Waiting for connection'
-        : !draft.trim()
-          ? 'Write a message to send'
-          : 'Send message · Enter'
+    : !connected
+      ? 'Waiting for connection'
+      : !draft.trim()
+        ? 'Write a message to send'
+        : 'Send message · Enter'
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current
@@ -162,20 +179,45 @@ export function AgentComposer({
             Press Enter to send. Shift + Enter adds a new line. You can edit
             your draft while Rhyme is responding or reconnecting.
           </span>
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <AgentModelSelector
               config={config}
               onSelect={onConfigure}
-              disabled={busy || !connected || configSaving}
-              saving={configSaving}
+              disabled={busy}
             />
-            {(busy || !connected) && (
-              <span
-                role="status"
-                className="text-muted-foreground truncate text-xs font-normal"
-              >
-                {busy ? 'Working…' : 'Connecting…'}
-              </span>
+            {ultrafastSupported && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <InputGroupButton
+                      size="sm"
+                      disabled={busy}
+                      aria-label="Response speed"
+                      className="h-8 rounded-lg px-2 text-xs"
+                    >
+                      {tier === 'ultrafast' ? 'Ultrafast' : 'Standard'}
+                    </InputGroupButton>
+                  }
+                />
+                <DropdownMenuContent side="top" align="start">
+                  <DropdownMenuRadioGroup
+                    value={tier}
+                    onValueChange={(value) => {
+                      void onConfigure({
+                        ...config,
+                        serviceTier: value as 'standard' | 'ultrafast',
+                      })
+                    }}
+                  >
+                    <DropdownMenuRadioItem value="standard">
+                      Standard
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="ultrafast">
+                      Ultrafast · Higher cost
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
           <Tooltip>

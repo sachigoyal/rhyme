@@ -52,7 +52,7 @@ before(async () => {
         try {
           const action = new URL(request.url).pathname.slice(1);
           const input = request.method === 'POST' ? await request.json() : {};
-          const result = action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]('ids' in input ? input : {id:new URL(request.url).searchParams.get('id') ?? '${fileId}', ...input});
+          const result = action === 'createChat' ? await chatsRouter.createCaller(ctx).create(input) : action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]('ids' in input ? input : {id:new URL(request.url).searchParams.get('id') ?? '${fileId}', ...input});
           return Response.json(result ?? {});
         } catch(error) { return Response.json({code:error.code, error:error.message}, {status:400}); }
       }};
@@ -151,6 +151,66 @@ const call = (operation, user = 'owner', id = fileId) =>
   runtime.dispatchFetch(`https://test/${operation}?id=${id}`, {
     headers: { 'x-user': user },
   })
+
+test('optimistic conversation IDs are idempotent and cannot overwrite or expose another account chat', async () => {
+  const id = crypto.randomUUID()
+  const create = async (user, file = fileId) => {
+    const response = await runtime.dispatchFetch('https://test/createChat', {
+      method: 'POST',
+      headers: { 'x-user': user, 'content-type': 'application/json' },
+      body: JSON.stringify({ id, fileId: file }),
+    })
+    return response.json()
+  }
+  try {
+    const first = await create('owner')
+    const retry = await create('owner')
+    assert.equal(first.id, id)
+    assert.deepEqual(retry, first)
+    assert.equal(
+      (
+        await db
+          .prepare('SELECT count(*) AS count FROM chats WHERE id = ?')
+          .bind(id)
+          .first()
+      ).count,
+      1,
+    )
+    assert.equal((await create('stranger')).code, 'NOT_FOUND')
+    await db.exec(
+      "INSERT INTO users (id,name,email,email_verified,created_at,updated_at) VALUES ('editor','Editor','editor@example.com',1,1,1)",
+    )
+    await db
+      .prepare(
+        "INSERT INTO file_collaborators (file_id,user_id,role,created_at,updated_at) VALUES (?,'editor','editor',1,1)",
+      )
+      .bind(fileId)
+      .run()
+    await db
+      .prepare(
+        "INSERT INTO legacy_chat_imports (file_id,user_id,created_at) VALUES (?,'editor',1)",
+      )
+      .bind(fileId)
+      .run()
+    const conflict = await create('editor')
+    assert.equal(conflict.code, 'CONFLICT')
+    assert.equal(conflict.userId, undefined)
+    assert.equal(
+      (
+        await db
+          .prepare('SELECT user_id FROM chats WHERE id = ?')
+          .bind(id)
+          .first()
+      ).user_id,
+      'owner',
+    )
+  } finally {
+    await db.prepare('DELETE FROM chats WHERE id = ?').bind(id).run()
+    await db.exec(
+      "DELETE FROM file_collaborators WHERE user_id = 'editor'; DELETE FROM legacy_chat_imports WHERE user_id = 'editor'; DELETE FROM users WHERE id = 'editor'",
+    )
+  }
+})
 
 test('migration preserves chats, runs, changes, and legacy import links', async () => {
   for (const table of ['chats', 'agent_runs', 'chat_changes'])

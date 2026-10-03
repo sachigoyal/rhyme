@@ -72,17 +72,3 @@ export function CanvasSkeleton({ title }: { title?: string }) {
     </main>
   )
 }
-
-export function AssistantSkeleton() {
-  return (
-    <div
-      className="flex h-full flex-col gap-4 p-3"
-      role="status"
-      aria-label="Loading assistant"
-    >
-      <Skeleton className="h-5 w-32" />
-      <Skeleton className="h-20" />
-      <Skeleton className="mt-auto h-24" />
-    </div>
-  )
-}

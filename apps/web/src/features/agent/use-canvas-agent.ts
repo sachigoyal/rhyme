@@ -1,14 +1,12 @@
 import type { UIMessage } from 'ai'
-import { useAIConnections } from '@rhyme/hooks/queries'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTRPC } from '@rhyme/trpc-client'
 import { useEffect, useRef, useState } from 'react'
 import { useAgentChat } from '@cloudflare/ai-chat/react'
 import { useAgent } from 'agents/react'
-import { AGENT_MODELS, DEFAULT_AGENT_CONFIG } from 'api/agent-config'
-import type { AgentConfig, AgentState } from 'api/agent-config'
+import { AGENT_MODELS } from 'api/agent-config'
+import type { AgentState } from 'api/agent-config'
 import type { Editor } from 'tldraw'
-import { toast } from '@rhyme/ui/components/toast'
 import { useRecordChatChange } from '@rhyme/hooks/mutations'
 import { env } from '@/lib/env'
 import { buildCanvasContext, captureCanvasPreview } from './canvas-context'
@@ -16,6 +14,7 @@ import {
   createCanvasToolRunner,
   continuingToolResult,
 } from './canvas-tool-runner'
+import { useAssistantPreferences } from './assistant-preferences'
 import { getCanvasAgentOptions } from './agent-connection'
 import { beginEditorBatch } from '../editor/editor-batch'
 
@@ -23,25 +22,24 @@ export function useCanvasAgent(
   fileId: string,
   conversationId: string,
   editor: Editor,
-  initialMessages?: UIMessage[],
+  initialMessages: UIMessage[],
+  ready: boolean,
 ) {
   const [runner] = useState(() => createCanvasToolRunner(editor))
   const [requestPending, setRequestPending] = useState(false)
   const [activeTools, setActiveTools] = useState(0)
   const requestInFlight = useRef(false)
-  const [configSaving, setConfigSaving] = useState(false)
-  const configInFlight = useRef(false)
   const recordChange = useRecordChatChange()
-  const connections = useAIConnections()
+  const { config, connections, configure } = useAssistantPreferences()
   const queryClient = useQueryClient()
   const trpc = useTRPC()
   const agent = useAgent<AgentState>({
+    enabled: ready,
     ...getCanvasAgentOptions(fileId, conversationId, env.apiUrl),
     onMessage: (event) => runner.receive(event.data),
   })
-  const config = agent.state?.config ?? DEFAULT_AGENT_CONFIG
   const configRef = useRef(config)
-  configRef.current = config
+  if (!requestInFlight.current) configRef.current = config
 
   const savePreview = (toolCallId: string, preview: string | null) => {
     if (preview)
@@ -83,9 +81,8 @@ export function useCanvasAgent(
 
   const chat = useAgentChat({
     agent,
-    ...(initialMessages
-      ? { messages: initialMessages, getInitialMessages: null }
-      : {}),
+    messages: initialMessages,
+    getInitialMessages: null,
     credentials: 'include',
     body: async () => {
       const turnConfig = configRef.current
@@ -148,13 +145,7 @@ export function useCanvasAgent(
   useEffect(() => () => runner.cancel(), [runner])
 
   const startRequest = (request: () => Promise<void>) => {
-    if (
-      requestInFlight.current ||
-      configInFlight.current ||
-      busy ||
-      !agent.identified
-    )
-      return false
+    if (requestInFlight.current || busy || !agent.identified) return false
     requestInFlight.current = true
     setRequestPending(true)
     runner.beginTurn()
@@ -171,39 +162,17 @@ export function useCanvasAgent(
     return true
   }
 
-  const send = (text: string, messageId?: string) =>
-    startRequest(() => chat.sendMessage({ text, messageId }))
+  const send = (text: string, messageId?: string, id?: string) =>
+    startRequest(() =>
+      chat.sendMessage(
+        id
+          ? { id, role: 'user', parts: [{ type: 'text', text }] }
+          : { text, messageId },
+      ),
+    )
 
   const regenerate = (messageId?: string) =>
     startRequest(() => chat.regenerate({ messageId }))
-
-  const configure = async (nextConfig: AgentConfig) => {
-    if (
-      requestInFlight.current ||
-      configInFlight.current ||
-      busy ||
-      !agent.identified
-    )
-      return false
-    configInFlight.current = true
-    setConfigSaving(true)
-    try {
-      configRef.current = await agent.call<AgentConfig>('configure', [
-        nextConfig,
-      ])
-      return true
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : 'Model settings could not be saved',
-      )
-      return false
-    } finally {
-      configInFlight.current = false
-      setConfigSaving(false)
-    }
-  }
 
   const resolveDeletion = async (
     toolCallId: string,
@@ -251,8 +220,8 @@ export function useCanvasAgent(
     usingTools: activeTools > 0,
     config,
     configure,
-    configSaving,
     connected: agent.identified,
+    reconnect: () => agent.reconnect(),
     send,
     regenerate,
     resolveDeletion,

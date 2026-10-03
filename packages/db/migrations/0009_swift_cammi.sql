@@ -1,0 +1,1 @@
+ALTER TABLE `ai_connections` ADD `service_tier` text DEFAULT 'standard' NOT NULL;

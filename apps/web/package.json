@@ -44,20 +44,21 @@
     "tailwindcss": "^4.1.18",
     "tinycolor2": "catalog:",
     "tldraw": "^5.4.2",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@resvg/resvg-js": "catalog:",
     "@tanstack/router-cli": "^1.132.0",
-    "@types/tinycolor2": "catalog:",
     "@types/node": "^22.10.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/tinycolor2": "catalog:",
     "@vitejs/plugin-react": "^6.0.1",
     "fontkit": "catalog:",
+    "playwright": "^1.63.0",
     "typescript": "catalog:",
-    "vite": "^8.0.0",
-    "playwright": "^1.63.0"
+    "vite": "^8.0.0"
   }
 }
