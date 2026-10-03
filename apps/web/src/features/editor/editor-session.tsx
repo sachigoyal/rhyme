@@ -26,7 +26,7 @@ import { UserAvatar, UserMenu } from '@/components/user-menu'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
 import type { AgentStatus } from '@/features/agent/agent-status'
 import { Logo } from '@/components/logo'
-import { GitHubLink } from '@/components/github-link'
+import { GithubLink } from '@/components/github-link'
 import { AgentPanel } from '@/features/agent/agent-panel'
 import type { SessionUser } from '@/lib/auth'
 import { Canvas } from './canvas'
@@ -102,7 +102,7 @@ export function EditorSession({
           {sync && (
             <SaveStatus sync={sync} onResolve={() => setResolving(true)} />
           )}
-          <GitHubLink />
+          <GithubLink />
           {file.role === 'owner' && (
             <ShareDialog fileId={file.id} fileName={file.name} />
           )}

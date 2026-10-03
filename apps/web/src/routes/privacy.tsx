@@ -17,7 +17,7 @@ function PrivacyPage() {
         <ul>
           <li>
             Your email, name, profile picture, and sign-in sessions. Google and
-            GitHub sign-in also store a provider account identifier and OAuth
+            Github sign-in also store a provider account identifier and OAuth
             tokens. Verified matching emails connect to the same Rhyme user.
           </li>
           <li>
@@ -58,7 +58,7 @@ function PrivacyPage() {
         <p>
           Cloudflare hosts the app and stores cloud data, handles sign-in
           emails, and runs the built-in AI models. If you choose Google or
-          GitHub sign-in, that provider handles authentication and shares your
+          Github sign-in, that provider handles authentication and shares your
           basic profile and email with Rhyme. Loading a provider profile picture
           also makes a request to its image host.
         </p>

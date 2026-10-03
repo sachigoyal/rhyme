@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { SidebarTrigger } from '@rhyme/ui/components/sidebar'
 import { WorkspaceBreadcrumbs } from '@/components/workspace-breadcrumbs'
-import { GitHubLink } from '@/components/github-link'
+import { GithubLink } from '@/components/github-link'
 
 export function ConversationHeader({ title }: { title: string }) {
   return (
@@ -17,7 +17,7 @@ export function ConversationHeader({ title }: { title: string }) {
           { label: title },
         ]}
       />
-      <GitHubLink />
+      <GithubLink />
     </header>
   )
 }

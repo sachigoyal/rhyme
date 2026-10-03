@@ -7,7 +7,7 @@ import { toast } from '@rhyme/ui/components/toast'
 import { Button } from '@rhyme/ui/components/button'
 import { useTheme } from '@rhyme/ui/components/theme'
 import { Logo } from '@/components/logo'
-import { GitHubLink } from '@/components/github-link'
+import { GithubLink } from '@/components/github-link'
 import { GuestIntroduction } from '@/components/guest-introduction'
 import { AgentLauncher } from '@/features/agent/agent-launcher'
 import { env } from '@/lib/env'
@@ -135,7 +135,7 @@ export function GuestCanvas() {
           >
             <Share2 className="size-3.5" /> Share
           </Button>
-          <GitHubLink />
+          <GithubLink />
           <Button size="sm" onClick={() => void signUp()} disabled={!editor}>
             Save canvas <ArrowUpRight className="size-3.5" />
           </Button>

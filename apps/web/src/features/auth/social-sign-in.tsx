@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@rhyme/ui/components/button'
 import { authClient } from '@/lib/auth'
+import { GithubIcon } from '@/components/github-icon'
 
 export function useSocialSignIn(redirectTo: string) {
   return useMutation({
@@ -19,7 +20,7 @@ export function useSocialSignIn(redirectTo: string) {
       if (error)
         throw new Error(
           error.code === 'PROVIDER_NOT_FOUND'
-            ? `${provider === 'google' ? 'Google' : 'GitHub'} sign-in isn’t configured yet. Please use email for now.`
+            ? `${provider === 'google' ? 'Google' : 'Github'} sign-in isn’t configured yet. Please use email for now.`
             : (error.message ?? 'Unable to start sign-in. Please try again.'),
         )
     },
@@ -51,9 +52,9 @@ export function SocialSignIn({
           ) : provider === 'google' ? (
             <GoogleIcon />
           ) : (
-            <GitHubIcon />
+            <GithubIcon />
           )}
-          Continue with {provider === 'google' ? 'Google' : 'GitHub'}
+          Continue with {provider === 'google' ? 'Google' : 'Github'}
         </Button>
       ))}
       {(signIn.error || authError) && (
@@ -90,19 +91,6 @@ function GoogleIcon() {
         fill="#EA4335"
         d="M12 5.96c1.47 0 2.79.51 3.82 1.51l2.86-2.86A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.94 5.49l3.35 2.59C7.2 7.72 9.4 5.96 12 5.96Z"
       />
-    </svg>
-  )
-}
-
-function GitHubIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="size-4"
-      aria-hidden="true"
-    >
-      <path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.1c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.64-1.25-1.64-1.02-.7.08-.69.08-.69 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.64 1.22 3.28.93.1-.73.39-1.22.71-1.5-2.5-.28-5.13-1.25-5.13-5.56 0-1.23.44-2.23 1.16-3.01-.12-.29-.5-1.43.11-2.98 0 0 .95-.3 3.09 1.15a10.8 10.8 0 0 1 5.62 0c2.14-1.45 3.08-1.15 3.08-1.15.62 1.55.23 2.69.12 2.98.72.78 1.15 1.78 1.15 3.01 0 4.32-2.63 5.27-5.14 5.55.4.35.77 1.03.77 2.08v3.1c0 .3.2.65.77.54A11.25 11.25 0 0 0 12 .75Z" />
     </svg>
   )
 }
