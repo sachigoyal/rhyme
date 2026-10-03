@@ -1,4 +1,4 @@
-import { createShapeId, toRichText } from 'tldraw'
+import { b64Vecs, createShapeId, toRichText } from 'tldraw'
 import type { Editor, TLShapeId, VecModel } from 'tldraw'
 import { z } from 'zod'
 import { canvasToolInputs, isCanvasTool } from 'api/canvas-schema'
@@ -131,7 +131,8 @@ function createShape(
   id: TLShapeId,
   resolve: Resolve,
 ) {
-  const richText = shape.text ? toRichText(shape.text) : undefined
+  const richText =
+    'text' in shape && shape.text ? toRichText(shape.text) : undefined
 
   switch (shape.type) {
     case 'geo':
@@ -173,6 +174,33 @@ function createShape(
       return
     case 'arrow':
       createArrow(editor, shape, id, resolve)
+      return
+    case 'draw': {
+      const points = shape.points.map(({ x, y, pressure }) => ({
+        x,
+        y,
+        z: pressure ?? 0.5,
+      }))
+      if (shape.closed && points.length > 1) points.push({ ...points[0]! })
+      editor.createShape({
+        id,
+        type: 'draw',
+        x: shape.x,
+        y: shape.y,
+        props: defined({
+          segments: [
+            { type: 'free' as const, path: b64Vecs.encodePoints(points) },
+          ],
+          isComplete: true,
+          isClosed: shape.closed,
+          isPen: shape.points.some((point) => point.pressure !== undefined),
+          color: shape.color,
+          size: shape.size,
+          fill: shape.fill ?? 'none',
+          dash: shape.dash ?? 'draw',
+        }),
+      })
+    }
   }
 }
 
@@ -342,7 +370,7 @@ export function updateShapes(editor: Editor, input: UpdateShapesInput) {
       ))
         set(field, value, field in current)
 
-      set('fill', update.fill, shape.type === 'geo')
+      set('fill', update.fill, shape.type === 'geo' || shape.type === 'draw')
       set('geo', update.geo, shape.type === 'geo')
       set('w', update.w, shape.type === 'geo' || shape.type === 'text')
       set('h', update.h, shape.type === 'geo')

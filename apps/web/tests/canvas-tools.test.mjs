@@ -4,6 +4,7 @@ import { createServer } from 'vite'
 import { createElement } from 'react'
 import { renderToReadableStream } from 'react-dom/server'
 import { useAgentChat } from '@cloudflare/ai-chat/react'
+import { b64Vecs, DEFAULT_THEME, DrawShapeUtil, drawShapeProps } from 'tldraw'
 
 let server
 let runCanvasTool
@@ -196,6 +197,83 @@ function makeEditor() {
 }
 
 const box = (id, x = 0) => ({ id, type: 'geo', x, y: 0, w: 100, h: 80 })
+
+test('pencil strokes use native tldraw paths and support pressure, closure, and style edits', () => {
+  const editor = makeEditor()
+  const result = runCanvasTool(editor, 'create_shapes', {
+    shapes: [
+      {
+        type: 'draw',
+        id: 'sketch',
+        x: 200,
+        y: 300,
+        points: [
+          { x: 0, y: 0, pressure: 0.25 },
+          { x: 80, y: 0, pressure: 0.5 },
+          { x: 40, y: 60, pressure: 1 },
+        ],
+        color: 'blue',
+        size: 's',
+        closed: true,
+        fill: 'semi',
+      },
+      { type: 'draw', id: 'dot', x: 0, y: 0, points: [{ x: 0, y: 0 }] },
+    ],
+  })
+  assert.equal(result.created.length, 2)
+  assert.equal(result.errors, undefined)
+  const stroke = editor.getShape('shape:sketch')
+  assert.equal(stroke.x, 200)
+  assert.equal(stroke.y, 300)
+  assert.equal(stroke.props.isComplete, true)
+  assert.equal(stroke.props.isClosed, true)
+  assert.equal(stroke.props.isPen, true)
+  assert.deepEqual(b64Vecs.decodePoints(stroke.props.segments[0].path), [
+    { x: 0, y: 0, z: 0.25 },
+    { x: 80, y: 0, z: 0.5 },
+    { x: 40, y: 60, z: 1 },
+    { x: 0, y: 0, z: 0.25 },
+  ])
+  const util = new DrawShapeUtil(editor)
+  editor.getCurrentTheme = () => DEFAULT_THEME
+  editor.getColorMode = () => 'light'
+  for (const shape of editor.shapes.values()) {
+    const props = { ...util.getDefaultProps(), ...shape.props }
+    for (const [key, validator] of Object.entries(drawShapeProps))
+      validator.validate(props[key])
+    const geometry = util.getGeometry({ ...shape, props })
+    assert.ok(Number.isFinite(geometry.bounds.w))
+    assert.ok(Number.isFinite(geometry.bounds.h))
+  }
+  assert.equal(editor.getShape('shape:dot').props.isPen, false)
+  assert.equal(editor.getShape('shape:dot').props.isClosed, false)
+  assert.equal(result.created[0].closed, true)
+  runCanvasTool(editor, 'update_shapes', {
+    updates: [{ id: 'sketch', color: 'red', size: 'l', fill: 'solid' }],
+  })
+  assert.equal(editor.getShape('shape:sketch').props.color, 'red')
+  assert.equal(editor.getShape('shape:sketch').props.size, 'l')
+  assert.equal(editor.getShape('shape:sketch').props.fill, 'solid')
+})
+
+test('invalid pencil points are rejected before any canvas changes', () => {
+  for (const points of [
+    [],
+    [{ x: Infinity, y: 0 }],
+    [{ x: 16001, y: 0 }],
+    [{ x: 0, y: 0, pressure: -0.1 }],
+    [{ x: 0, y: 0, pressure: 1.1 }],
+    Array.from({ length: 1001 }, () => ({ x: 0, y: 0 })),
+  ]) {
+    const editor = makeEditor()
+    assert.throws(() =>
+      runCanvasTool(editor, 'create_shapes', {
+        shapes: [box('valid'), { type: 'draw', x: 0, y: 0, points }],
+      }),
+    )
+    assert.equal(editor.shapes.size, 0)
+  }
+})
 
 test('replayed tool calls return their original result without drawing twice', async () => {
   const editor = makeEditor()

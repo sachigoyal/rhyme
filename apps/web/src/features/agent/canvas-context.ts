@@ -64,9 +64,14 @@ export function describeShape(
   }
   if (typeof props.geo === 'string') described.geo = props.geo
   if (typeof props.color === 'string') described.color = props.color
-  if (shape.type === 'geo' && typeof props.fill === 'string') {
+  if (
+    (shape.type === 'geo' || shape.type === 'draw') &&
+    typeof props.fill === 'string'
+  ) {
     described.fill = props.fill
   }
+  if (shape.type === 'draw' && typeof props.isClosed === 'boolean')
+    described.closed = props.isClosed
   if (props.richText) {
     const text = renderPlaintextFromRichText(
       editor,

@@ -19,7 +19,7 @@ export const canvasTools = {
   }),
   create_shapes: tool({
     description:
-      'Create shapes on the canvas. Shapes are created in order, so an arrow can refer to the id of a shape created earlier in the same call. Returns the created ids with their actual page bounds.',
+      'Create shapes on the canvas, including freehand pencil strokes with type draw. Each draw shape is one continuous stroke with points relative to its x/y origin, optional pressure, color, thickness (size), and closed outline/fill. Use separate draw shapes for separate strokes. Shapes are created in order, so an arrow can refer to the id of a shape created earlier in the same call. Returns the created ids with their actual page bounds.',
     inputSchema: createShapesInput,
   }),
   update_shapes: tool({

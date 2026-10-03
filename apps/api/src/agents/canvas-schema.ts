@@ -140,11 +140,40 @@ const arrowShape = z.object({
   ...arrowStyles,
 })
 
+const drawShape = z.object({
+  type: z.literal('draw'),
+  id: newId,
+  x: coordinate,
+  y: coordinate,
+  points: z
+    .array(
+      z.object({
+        x: z.number().finite().min(-16000).max(16000),
+        y: z.number().finite().min(-16000).max(16000),
+        pressure: z.number().finite().min(0).max(1).optional(),
+      }),
+    )
+    .min(1)
+    .max(1000)
+    .describe(
+      'Ordered pencil stroke points relative to x/y; one point makes a dot. Add intermediate points for curves. Optional pressure is 0 to 1.',
+    ),
+  closed: z
+    .boolean()
+    .default(false)
+    .describe('Join the last point to the first'),
+  color: color.optional(),
+  size: z.enum(TEXT_SIZES).optional().describe('Stroke thickness'),
+  fill: z.enum(FILLS).optional(),
+  dash: styles.dash,
+})
+
 export const newShape = z.discriminatedUnion('type', [
   geoShape,
   textShape,
   noteShape,
   arrowShape,
+  drawShape,
 ])
 
 export const readCanvasInput = z.object({
@@ -331,6 +360,7 @@ export const canvasShape = z.object({
   text: z.string().optional(),
   color: z.string().optional(),
   fill: z.string().optional(),
+  closed: z.boolean().optional(),
   parentId: z.string().optional(),
   rotation: z.number().optional(),
   locked: z.boolean().optional(),
