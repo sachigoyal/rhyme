@@ -6,8 +6,12 @@ export const objectKeys = {
     `files/${fileId}/documents/${crypto.randomUUID()}.json`,
   asset: (fileId: string, assetId: string) =>
     `files/${fileId}/assets/${assetId}`,
-  thumbnail: (fileId: string) => `files/${fileId}/thumbnail`,
+  thumbnail: (fileId: string, version: number) =>
+    `files/${fileId}/thumbnails/${version}/${crypto.randomUUID()}`,
 }
+
+export const thumbnailRevision = (key: string | null) =>
+  key?.split('/').pop() ?? null
 
 export async function readJson<T>(bucket: R2Bucket, key: string) {
   const object = await bucket.get(key)

@@ -131,17 +131,18 @@ function FilePreview({
   file: FileSummary
   compact: boolean
 }) {
-  const [failed, setFailed] = useState(false)
+  const src = thumbnailUrl(file.id, file.version, file.thumbnailRevision)
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
   return (
     <div
       className={`bg-background relative aspect-video overflow-hidden ${compact ? 'w-20 shrink-0 rounded-md' : ''}`}
     >
-      {file.hasThumbnail && !failed ? (
+      {file.hasThumbnail && failedSrc !== src ? (
         <img
-          src={thumbnailUrl(file.id, file.version)}
+          src={src}
           alt=""
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSrc(src)}
           className="size-full object-contain p-3 dark:invert dark:hue-rotate-180"
         />
       ) : (

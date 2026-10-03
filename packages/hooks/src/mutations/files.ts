@@ -31,6 +31,7 @@ export function useCreateFile() {
           version: 0,
           lastEditedById: null,
           hasThumbnail: false,
+          thumbnailRevision: null,
           createdAt: now,
           updatedAt: now,
           trashedAt: null,
@@ -71,6 +72,7 @@ export function useImportGuestCanvas() {
           version: 1,
           lastEditedById: sessionUser(queryClient)?.id ?? null,
           hasThumbnail: false,
+          thumbnailRevision: null,
           createdAt: now,
           updatedAt: now,
           trashedAt: null,
@@ -303,10 +305,15 @@ export function useDestroyFile() {
 
 export function useSaveFileDocument() {
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const cache = useFilesCache()
   return useMutation(
     trpc.files.saveDocument.mutationOptions({
-      onSuccess: (saved, { id }) => {
+      onSuccess: async (saved, { id }) => {
+        await Promise.all([
+          queryClient.cancelQueries(trpc.files.get.queryFilter({ id })),
+          queryClient.cancelQueries(trpc.files.list.queryFilter()),
+        ])
         cache.patch({
           filter: trpc.settings.get.queryFilter(),
           update: (data) =>
@@ -340,18 +347,29 @@ export function useThumbnailUploaded() {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   return useCallback(
-    (id: string) => {
+    async (
+      id: string,
+      thumbnail: Pick<
+        FileSummary,
+        'version' | 'hasThumbnail' | 'thumbnailRevision'
+      >,
+    ) => {
+      await Promise.all([
+        queryClient.cancelQueries(trpc.files.get.queryFilter({ id })),
+        queryClient.cancelQueries(trpc.files.list.queryFilter()),
+      ])
+      const update = (file: FileSummary) =>
+        file.version === thumbnail.version ? { ...file, ...thumbnail } : file
       patchCache(queryClient, {
         filter: trpc.files.get.queryFilter({ id }),
-        update: (data) =>
-          data && { ...(data as FileSummary), hasThumbnail: true },
+        update: (data) => data && update(data as FileSummary),
       })
       patchCache(queryClient, {
         filter: trpc.files.list.queryFilter(),
         update: (data) =>
           data &&
           (data as FileSummary[]).map((file) =>
-            file.id === id ? { ...file, hasThumbnail: true } : file,
+            file.id === id ? update(file) : file,
           ),
       })
     },

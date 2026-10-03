@@ -30,8 +30,12 @@ export function Canvas({
   const assets = useMemo(() => createAssetStore(fileId), [fileId])
   const thumbnailUploaded = useThumbnailUploaded()
   const thumbnailer = useMemo(
-    () => createThumbnailer(fileId, () => thumbnailUploaded(fileId)),
-    [fileId, thumbnailUploaded],
+    () =>
+      sync &&
+      createThumbnailer(fileId, sync, (thumbnail) =>
+        thumbnailUploaded(fileId, thumbnail),
+      ),
+    [fileId, sync, thumbnailUploaded],
   )
 
   useEffect(() => {
@@ -51,16 +55,17 @@ export function Canvas({
     onReady?.(mounted)
     mounted.updateInstanceState({ isReadonly: !sync })
     if (headless) mounted.zoomToFit()
-    if (!sync) return () => onReady?.(null)
+    if (!sync || !thumbnailer) return () => onReady?.(null)
 
     const detach = sync.attach(mounted)
     const stopSaved = sync.subscribe(
       () => sync.getStatus() === 'saved' && thumbnailer.schedule(mounted),
     )
+    if (sync.getStatus() === 'saved') thumbnailer.schedule(mounted)
     return () => {
       onReady?.(null)
       stopSaved()
-      thumbnailer.flush(mounted)
+      void thumbnailer.flush(mounted)
       detach()
     }
   }

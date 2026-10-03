@@ -1,5 +1,7 @@
 import type { Editor, TLAssetStore } from 'tldraw'
-import { uploadAsset, uploadThumbnail } from '@/lib/storage'
+import { publishThumbnail, uploadAsset } from '@/lib/storage'
+import type { Thumbnail } from '@/lib/storage'
+import type { DocumentSync } from './document-sync'
 
 export function createAssetStore(fileId: string): TLAssetStore {
   return {
@@ -13,25 +15,55 @@ export function createAssetStore(fileId: string): TLAssetStore {
 const THUMBNAIL_SIZE = 800
 const THUMBNAIL_INTERVAL = 15_000
 
-export function createThumbnailer(fileId: string, onUploaded: () => void) {
+export function createThumbnailer(
+  fileId: string,
+  sync: Pick<
+    DocumentSync,
+    'flush' | 'getStatus' | 'getVersion' | 'getRevision'
+  >,
+  onUploaded: (thumbnail: Thumbnail) => void | Promise<void>,
+) {
   let lastRun = 0
   let timer: ReturnType<typeof setTimeout> | undefined
+  let publishing = Promise.resolve()
 
   const capture = async (editor: Editor) => {
     lastRun = Date.now()
+    const revision = sync.getRevision()
     const shapes = [...editor.getCurrentPageShapeIds()]
     const bounds = editor.getCurrentPageBounds()
-    if (!shapes.length || !bounds) return
+    if (shapes.length && !bounds) return
     try {
-      const { blob } = await editor.toImage(shapes, {
-        format: 'png',
-        background: false,
-        darkMode: false,
-        pixelRatio: 1,
-        scale: Math.min(1, THUMBNAIL_SIZE / Math.max(bounds.w, bounds.h)),
-      })
-      await uploadThumbnail(fileId, blob)
-      onUploaded()
+      const [image] = await Promise.all([
+        shapes.length && bounds
+          ? editor
+              .toImage(shapes, {
+                format: 'png',
+                background: false,
+                darkMode: false,
+                pixelRatio: 1,
+                scale: Math.min(
+                  1,
+                  THUMBNAIL_SIZE / Math.max(bounds.w, bounds.h),
+                ),
+              })
+              .then(({ blob }) => blob)
+          : Promise.resolve(null),
+        sync.flush(),
+      ])
+      const version = sync.getVersion()
+      const current = () =>
+        sync.getStatus() === 'saved' &&
+        sync.getRevision() === revision &&
+        sync.getVersion() === version
+      publishing = publishing
+        .catch(() => {})
+        .then(async () => {
+          if (!current()) return
+          const thumbnail = await publishThumbnail(fileId, version, image)
+          if (thumbnail && current()) await onUploaded(thumbnail)
+        })
+      await publishing
     } catch (error) {
       console.warn('Thumbnail capture failed', error)
     }
@@ -49,10 +81,9 @@ export function createThumbnailer(fileId: string, onUploaded: () => void) {
       )
     },
     flush(editor: Editor) {
-      if (timer === undefined) return
       clearTimeout(timer)
       timer = undefined
-      void capture(editor)
+      return capture(editor)
     },
   }
 }

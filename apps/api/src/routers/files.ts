@@ -4,7 +4,13 @@ import { z } from 'zod'
 import { schema } from '@rhyme/db'
 import type { Database, File, FileRole } from '@rhyme/db'
 import { isFolderOwner } from '../services/access'
-import { deletePrefix, objectKeys, readJson, writeJson } from '../lib/storage'
+import {
+  deletePrefix,
+  objectKeys,
+  readJson,
+  thumbnailRevision,
+  writeJson,
+} from '../lib/storage'
 import { fileProcedure, protectedProcedure, router } from '../trpc/init'
 
 const { fileCollaborators, files, users, userSettings } = schema
@@ -67,6 +73,7 @@ function toSummary({ thumbnailKey, ...file }: SummarySource, role: FileRole) {
     owner: file.owner,
     role,
     hasThumbnail: thumbnailKey !== null,
+    thumbnailRevision: thumbnailRevision(thumbnailKey),
   }
 }
 
@@ -286,7 +293,11 @@ export const filesRouter = router({
           `${objectKeys.file(ctx.file.id)}documents/`,
         ),
         deletePrefix(ctx.env.STORAGE, `${objectKeys.file(ctx.file.id)}assets/`),
-        ctx.env.STORAGE.delete(objectKeys.thumbnail(ctx.file.id)),
+        deletePrefix(
+          ctx.env.STORAGE,
+          `${objectKeys.file(ctx.file.id)}thumbnails/`,
+        ),
+        ctx.env.STORAGE.delete(`${objectKeys.file(ctx.file.id)}thumbnail`),
       ]),
     )
   }),
@@ -322,6 +333,7 @@ export const filesRouter = router({
         .set({
           documentKey: key,
           documentSize: size,
+          thumbnailKey: null,
           version: sql`${files.version} + 1`,
           lastEditedById: ctx.user.id,
         })
@@ -348,6 +360,13 @@ export const filesRouter = router({
         ),
       )
       if (file.documentKey) waitUntil(env.STORAGE.delete(file.documentKey))
-      return saved
+      waitUntil(
+        deletePrefix(
+          env.STORAGE,
+          `${objectKeys.file(file.id)}thumbnails/${input.baseVersion}/`,
+        ),
+      )
+      if (file.thumbnailKey) waitUntil(env.STORAGE.delete(file.thumbnailKey))
+      return { ...saved, hasThumbnail: false, thumbnailRevision: null }
     }),
 })

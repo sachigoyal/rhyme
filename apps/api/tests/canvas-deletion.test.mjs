@@ -12,6 +12,7 @@ const root = resolve(dirname(new URL(import.meta.url).pathname), '..')
 let runtime, db, storage
 const fileId = '00000000-0000-4000-8000-000000000001'
 const chatId = '00000000-0000-4000-8000-000000000002'
+const thumbnailFileId = '00000000-0000-4000-8000-000000000003'
 
 before(async () => {
   const result = await build({
@@ -35,11 +36,23 @@ before(async () => {
       });
       app.route('/', storageRoutes);
       export default { async fetch(request, env, context) {
-        if (new URL(request.url).pathname.startsWith('/profile/')) return app.fetch(request, env, context);
+        const path = new URL(request.url).pathname;
+        if (path.startsWith('/profile/') || path.startsWith('/files/')) {
+          const storage = request.headers.has('x-race') ? {
+            put: async (...args) => {
+              const result = await env.STORAGE.put(...args);
+              await env.DB.prepare('UPDATE files SET version = version + 1, thumbnail_key = NULL WHERE id = ?').bind(path.split('/')[2]).run();
+              return result;
+            },
+            delete: (...args) => env.STORAGE.delete(...args),
+          } : env.STORAGE;
+          return app.fetch(request, {...env, STORAGE: storage}, context);
+        }
         const ctx = { db: createDb(env.DB), env, user: { id: request.headers.get('x-user') ?? 'owner' }, waitUntil: (p) => context.waitUntil(p) };
         try {
           const action = new URL(request.url).pathname.slice(1);
-          const result = action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]({id:'${fileId}'});
+          const input = request.method === 'POST' ? await request.json() : {};
+          const result = action === 'analytics' ? await chatsRouter.createCaller(ctx).analytics({days:30}) : action === 'activity' ? await chatsRouter.createCaller(ctx).activity() : await filesRouter.createCaller(ctx)[action]({id:new URL(request.url).searchParams.get('id') ?? '${fileId}', ...input});
           return Response.json(result ?? {});
         } catch(error) { return Response.json({code:error.code, error:error.message}, {status:400}); }
       }};
@@ -126,6 +139,7 @@ before(async () => {
     `files/${fileId}/documents/a.json`,
     `files/${fileId}/assets/a`,
     `files/${fileId}/thumbnail`,
+    `files/${fileId}/thumbnails/a`,
     `files/${fileId}/chats/${chatId}/preview.jpg`,
   ])
     await storage.put(key, 'fixture')
@@ -133,8 +147,8 @@ before(async () => {
 after(async () => {
   await runtime?.dispose()
 })
-const call = (operation, user = 'owner') =>
-  runtime.dispatchFetch(`https://test/${operation}`, {
+const call = (operation, user = 'owner', id = fileId) =>
+  runtime.dispatchFetch(`https://test/${operation}?id=${id}`, {
     headers: { 'x-user': user },
   })
 
@@ -154,6 +168,98 @@ test('migration preserves chats, runs, changes, and legacy import links', async 
     (await db.prepare('PRAGMA foreign_key_check').all()).results.length,
     0,
   )
+})
+
+test('thumbnails follow saved versions, clear on deletion, and reject uploads overtaken by a save', async () => {
+  await db
+    .prepare(
+      'INSERT INTO files (id,owner_id,name,created_at,updated_at) VALUES (?, ?, ?, ?, ?)',
+    )
+    .bind(thumbnailFileId, 'owner', 'Thumbnail canvas', Date.now(), Date.now())
+    .run()
+  await db
+    .prepare(
+      'INSERT INTO users (id,name,email,email_verified,created_at,updated_at) VALUES (?, ?, ?, 1, ?, ?)',
+    )
+    .bind('other', 'Other', 'other@example.com', Date.now(), Date.now())
+    .run()
+  const thumbnail = (version, init = {}) =>
+    runtime.dispatchFetch(
+      `https://test/files/${thumbnailFileId}/thumbnail?v=${version}`,
+      {
+        ...init,
+        headers: { 'x-user': 'owner', ...init.headers },
+      },
+    )
+  const upload = (version, body = 'drawing', headers = {}) =>
+    thumbnail(version, { method: 'PUT', body, headers })
+  assert.equal((await upload(0, 'drawing', { 'x-user': '' })).status, 401)
+  assert.equal((await upload(0, 'drawing', { 'x-user': 'other' })).status, 404)
+  assert.equal((await upload('invalid')).status, 400)
+  const first = await (await upload(0)).json()
+  assert.equal(first.hasThumbnail, true)
+  assert.ok(first.thumbnailRevision)
+  assert.equal(await (await thumbnail(0)).text(), 'drawing')
+  const second = await (await upload(0, 'new drawing')).json()
+  assert.notEqual(second.thumbnailRevision, first.thumbnailRevision)
+  assert.equal(
+    (
+      await runtime.dispatchFetch(
+        `https://test/files/${thumbnailFileId}/thumbnail?v=0&revision=${first.thumbnailRevision}`,
+        { headers: { 'x-user': 'owner' } },
+      )
+    ).status,
+    404,
+  )
+  const savedResponse = await runtime.dispatchFetch(
+    'https://test/saveDocument',
+    {
+      method: 'POST',
+      headers: { 'x-user': 'owner', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: thumbnailFileId,
+        baseVersion: 0,
+        document: { store: {}, schema: {} },
+      }),
+    },
+  )
+  assert.equal(savedResponse.status, 200)
+  const saved = await savedResponse.json()
+  assert.equal(saved.version, 1)
+  assert.equal(saved.hasThumbnail, false)
+  assert.equal(saved.thumbnailRevision, null)
+  assert.equal((await thumbnail(1)).status, 404)
+  assert.equal((await thumbnail(0)).status, 404)
+  assert.equal((await upload(0)).status, 409)
+  assert.equal((await upload(1)).status, 200)
+  assert.equal((await thumbnail(0, { method: 'DELETE' })).status, 409)
+  assert.equal(
+    (await (await call('get', 'owner', thumbnailFileId)).json()).hasThumbnail,
+    true,
+  )
+  const cleared = await (await thumbnail(1, { method: 'DELETE' })).json()
+  assert.deepEqual(cleared, {
+    version: 1,
+    hasThumbnail: false,
+    thumbnailRevision: null,
+  })
+  assert.equal((await thumbnail(1)).status, 404)
+  assert.equal(
+    (await (await call('get', 'owner', thumbnailFileId)).json()).hasThumbnail,
+    false,
+  )
+  assert.equal((await upload(1, 'stale', { 'x-race': 'save' })).status, 409)
+  assert.equal(
+    (await (await call('get', 'owner', thumbnailFileId)).json()).version,
+    2,
+  )
+  assert.equal((await thumbnail(2)).status, 404)
+  assert.equal(
+    (await storage.list({ prefix: `files/${thumbnailFileId}/thumbnails/` }))
+      .objects.length,
+    0,
+  )
+  assert.equal((await upload(2, 'latest')).status, 200)
 })
 
 test('trash and permanent deletion preserve activity and isolate it by user', async () => {
@@ -176,6 +282,11 @@ test('trash and permanent deletion preserve activity and isolate it by user', as
   )
   assert.equal(await storage.get(`files/${fileId}/documents/a.json`), null)
   assert.equal(await storage.get(`files/${fileId}/assets/a`), null)
+  assert.equal(
+    (await storage.list({ prefix: `files/${fileId}/thumbnails/` })).objects
+      .length,
+    0,
+  )
   assert.ok(await storage.get(`files/${fileId}/chats/${chatId}/preview.jpg`))
 })
 

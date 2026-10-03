@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { schema } from '@rhyme/db'
 import type { AppEnv } from '../env'
-import { objectKeys } from '../lib/storage'
+import { objectKeys, thumbnailRevision } from '../lib/storage'
 import { fileAccess, session } from '../middleware'
 
 const { assets, files, users } = schema
@@ -168,7 +168,11 @@ export const storageRoutes = new Hono<AppEnv>()
 
   .put('/files/:fileId/thumbnail', session, fileAccess('editor'), async (c) => {
     const { file } = c.var.access
-    const key = objectKeys.thumbnail(file.id)
+    const version = Number(c.req.query('v'))
+    if (!c.req.query('v') || !Number.isSafeInteger(version) || version < 0)
+      throw new HTTPException(400)
+    if (version !== file.version) throw new HTTPException(409)
+    const key = objectKeys.thumbnail(file.id, version)
     const body = await readBody(c.req.raw, MAX_THUMBNAIL_BYTES)
 
     await c.env.STORAGE.put(key, body, {
@@ -176,16 +180,76 @@ export const storageRoutes = new Hono<AppEnv>()
         contentType: c.req.header('content-type') ?? 'image/png',
       },
     })
-    await c.var.db
-      .update(files)
-      .set({ thumbnailKey: key, updatedAt: sql`${files.updatedAt}` })
-      .where(eq(files.id, file.id))
-
-    return c.body(null, 204)
+    try {
+      const saved = await c.var.db
+        .update(files)
+        .set({ thumbnailKey: key, updatedAt: sql`${files.updatedAt}` })
+        .where(
+          and(
+            eq(files.id, file.id),
+            eq(files.version, version),
+            file.thumbnailKey
+              ? eq(files.thumbnailKey, file.thumbnailKey)
+              : isNull(files.thumbnailKey),
+          ),
+        )
+        .returning({ id: files.id })
+        .get()
+      if (!saved) throw new HTTPException(409)
+    } catch (error) {
+      await c.env.STORAGE.delete(key)
+      throw error
+    }
+    if (file.thumbnailKey)
+      c.executionCtx.waitUntil(c.env.STORAGE.delete(file.thumbnailKey))
+    return c.json({
+      version,
+      hasThumbnail: true,
+      thumbnailRevision: thumbnailRevision(key),
+    })
   })
 
+  .delete(
+    '/files/:fileId/thumbnail',
+    session,
+    fileAccess('editor'),
+    async (c) => {
+      const { file } = c.var.access
+      const version = Number(c.req.query('v'))
+      if (!c.req.query('v') || !Number.isSafeInteger(version) || version < 0)
+        throw new HTTPException(400)
+      const saved = await c.var.db
+        .update(files)
+        .set({ thumbnailKey: null, updatedAt: sql`${files.updatedAt}` })
+        .where(
+          and(
+            eq(files.id, file.id),
+            eq(files.version, version),
+            file.thumbnailKey
+              ? eq(files.thumbnailKey, file.thumbnailKey)
+              : isNull(files.thumbnailKey),
+          ),
+        )
+        .returning({ id: files.id })
+        .get()
+      if (!saved) throw new HTTPException(409)
+      if (file.thumbnailKey)
+        c.executionCtx.waitUntil(c.env.STORAGE.delete(file.thumbnailKey))
+      return c.json({ version, hasThumbnail: false, thumbnailRevision: null })
+    },
+  )
+
   .get('/files/:fileId/thumbnail', session, fileAccess('viewer'), async (c) => {
-    const { thumbnailKey } = c.var.access.file
+    const { thumbnailKey, version } = c.var.access.file
+    const requestedVersion = c.req.query('v')
+    const requestedRevision = c.req.query('revision')
+    if (
+      (requestedVersion !== undefined &&
+        Number(requestedVersion) !== version) ||
+      (requestedRevision !== undefined &&
+        requestedRevision !== thumbnailRevision(thumbnailKey))
+    )
+      throw new HTTPException(404)
     const object = thumbnailKey && (await c.env.STORAGE.get(thumbnailKey))
     if (!object) throw new HTTPException(404)
 

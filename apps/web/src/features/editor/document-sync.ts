@@ -55,6 +55,8 @@ export class DocumentSync {
   }
 
   getStatus = () => this.status
+  getVersion = () => this.version
+  getRevision = () => this.revision
 
   attach(editor: Editor) {
     this.read = () =>
@@ -92,7 +94,12 @@ export class DocumentSync {
 
   async flush(): Promise<void> {
     clearTimeout(this.saveTimer)
-    if (this.saving || !this.isDirty || this.status === 'conflict') return
+    if (this.saving) {
+      await this.saving
+      if (this.status === 'unsaved') await this.flush()
+      return
+    }
+    if (!this.isDirty || this.status === 'conflict') return
 
     const document = this.read()
     if (!document) return
