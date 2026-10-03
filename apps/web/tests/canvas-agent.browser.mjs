@@ -62,6 +62,217 @@ const run = (name, input) =>
 const node = (id, role = 'process', text = id) => ({ id, role, text })
 const box = (id, x = 0, y = 0) => ({ id, type: 'geo', x, y, w: 160, h: 100 })
 
+test('streaming tool arguments preview creation and updates without saving or changing undo history', async () => {
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    const { editor, streamPreview, sync } = fixture
+    const release = sync.beginBatch()
+    const message = (name, input) => [
+      {
+        id: 'stream',
+        role: 'assistant',
+        parts: [
+          {
+            type: `tool-${name}`,
+            toolCallId: name,
+            state: 'input-streaming',
+            input,
+          },
+        ],
+      },
+    ]
+    const shape = {
+      id: 'stream-node',
+      type: 'geo',
+      x: 40,
+      y: 80,
+      w: 180,
+      h: 100,
+      color: 'green',
+    }
+    streamPreview.update(
+      message('create_shapes', { shapes: [shape, { type: 'geo' }] }),
+    )
+    const previewCount = editor.getCurrentPageShapeIds().size
+    const stableCount = Object.values(fixture.document().store).filter(
+      (record) => record.typeName === 'shape',
+    ).length
+    await sync.flush()
+    const previewSaves = fixture.saves.length
+    streamPreview.finish('create_shapes')
+    const clearedCount = editor.getCurrentPageShapeIds().size
+    await fixture.runner.run('stream-create-final', 'create_shapes', {
+      shapes: [shape],
+    })
+    streamPreview.update(
+      message('update_shapes', {
+        updates: [{ id: 'stream-node', color: 'red', dx: 30, text: 'Live' }],
+      }),
+    )
+    const updatedPreview = editor.getShape('shape:stream-node')
+    const stable = fixture.document().store['shape:stream-node']
+    streamPreview.update(
+      message('update_shapes', {
+        updates: [
+          { id: 'stream-node', color: 'red', dx: 30, text: 'Live text' },
+        ],
+      }),
+    )
+    const nonAccumulatingX = editor.getShape('shape:stream-node').x
+    streamPreview.clear()
+    const restored = editor.getShape('shape:stream-node')
+    streamPreview.finish('update_shapes')
+    await fixture.runner.run('stream-update-final', 'update_shapes', {
+      updates: [{ id: 'stream-node', color: 'red', dx: 30 }],
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    release()
+    await sync.flush()
+    const final = editor.getShape('shape:stream-node')
+    editor.undo()
+    return {
+      previewCount,
+      stableCount,
+      previewSaves,
+      clearedCount,
+      previewColor: updatedPreview.props.color,
+      previewX: updatedPreview.x,
+      stableColor: stable.props.color,
+      stableX: stable.x,
+      nonAccumulatingX,
+      restoredColor: restored.props.color,
+      restoredX: restored.x,
+      finalColor: final.props.color,
+      finalX: final.x,
+      saves: fixture.saves.length,
+      afterUndo: editor.getCurrentPageShapeIds().size,
+    }
+  })
+  assert.deepEqual(result, {
+    previewCount: 1,
+    stableCount: 0,
+    previewSaves: 0,
+    clearedCount: 0,
+    previewColor: 'red',
+    previewX: 70,
+    stableColor: 'green',
+    stableX: 40,
+    nonAccumulatingX: 70,
+    restoredColor: 'green',
+    restoredX: 40,
+    finalColor: 'red',
+    finalX: 70,
+    saves: 1,
+    afterUndo: 0,
+  })
+  assert.deepEqual(errors, [])
+})
+
+test('streaming diagram drafts and connectors render before final layout and disappear on cancellation', async () => {
+  await page.evaluate(() => {
+    const fixture = window.canvasFixture
+    fixture.streamMessage = [
+      {
+        id: 'diagram-stream',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-create_diagram',
+            toolCallId: 'diagram-stream',
+            state: 'input-streaming',
+            input: {
+              nodes: [
+                { id: 'draft-a', text: 'First' },
+                { id: 'draft-b', text: 'Second' },
+              ],
+              edges: [{ from: 'draft-a', to: 'draft-b' }, { from: 'draft-b' }],
+            },
+          },
+        ],
+      },
+    ]
+    fixture.streamPreview.update(fixture.streamMessage)
+  })
+  await page.waitForFunction(
+    () => window.canvasFixture.editor.getCurrentPageShapeIds().size === 3,
+  )
+  if (process.env.CANVAS_SCREENSHOT_DIR) {
+    await mkdir(process.env.CANVAS_SCREENSHOT_DIR, { recursive: true })
+    await page.screenshot({
+      path: `${process.env.CANVAS_SCREENSHOT_DIR}/streaming-diagram.png`,
+    })
+  }
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    const shapes = fixture.editor.getCurrentPageShapesSorted()
+    const arrow = shapes.find((shape) => shape.type === 'arrow')
+    const bindings = fixture.editor.getBindingsFromShape(arrow.id, 'arrow')
+    const stableCount = Object.values(fixture.document().store).filter(
+      (record) => record.typeName === 'shape',
+    ).length
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await fixture.sync.flush()
+    fixture.streamPreview.cancel()
+    fixture.streamPreview.update(fixture.streamMessage)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    return {
+      bindings: bindings.length,
+      stableCount,
+      saves: fixture.saves.length,
+      afterCancel: fixture.editor.getCurrentPageShapeIds().size,
+    }
+  })
+  assert.deepEqual(result, {
+    bindings: 2,
+    stableCount: 0,
+    saves: 0,
+    afterCancel: 0,
+  })
+  assert.deepEqual(errors, [])
+})
+
+test('completed update calls reveal each edited shape and stop without applying the remainder', async () => {
+  await run('create_shapes', {
+    shapes: Array.from({ length: 20 }, (_, index) => ({
+      id: `update-${index}`,
+      type: 'geo',
+      x: index * 180,
+      y: 0,
+      w: 160,
+      h: 100,
+    })),
+  })
+  await page.evaluate(() => {
+    const fixture = window.canvasFixture
+    fixture.pending = fixture.runner.run('live-update', 'update_shapes', {
+      ids: Array.from({ length: 20 }, (_, index) => `update-${index}`),
+      patch: { color: 'red' },
+    })
+  })
+  await page.waitForFunction(
+    () =>
+      window.canvasFixture.editor
+        .getCurrentPageShapesSorted()
+        .filter((shape) => shape.props.color === 'red').length >= 2,
+  )
+  const result = await page.evaluate(async () => {
+    const fixture = window.canvasFixture
+    fixture.runner.cancel()
+    const execution = await fixture.pending
+    return {
+      updated: execution.result.output.updated.length,
+      red: fixture.editor
+        .getCurrentPageShapesSorted()
+        .filter((shape) => shape.props.color === 'red').length,
+      interrupted: execution.result.output.interrupted,
+    }
+  })
+  assert.ok(result.updated >= 2 && result.updated < 20)
+  assert.equal(result.red, result.updated)
+  assert.equal(result.interrupted, true)
+  assert.deepEqual(errors, [])
+})
+
 test('agent creation renders progressively, saves the final scene once, and undoes together', async () => {
   await page.evaluate(() => {
     const { editor, runner, sync } = window.canvasFixture

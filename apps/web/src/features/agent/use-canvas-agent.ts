@@ -18,6 +18,7 @@ import {
 } from './canvas-tool-runner'
 import { getCanvasAgentOptions } from './agent-connection'
 import { beginEditorBatch } from '../editor/editor-batch'
+import { createCanvasStreamPreview } from './canvas-stream-preview'
 
 export function useCanvasAgent(
   fileId: string,
@@ -26,6 +27,7 @@ export function useCanvasAgent(
   initialMessages?: UIMessage[],
 ) {
   const [runner] = useState(() => createCanvasToolRunner(editor))
+  const [streamPreview] = useState(() => createCanvasStreamPreview(editor))
   const [requestPending, setRequestPending] = useState(false)
   const [activeTools, setActiveTools] = useState(0)
   const requestInFlight = useRef(false)
@@ -97,6 +99,7 @@ export function useCanvasAgent(
       }
     },
     onToolCall: async ({ toolCall, addToolOutput }) => {
+      const previewed = streamPreview.finish(toolCall.toolCallId)
       if (toolCall.toolName === 'delete_shapes') return
       setActiveTools((count) => count + 1)
       try {
@@ -104,6 +107,7 @@ export function useCanvasAgent(
           toolCall.toolCallId,
           toolCall.toolName,
           toolCall.input,
+          !previewed,
         )
         const canvas = await refresh(toolCall.toolCallId)
         await addToolOutput({
@@ -145,6 +149,13 @@ export function useCanvasAgent(
   }, [busy, editor])
 
   useEffect(() => () => runner.cancel(), [runner])
+
+  useEffect(() => {
+    if (!busy) return streamPreview.clear()
+    streamPreview.update(chat.messages)
+  }, [busy, chat.messages, streamPreview])
+
+  useEffect(() => () => streamPreview.clear(), [streamPreview])
 
   const startRequest = (request: () => Promise<void>) => {
     if (
@@ -238,6 +249,7 @@ export function useCanvasAgent(
   return {
     ...chat,
     stop: async () => {
+      streamPreview.cancel()
       runner.cancel()
       await chat.stop()
     },

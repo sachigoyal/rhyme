@@ -463,6 +463,44 @@ export function updateShapes(editor: Editor, input: UpdateShapesInput) {
   }
 }
 
+async function updateShapesProgressively(
+  editor: Editor,
+  input: UpdateShapesInput,
+  onStep: (count: number) => Promise<void>,
+) {
+  const updates = [
+    ...(input.ids?.map((id) => ({ ...input.patch, id })) ?? []),
+    ...(input.updates ?? []),
+  ]
+  const updated: string[] = []
+  const errors: Array<{ id: string; error: string }> = []
+  await onStep(updates.length)
+  let interrupted = false
+  try {
+    for (const [index, update] of updates.entries()) {
+      if (editor.isDisposed) throw new Error('Canvas was closed while updating')
+      if (editor.getIsReadonly()) throw new Error('Canvas is read-only')
+      const result = updateShapes(editor, { updates: [update] })
+      updated.push(...result.updated)
+      errors.push(...(result.errors ?? []))
+      if (index < updates.length - 1) await onStep(updates.length)
+    }
+  } catch (error) {
+    if (editor.isDisposed) throw error
+    interrupted = true
+    errors.push({
+      id: updates[updated.length]?.id ?? '',
+      error: errorText(error),
+    })
+  }
+  return {
+    updated,
+    shapes: descriptions(editor, updated.map(toShapeId)),
+    ...(interrupted ? { interrupted } : {}),
+    ...(errors.length ? { errors } : {}),
+  }
+}
+
 export function deleteShapes(editor: Editor, { ids }: DeleteShapesInput) {
   const unique = [...new Set(ids)]
   const missing = unique.filter((id) => !editor.getShape(toShapeId(id)))
@@ -863,7 +901,9 @@ export function runCanvasTool(
         ? createShapesProgressively(editor, parseToolInput(name, input), onStep)
         : createShapes(editor, parseToolInput(name, input))
     case 'update_shapes':
-      return updateShapes(editor, parseToolInput(name, input))
+      return onStep
+        ? updateShapesProgressively(editor, parseToolInput(name, input), onStep)
+        : updateShapes(editor, parseToolInput(name, input))
     case 'delete_shapes':
       return deleteShapes(editor, parseToolInput(name, input))
     case 'arrange_shapes':

@@ -58,7 +58,12 @@ export function createCanvasToolRunner(
       results.set(toolCallId, result)
       return result
     },
-    async run(toolCallId: string, name: string, input: unknown) {
+    async run(
+      toolCallId: string,
+      name: string,
+      input: unknown,
+      animate = true,
+    ) {
       const previous = results.get(toolCallId)
       if (previous) return { result: previous, applied: false }
       const running = pending.get(toolCallId)
@@ -78,7 +83,7 @@ export function createCanvasToolRunner(
           const result: ToolResult = {
             state: 'output-available',
             output: await runCanvasTool(editor, name, input, async (count) => {
-              await waitForStep(count)
+              if (animate) await waitForStep(count)
               controller.signal.throwIfAborted()
             }),
           }
